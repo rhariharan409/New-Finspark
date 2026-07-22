@@ -160,95 +160,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Temporary ATO Engine Session Hijack & Legitimate Device Verification Handlers
-  const sameDevBtn = document.getElementById('sim-verify-same-btn');
-  const hijackBtn = document.getElementById('sim-hijack-btn');
-  const hijackInput = document.getElementById('sim-hijack-session-id');
+  // Floating Demo Widget: Single Session ID Login & ATO Live Verification
+  const demoBtn = document.getElementById('demo-session-btn');
+  const demoInput = document.getElementById('demo-session-input');
 
-  if (sameDevBtn) {
-    sameDevBtn.addEventListener('click', async (e) => {
+  if (demoBtn) {
+    demoBtn.addEventListener('click', async (e) => {
       e.preventDefault();
-      hideAlert();
 
-      const sessionId = hijackInput ? hijackInput.value.trim() : '';
+      const sessionId = demoInput ? demoInput.value.trim() : '';
       if (!sessionId) {
-        return showAlert('Please enter an active Session ID to verify.');
+        alert('Please enter a Session ID (e.g. SES-908C0B98).');
+        return;
       }
 
-      showAlert('Capturing current laptop specs and verifying against DB baseline...', true);
-      const realEnv = collectRealClientEnvironment();
+      demoBtn.disabled = true;
+      demoBtn.textContent = 'Verifying...';
+
+      // Collect real client environment from current device
+      const clientEnv = collectRealClientEnvironment();
 
       try {
-        const res = await fetch('/api/analyst/simulate-ato-attack', {
+        const res = await fetch('/api/auth/verify-session-id-login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId,
-            customParams: {
-              deviceFingerprint: realEnv.deviceFingerprint,
-              browserName: realEnv.browserName,
-              browserVersion: realEnv.browserVersion,
-              operatingSystem: realEnv.operatingSystem,
-              userAgent: realEnv.userAgent,
-              screenResolution: realEnv.screenResolution,
-              language: realEnv.language,
-              timezone: realEnv.timezone,
-              country: 'India',
-              city: 'Chennai'
-            }
-          })
+          body: JSON.stringify({ sessionId, clientEnv })
         });
 
         const data = await res.json();
-        if (data && data.success) {
-          const score = data.evaluation?.riskScore || 0;
-          const dec = data.evaluation?.action || 'ALLOW';
-          if (score < 30) {
-            showAlert(`🟢 Legitimate Request Verified! ATO Risk Score: ${score}/100 [Decision: ${dec}]. All current laptop specs matched DB baseline!`, true);
-          } else {
-            showAlert(`⚠️ Mismatch Detected! Risk Score: ${score}/100 [Decision: ${dec}]. Stored baseline differs from current laptop environment.`, false);
-          }
+        demoBtn.disabled = false;
+        demoBtn.textContent = 'Login';
+
+        if (res.ok && data.success) {
+          alert(data.message || '🟢 Session Verified! Device specifications match trusted baseline. Logging into banking dashboard...');
+          window.location.href = data.redirectUrl || 'dashboard.html';
         } else {
-          showAlert('Failed to verify laptop specs against database.');
+          // Show ONLY Popup Alert when access is denied
+          alert(data.message || '🚫 ACCESS DENIED: Account Takeover (ATO) Detected!\n\nIncoming device specifications do not match trusted session baseline.');
         }
       } catch (err) {
-        showAlert('Network error verifying laptop specs against database.');
-      }
-    });
-  }
-
-  if (hijackBtn) {
-    hijackBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      hideAlert();
-
-      const sessionId = hijackInput ? hijackInput.value.trim() : '';
-      if (!sessionId) {
-        return showAlert('Please enter an active Session ID to simulate hijacking.');
-      }
-
-      showAlert('Injecting simulated hijacked request with altered device signature...', false);
-
-      try {
-        const res = await fetch('/api/analyst/simulate-ato-attack', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId,
-            attackPreset: 'CROSS_COUNTRY_HIJACK'
-          })
-        });
-
-        const data = await res.json();
-        if (data && data.success) {
-          const score = data.evaluation?.riskScore || 100;
-          const dec = data.evaluation?.action || 'BLOCK';
-          showAlert(`⚡ Attacker Hijack Detected! Mismatch Risk Score: ${score}/100 [Decision: ${dec}]. Session Blocked & Alert sent to Analyst Portal.`, false);
-        } else {
-          showAlert('Failed to process session hijack simulation.');
-        }
-      } catch (err) {
-        showAlert('Network error simulating session hijack.');
+        demoBtn.disabled = false;
+        demoBtn.textContent = 'Login';
+        alert('Network error verifying Session ID against database.');
       }
     });
   }

@@ -1,22 +1,24 @@
 /**
- * Authentication Module Router for Bank of Turtles
- * Implements user signup, login, session validation, and logout APIs.
+ * FINSPARK - Authentication API Router
+ * User Signup, Login, Session Management, Telemetry Logging, and ATO Session Verification.
  */
 
 import express from 'express';
 import { userService } from '../services/userService.js';
 import { passwordService } from '../security/passwordService.js';
+import { sessionModule } from '../session/index.js';
 import { sessionService } from '../services/sessionService.js';
 import { telemetryService } from '../services/telemetryService.js';
-import { sessionModule } from '../session/index.js';
 import { sessionIntegrityEngine } from '../services/sessionIntegrityEngine.js';
+import { supabase } from '../db/supabaseClient.js';
+import { riskRepository } from '../db/riskRepository.js';
 
 const router = express.Router();
 
 function toSafeUser(user) {
   if (!user) return null;
-  const { password_hash, ...safeUser } = user;
-  return safeUser;
+  const { password_hash, ...safe } = user;
+  return safe;
 }
 
 /**
@@ -25,17 +27,17 @@ function toSafeUser(user) {
  */
 router.post('/signup', async (req, res) => {
   try {
-    const { fullName, username, email, phone, password, confirmPassword } = req.body;
-    const finalUsername = username || (email ? email.split('@')[0] : '');
+    const { email, password, confirmPassword, fullName, phone, username } = req.body;
+    const finalUsername = (username || email || '').trim().toLowerCase();
 
-    if (!fullName || !email || !password) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'All required fields must be filled.'
+        message: 'Email address and password are required.'
       });
     }
 
-    if (password !== confirmPassword) {
+    if (confirmPassword !== undefined && password !== confirmPassword) {
       return res.status(400).json({
         success: false,
         message: 'Passwords do not match.'
@@ -68,10 +70,15 @@ router.post('/signup', async (req, res) => {
     });
 
     const safeUser = toSafeUser(newUser);
+    const activeSession = await sessionService.createSessionForUser(newUser.user_id);
+
+    sessionModule.setSessionUser(req, safeUser);
+    req.session.sessionId = activeSession.session_id;
 
     return res.status(201).json({
       success: true,
-      message: 'Account created successfully.',
+      message: 'Account registered successfully.',
+      redirectUrl: 'dashboard.html',
       user: safeUser
     });
 
@@ -85,7 +92,7 @@ router.post('/signup', async (req, res) => {
 });
 
 /**
- * Login API with Session Creation Integration & Telemetry Logging
+ * Login API with Session Creation & Trusted Environment Logging
  * POST /api/auth/login
  */
 router.post('/login', async (req, res) => {
@@ -180,7 +187,137 @@ router.post('/login', async (req, res) => {
 });
 
 /**
- * Session Verification API for Normal Users (STRICTLY ISOLATED FROM INTERNAL FRAUD INTELLIGENCE)
+ * Demo API: Session ID Login & Real-Time ATO Specification Cross-Verification
+ * POST /api/auth/verify-session-id-login
+ */
+router.post('/verify-session-id-login', async (req, res) => {
+  try {
+    const { sessionId, clientEnv } = req.body;
+    const cleanSessionId = (sessionId || '').trim();
+
+    if (!cleanSessionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session ID is required.'
+      });
+    }
+
+    // 1. Fetch stored trusted profile from Supabase trusted_session_profiles table
+    let trusted = null;
+    try {
+      const { data } = await supabase
+        .from('trusted_session_profiles')
+        .select('*')
+        .eq('session_id', cleanSessionId)
+        .single();
+      if (data) trusted = data;
+    } catch (e) {}
+
+    // Fallback: Check sessions table for user_id
+    let userId = trusted ? trusted.user_id : null;
+    if (!userId) {
+      try {
+        const { data: sessData } = await supabase
+          .from('sessions')
+          .select('*')
+          .eq('session_id', cleanSessionId)
+          .single();
+        if (sessData) userId = sessData.user_id;
+      } catch (e) {}
+    }
+
+    if (!userId) {
+      return res.status(404).json({
+        success: false,
+        message: `Session ID '${cleanSessionId}' not found in database.`
+      });
+    }
+
+    // 2. Fetch User Record
+    const rawUser = await userService.findUserById(userId, true);
+    if (!rawUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User account associated with this session was not found.'
+      });
+    }
+
+    // 3. Extract Current Device Specs from Request
+    const incomingEnv = clientEnv || {};
+    const currentFingerprint = incomingEnv.deviceFingerprint || req.headers['x-device-fingerprint'] || 'FP-UNKNOWN';
+    const currentBrowser = incomingEnv.browserName || 'Unknown';
+
+    // 4. Perform Specification Comparison against DB Baseline
+    let isMatch = true;
+    let mismatchReasons = [];
+
+    if (trusted) {
+      // Compare Device Fingerprint
+      if (trusted.device_fingerprint && currentFingerprint !== trusted.device_fingerprint) {
+        isMatch = false;
+        mismatchReasons.push(`Device Fingerprint Mismatch (Stored DB: ${trusted.device_fingerprint} vs Current: ${currentFingerprint})`);
+      }
+      // Compare Browser Name
+      if (trusted.browser_name && currentBrowser.toLowerCase() !== trusted.browser_name.toLowerCase()) {
+        isMatch = false;
+        mismatchReasons.push(`Browser Mismatch (Stored DB: ${trusted.browser_name} vs Current: ${currentBrowser})`);
+      }
+    }
+
+    // 5. Enforce Decision
+    if (!isMatch) {
+      // Record ATO Decision in DB
+      try {
+        await riskRepository.createRiskDecision({
+          transaction_id: `ATO-${Date.now().toString(36).toUpperCase()}`,
+          user_id: userId,
+          session_id: cleanSessionId,
+          risk_score: 100,
+          risk_level: 'CRITICAL',
+          decision: 'BLOCK',
+          risk_factors: mismatchReasons,
+          baseline_snapshot: {
+            reason: 'Account Takeover (ATO)',
+            mismatch_reasons: mismatchReasons
+          }
+        });
+      } catch (e) {}
+
+      return res.status(403).json({
+        success: false,
+        matched: false,
+        reason: 'ATO_DEVICE_MISMATCH',
+        message: `🚫 ACCESS DENIED: Account Takeover (ATO) Detected!\n\nIncoming device specifications do not match the trusted session profile stored in database.\n\n${mismatchReasons.join('\n')}`
+      });
+    }
+
+    // 6. Legitimate Request - Establish Active Session
+    const safeUser = toSafeUser(rawUser);
+    sessionModule.setSessionUser(req, safeUser);
+    req.session.sessionId = cleanSessionId;
+
+    req.session.save((err) => {
+      if (err) console.error('Session save error:', err.message);
+      return res.status(200).json({
+        success: true,
+        matched: true,
+        message: '🟢 Session Verified! Device specifications match trusted baseline.',
+        redirectUrl: 'dashboard.html',
+        user: safeUser
+      });
+    });
+
+  } catch (error) {
+    console.error('Session ID verification login error:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during session ID verification.'
+    });
+  }
+});
+
+/**
+ * Session Verification API
  * GET /api/auth/me
  */
 router.get('/me', async (req, res) => {
@@ -218,26 +355,25 @@ router.post('/logout', async (req, res) => {
     if (sessionId) {
       await sessionService.terminateSession(sessionId, userId);
       if (userId) {
-        const clientDetails = telemetryService.extractClientDetails(req);
-        await telemetryService.recordTelemetryEvent({
-          userId,
-          sessionId,
-          eventType: 'logout',
-          ipAddress: clientDetails.ipAddress,
-          deviceType: clientDetails.deviceType,
-          metadata: { logout_time: new Date().toISOString() }
-        });
+        try {
+          await telemetryService.recordTelemetryEvent({
+            userId,
+            sessionId,
+            eventType: 'logout'
+          });
+        } catch (tErr) {}
       }
     }
 
-    try {
-      await sessionModule.destroySession(req);
-    } catch (sErr) {}
+    sessionModule.clearSessionUser(req);
 
-    return res.status(200).json({
-      success: true,
-      message: 'Logout successful.',
-      redirectUrl: 'login.html'
+    req.session.destroy((err) => {
+      if (err) console.error('Session destroy error:', err.message);
+      res.clearCookie('connect.sid');
+      return res.status(200).json({
+        success: true,
+        message: 'Logout successful.'
+      });
     });
 
   } catch (error) {

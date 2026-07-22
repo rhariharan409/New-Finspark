@@ -209,7 +209,7 @@ export const sessionIntegrityEngine = {
 
     // Persist to Supabase trusted_session_profiles table
     try {
-      await supabase.from('trusted_session_profiles').upsert([{
+      const { error } = await supabase.from('trusted_session_profiles').upsert([{
         session_id: sessionId,
         user_id: userId,
         account_id: trustedProfile.accountId,
@@ -227,7 +227,14 @@ export const sessionIntegrityEngine = {
         screen_resolution: details.screenResolution,
         login_timestamp: now.toISOString()
       }]);
-    } catch (err) {}
+      if (error) {
+        console.error('Supabase trusted_session_profiles upsert error:', error.message);
+      } else {
+        console.log(`[SessionIntegrityEngine] Saved trusted session profile ${sessionId} to Supabase.`);
+      }
+    } catch (err) {
+      console.error('Session profile save exception:', err.message);
+    }
 
     return trustedProfile;
   },
