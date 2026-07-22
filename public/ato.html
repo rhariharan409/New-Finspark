@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account Takeover (ATO) Intelligence - FINSPARK</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .layout-wrapper {
+      display: flex;
+      min-height: calc(100vh - 60px);
+    }
+    .sidebar {
+      width: 260px;
+      background: #f8fafc;
+      border-right: 1px solid #e2e8f0;
+      padding: 1.25rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .nav-group-title {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      padding-left: 0.5rem;
+    }
+    .sidebar-menu {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .sidebar-menu li a {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #334155;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+    .sidebar-menu li a:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .sidebar-menu li a.active {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .content-area {
+      flex: 1;
+      padding: 1.5rem 2rem;
+      max-width: 1200px;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+    }
+    .summary-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.85rem;
+    }
+    .summary-val {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 0.2rem;
+      word-break: break-all;
+    }
+    .action-bar {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    .btn-action {
+      padding: 0.45rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #0f172a;
+      cursor: pointer;
+    }
+    .btn-action:hover {
+      background: #f1f5f9;
+      border-color: #2563eb;
+      color: #2563eb;
+    }
+  </style>
+</head>
+<body style="background-color: #ffffff;">
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <a href="index.html" class="brand">
+      <span class="brand-icon">⚡</span>
+      <span>FINSPARK</span>
+      <span style="font-size: 0.75rem; background: #1e293b; color: #38bdf8; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; text-transform: uppercase;">Analyst Console</span>
+    </a>
+    <div class="nav-links">
+      <span id="analyst-info" style="font-size: 0.85rem; color: #cbd5e1;">Analyst</span>
+      <button id="analyst-logout-btn" class="btn btn-danger" style="padding: 0.35rem 0.85rem; font-size: 0.8rem;">Logout</button>
+    </div>
+  </nav>
+
+  <div class="layout-wrapper">
+    <!-- LEFT SIDEBAR NAVIGATION -->
+    <aside class="sidebar">
+      <div>
+        <div class="nav-group-title">INVESTIGATION PORTAL</div>
+        <ul class="sidebar-menu">
+          <li><a href="analyst.html">🔍 Investigation & Money Flow</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-group-title">THREAT INTELLIGENCE</div>
+        <ul class="sidebar-menu">
+          <li><a href="ato.html" class="active">🛡️ Account Takeover (ATO)</a></li>
+          <li><a href="#" onclick="alert('Money Mule Intelligence Module coming in next phase.')">💸 Money Mule / Laundering</a></li>
+          <li><a href="#" onclick="alert('Credential Stuffing Module coming in next phase.')">🔑 Credential Stuffing</a></li>
+          <li><a href="#" onclick="alert('Card Fraud Module coming in next phase.')">💳 Card Fraud</a></li>
+          <li><a href="#" onclick="alert('Synthetic Identity Module coming in next phase.')">👤 Synthetic Identity</a></li>
+          <li><a href="#" onclick="alert('API Abuse Module coming in next phase.')">⚡ API Abuse</a></li>
+          <li><a href="#" onclick="alert('Insider Threat Module coming in next phase.')">🏢 Insider Threat</a></li>
+          <li><a href="#" onclick="alert('Device Intelligence Module coming in next phase.')">📱 Device Intelligence</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="content-area">
+
+      <!-- Header & Search Card -->
+      <div class="card" style="border-top: 4px solid #2563eb;">
+        <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem;">Account Takeover (ATO) Threat Intelligence</h2>
+        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
+          Analyze real database telemetry, login history, device fingerprints, IP anomalies, and post-login transaction velocity to detect ATO compromise.
+        </p>
+
+        <form id="ato-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <input type="text" id="ato-query-input" class="form-input" placeholder="Enter Account ID, User ID, or Email (e.g. TURTLE-1749020303)" style="flex: 1; min-width: 280px;" required>
+          <button type="submit" id="ato-search-btn" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
+            Run ATO Intelligence
+          </button>
+        </form>
+        <div id="ato-alert" class="alert alert-danger" style="display:none; margin-top: 1rem;"></div>
+      </div>
+
+      <!-- ATO Workspace (Hidden until search executed) -->
+      <div id="ato-workspace" style="display: none;">
+
+        <!-- 1. Current Risk & Status -->
+        <div class="card">
+          <div class="section-title" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">
+            <span style="font-size: 1.05rem; font-weight: 700; color: #0f172a;">1. Current ATO Risk Status</span>
+            <span id="ato-risk-badge" class="badge badge-low">LOW RISK</span>
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">ATO Risk Score</span>
+              <div id="ato-score-val" class="summary-val" style="color: #dc2626;">0/100</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Risk Level</span>
+              <div id="ato-level-val" class="summary-val" style="color: #059669;">LOW</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Threat Assessment</span>
+              <div id="ato-status-val" class="summary-val" style="color: #059669;">NORMAL</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Last Analysis</span>
+              <div id="ato-updated-val" class="summary-val" style="font-size: 0.85rem; color: #475569;">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Latest Login Details -->
+        <div class="card">
+          <div class="section-title"><span>2. Latest Login Telemetry</span></div>
+          <div class="summary-grid">
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Login Timestamp</span>
+              <div id="ll-time" class="summary-val" style="font-size: 0.9rem;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">IP Address</span>
+              <div id="ll-ip" class="summary-val" style="color: #2563eb;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Geographic Location</span>
+              <div id="ll-loc" class="summary-val" style="font-size: 0.9rem;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Device Type</span>
+              <div id="ll-dev" class="summary-val" style="font-size: 0.9rem;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Browser & OS</span>
+              <div id="ll-browser" class="summary-val" style="font-size: 0.9rem;">-</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Recent Activity & Behavior Summary -->
+        <div class="card">
+          <div class="section-title"><span>3. Recent Activity & Baseline Comparison</span></div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Successful Logins / Sessions</span>
+              <div id="act-sessions" class="summary-val">0</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Failed Login Attempts</span>
+              <div id="act-failed" class="summary-val" style="color: #dc2626;">0</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Password Changes</span>
+              <div id="act-pwd" class="summary-val" style="color: #d97706;">0</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Current Transfer Deviation</span>
+              <div id="beh-dev-ratio" class="summary-val" style="color: #d97706;">1.0x</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. RISK SIGNAL ENGINE -->
+        <div class="card" style="border-top: 4px solid #dc2626;">
+          <div class="section-title"><span>4. ATO Risk Signal Engine</span></div>
+          <div id="signals-container">
+            <!-- Dynamic Risk Signal Cards -->
+          </div>
+        </div>
+
+        <!-- 5. DEVICE & IP & LOCATION ANALYSIS -->
+        <div class="card">
+          <div class="section-title"><span>5. Device & IP Fingerprinting & Impossible Travel Analysis</span></div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Known Devices Count</span>
+              <div id="dev-count" class="summary-val">1</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">New Unrecognized Device?</span>
+              <div id="dev-new-flag" class="summary-val" style="color: #059669;">NO</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Device Reuse Across Accounts</span>
+              <div id="dev-reuse-flag" class="summary-val" style="color: #059669;">NONE</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Impossible Travel Anomaly</span>
+              <div id="travel-flag" class="summary-val" style="color: #059669;">NORMAL</div>
+            </div>
+          </div>
+          <div id="travel-evidence-box" style="font-size: 0.85rem; color: #334155; background: #f8fafc; padding: 0.85rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <strong>Travel Evidence:</strong> <span id="travel-evidence-text">Normal physical movement.</span>
+          </div>
+        </div>
+
+        <!-- 6. CHRONOLOGICAL LOGIN TIMELINE -->
+        <div class="card">
+          <div class="section-title"><span>6. Chronological Session & Login Timeline</span></div>
+          <div id="timeline-container" style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Event Type</th>
+                  <th>Description</th>
+                  <th>IP Address</th>
+                  <th>Location</th>
+                  <th>Risk Score</th>
+                </tr>
+              </thead>
+              <tbody id="timeline-table-body">
+                <tr><td colspan="6" style="text-align:center; color:#64748b;">No timeline entries available</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 7. INVESTIGATION ACTION PANEL -->
+        <div class="card" style="border-top: 4px solid #2563eb;">
+          <div class="section-title"><span>7. Analyst Action Panel</span></div>
+          <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+            Execute corrective fraud remediation actions. All actions are logged permanently in Supabase audit history.
+          </p>
+
+          <div class="action-bar">
+            <button class="btn-action" onclick="executeAnalystAction('MARK_SAFE')">✅ Mark Account Safe</button>
+            <button class="btn-action" onclick="executeAnalystAction('MONITOR')">👁️ Monitor Account</button>
+            <button class="btn-action" onclick="executeAnalystAction('REQUIRE_MFA')">🔐 Require Step-up Auth</button>
+            <button class="btn-action" style="color: #ea580c; border-color: #ea580c;" onclick="executeAnalystAction('FREEZE_TX')">⚠️ Freeze Transactions</button>
+            <button class="btn-action" style="color: #dc2626; border-color: #dc2626;" onclick="executeAnalystAction('LOCK_ACCOUNT')">🔒 Lock Account</button>
+            <button class="btn-action" style="background: #2563eb; color: #ffffff; border-color: #2563eb;" onclick="executeAnalystAction('ESCALATE')">🚨 Escalate Investigation</button>
+          </div>
+          <div id="action-status-msg" style="margin-top: 0.75rem; font-size: 0.85rem; font-weight: 600; display: none;"></div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <footer class="footer">
+    FINSPARK — Account Takeover (ATO) Threat Intelligence Console
+  </footer>
+
+  <script src="js/ato-ui.js"></script>
+</body>
+</html>

@@ -138,8 +138,9 @@ router.post('/login', async (req, res) => {
         userId: rawUser.user_id,
         sessionId: activeSession.session_id,
         eventType: 'login',
-        ipAddress: clientDetails.ipAddress,
-        deviceType: clientDetails.deviceType,
+        ipAddress: req.body.ipAddress || clientDetails.ipAddress,
+        deviceType: req.body.deviceType || clientDetails.deviceType,
+        location: req.body.location || null,
         metadata: { login_time: activeSession.login_time, email: rawUser.email }
       });
     } catch (telemetryError) {

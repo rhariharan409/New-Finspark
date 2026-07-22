@@ -7,6 +7,7 @@ import express from 'express';
 import { supabase } from '../db/supabaseClient.js';
 import { correlationEngine } from '../services/correlationEngine.js';
 import { caseService } from '../services/caseService.js';
+import { atoService } from '../services/atoService.js';
 import { initCyberAnalystTables, INITIAL_ANALYSTS } from '../db/cyberSchemaInitializer.js';
 import { passwordService } from '../security/passwordService.js';
 
@@ -198,6 +199,36 @@ router.get('/money-flow', async (req, res) => {
   } catch (err) {
     console.error('Money flow API error:', err.message);
     return res.status(500).json({ success: false, message: 'Failed to retrieve money flow graph data.' });
+  }
+});
+
+/**
+ * Account Takeover (ATO) Threat Intelligence API
+ * GET /api/analyst/ato?accountNumber=...&timeRange=all
+ */
+router.get('/ato', async (req, res) => {
+  try {
+    const query = (req.query.accountNumber || req.query.query || '').trim();
+    const timeRange = req.query.timeRange || 'all';
+
+    if (!query) {
+      return res.status(400).json({ success: false, message: 'Account Number, User ID, or Email is required.' });
+    }
+
+    const atoData = await atoService.analyzeAccountTakeover(query, timeRange);
+
+    if (!atoData.found) {
+      return res.status(404).json({ success: false, found: false, message: atoData.message });
+    }
+
+    return res.status(200).json({
+      success: true,
+      ...atoData
+    });
+
+  } catch (err) {
+    console.error('ATO API error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to retrieve Account Takeover threat intelligence.' });
   }
 });
 
