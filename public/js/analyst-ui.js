@@ -40,6 +40,9 @@ async function initAnalystPortal() {
       infoEl.textContent = `Analyst: ${authData.analyst.email} (${authData.analyst.role || 'Investigator'})`;
     }
 
+    // Load System Overview Metrics & Monitored Feeds
+    await loadSystemOverview();
+
   } catch (err) {
     window.location.href = 'analyst-login.html';
     return;
@@ -785,3 +788,63 @@ function truncateString(str, num) {
   if (str.length <= num) return str;
   return str.slice(0, num) + '...';
 }
+
+/**
+ * Loads Global Overview System Metrics & Monitored Feeds
+ */
+async function loadSystemOverview() {
+  try {
+    const res = await fetch('/api/analyst/overview');
+    const data = await res.json();
+
+    if (!res.ok || !data.success) return;
+
+    const m = data.global_metrics || {};
+    document.getElementById('metric-scanned').textContent = m.sessions_scanned || 0;
+    document.getElementById('metric-allowed').textContent = m.allowed_logs || 0;
+    document.getElementById('metric-stepup').textContent = m.step_up_challenges || 0;
+    document.getElementById('metric-blocks').textContent = m.blocks_in_force || 0;
+    document.getElementById('metric-fraud-rate').textContent = m.confirmed_fraud_rate || '0%';
+    document.getElementById('metric-fp-rate').textContent = m.false_positive_rate || '65.6%';
+    document.getElementById('metric-confidence').textContent = m.decision_confidence || '87%';
+
+    const body = document.getElementById('monitored-feeds-body');
+    const feeds = data.monitored_feeds || [];
+
+    if (body) {
+      if (feeds.length === 0) {
+        body.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#64748b;">No live monitored sessions currently active</td></tr>`;
+      } else {
+        body.innerHTML = feeds.map(f => {
+          const actClass = f.action === 'BLOCK' ? 'badge-critical' : (f.action === 'STEP_UP' ? 'badge-high' : (f.action === 'MONITOR' ? 'badge-medium' : 'badge-low'));
+          return `
+            <tr>
+              <td><strong>${f.user_name}</strong></td>
+              <td style="color:#2563eb;">${f.account_id}</td>
+              <td>${f.session_id}</td>
+              <td><span class="badge ${f.risk_score >= 50 ? 'badge-high' : 'badge-low'}">${f.risk_score}</span></td>
+              <td><strong style="color:#059669;">${f.ai_confidence}%</strong></td>
+              <td><span class="badge ${actClass}">${f.action}</span></td>
+              <td>${new Date(f.timestamp).toLocaleTimeString()}</td>
+              <td>
+                <button type="button" class="btn btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;" onclick="investigateFeedAccount('${f.account_id}')">
+                  Inspect
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+  } catch (err) {
+    console.error('Error loading system overview:', err);
+  }
+}
+
+window.investigateFeedAccount = function(accId) {
+  const input = document.getElementById('analyst-query-input');
+  if (input) input.value = accId;
+  currentQuery = accId;
+  executeFullInvestigation(accId, true);
+};

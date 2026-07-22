@@ -6,6 +6,58 @@
   <title>Analyst Portal - FINSPARK</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
+    .layout-wrapper {
+      display: flex;
+      min-height: calc(100vh - 60px);
+    }
+    .sidebar {
+      width: 260px;
+      background: #f8fafc;
+      border-right: 1px solid #e2e8f0;
+      padding: 1.25rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .nav-group-title {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      padding-left: 0.5rem;
+    }
+    .sidebar-menu {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .sidebar-menu li a {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #334155;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+    .sidebar-menu li a:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .sidebar-menu li a.active {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .content-area {
+      flex: 1;
+      padding: 1.5rem 2rem;
+      max-width: 1200px;
+    }
     .section-title {
       font-size: 1.05rem;
       font-weight: 700;
@@ -21,7 +73,7 @@
     }
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 1rem;
     }
     .summary-box {
@@ -107,24 +159,7 @@
       color: #2563eb;
     }
 
-    /* Node & Edge Styles */
-    .node-group {
-      cursor: pointer;
-      transition: transform 0.1s ease;
-    }
-    .node-group:hover {
-      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.12));
-    }
-    .edge-line {
-      stroke-linecap: round;
-      transition: stroke 0.2s ease, stroke-width 0.2s ease;
-    }
-    .edge-line:hover {
-      stroke-width: 4px !important;
-      cursor: pointer;
-    }
-
-    /* Side Panel / Modal */
+    /* Side Panel / Drawer */
     .side-panel {
       position: fixed;
       top: 0; right: -420px;
@@ -138,9 +173,7 @@
       display: flex;
       flex-direction: column;
     }
-    .side-panel.open {
-      right: 0;
-    }
+    .side-panel.open { right: 0; }
     .side-panel-header {
       padding: 1.25rem;
       border-bottom: 1px solid #e2e8f0;
@@ -153,60 +186,6 @@
       padding: 1.25rem;
       overflow-y: auto;
       flex: 1;
-    }
-  </style>
-  <style>
-    .layout-wrapper {
-      display: flex;
-      min-height: calc(100vh - 60px);
-    }
-    .sidebar {
-      width: 260px;
-      background: #f8fafc;
-      border-right: 1px solid #e2e8f0;
-      padding: 1.25rem 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-    .nav-group-title {
-      font-size: 0.72rem;
-      font-weight: 800;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.5rem;
-      padding-left: 0.5rem;
-    }
-    .sidebar-menu {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    .sidebar-menu li a {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      padding: 0.6rem 0.75rem;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #334155;
-      text-decoration: none;
-      border-radius: 6px;
-      transition: all 0.15s ease;
-    }
-    .sidebar-menu li a:hover {
-      background: #e2e8f0;
-      color: #0f172a;
-    }
-    .sidebar-menu li a.active {
-      background: #2563eb;
-      color: #ffffff;
-    }
-    .content-area {
-      flex: 1;
-      padding: 1.5rem 2rem;
-      max-width: 1100px;
     }
   </style>
 </head>
@@ -231,299 +210,355 @@
       <div>
         <div class="nav-group-title">INVESTIGATION PORTAL</div>
         <ul class="sidebar-menu">
-          <li><a href="analyst.html" class="active">🔍 Investigation & Money Flow</a></li>
+          <li><a href="analyst.html" class="active">🔍 Main Dashboard & Investigation</a></li>
         </ul>
       </div>
 
       <div>
         <div class="nav-group-title">THREAT INTELLIGENCE</div>
         <ul class="sidebar-menu">
+          <li><a href="threat-intel.html">⚡ Unified Threat Dashboard</a></li>
           <li><a href="ato.html">🛡️ Account Takeover (ATO)</a></li>
-          <li><a href="#" onclick="alert('Money Mule Intelligence Module coming in next phase.')">💸 Money Mule / Laundering</a></li>
-          <li><a href="#" onclick="alert('Credential Stuffing Module coming in next phase.')">🔑 Credential Stuffing</a></li>
-          <li><a href="#" onclick="alert('Card Fraud Module coming in next phase.')">💳 Card Fraud</a></li>
-          <li><a href="#" onclick="alert('Synthetic Identity Module coming in next phase.')">👤 Synthetic Identity</a></li>
-          <li><a href="#" onclick="alert('API Abuse Module coming in next phase.')">⚡ API Abuse</a></li>
-          <li><a href="#" onclick="alert('Insider Threat Module coming in next phase.')">🏢 Insider Threat</a></li>
-          <li><a href="#" onclick="alert('Device Intelligence Module coming in next phase.')">📱 Device Intelligence</a></li>
+          <li><a href="threat-intel.html?module=mule">💸 Money Mule / Laundering</a></li>
+          <li><a href="threat-intel.html?module=stuffing">🔑 Credential Stuffing</a></li>
+          <li><a href="threat-intel.html?module=card">💳 Card Fraud</a></li>
+          <li><a href="threat-intel.html?module=synthetic">👤 Synthetic Identity</a></li>
+          <li><a href="threat-intel.html?module=api">⚡ API Abuse</a></li>
+          <li><a href="threat-intel.html?module=insider">🏢 Insider Threat</a></li>
+          <li><a href="threat-intel.html?module=device">📱 Device Intelligence</a></li>
         </ul>
       </div>
     </aside>
 
     <main class="content-area">
-    
-    <!-- 1. Account Investigation Search Card -->
-    <div class="card" style="border-top: 4px solid #2563eb;">
-      <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem;">Account Investigation Search</h2>
-      <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
-        Search target user account by exact Account ID, User ID, or Email address to inspect real-time multi-hop graph flows and risk intelligence.
-      </p>
 
-      <form id="analyst-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-        <input type="text" id="analyst-query-input" class="form-input" placeholder="e.g. TURTLE-1749020303 or user@example.com" style="flex: 1; min-width: 280px;" required>
-        <button type="submit" id="analyst-search-btn" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
-          Investigate Account
-        </button>
-      </form>
-      <div id="analyst-search-alert" class="alert alert-danger" style="display:none; margin-top: 1rem;"></div>
-    </div>
-
-    <!-- Investigation Workspace (Hidden until searched) -->
-    <div id="investigation-workspace" style="display: none;">
-
-      <!-- 2. Investigation Summary -->
-      <div class="card">
+      <!-- 1. TOP SYSTEM OVERVIEW CARDS (SCREENSHOT 2 METRICS) -->
+      <div class="card" style="border-top: 4px solid #2563eb; margin-bottom: 1.5rem;">
         <div class="section-title">
-          <span>1. Investigation Summary</span>
-          <span id="overall-risk-badge" class="badge badge-low">LOW RISK</span>
+          <span>System Security Posture & Metrics</span>
+          <span class="badge badge-low" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">CORE SECURED</span>
         </div>
 
         <div class="summary-grid">
           <div class="summary-box">
-            <span style="font-size: 0.75rem; color: #64748b;">User Name</span>
-            <div id="sum-name" class="summary-val">-</div>
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Sessions Scanned</span>
+            <div id="metric-scanned" class="summary-val" style="color: #0f172a;">-</div>
           </div>
           <div class="summary-box">
-            <span style="font-size: 0.75rem; color: #64748b;">Account ID</span>
-            <div id="sum-account-id" class="summary-val" style="color: #2563eb;">-</div>
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Allowed Logs</span>
+            <div id="metric-allowed" class="summary-val" style="color: #059669;">-</div>
           </div>
           <div class="summary-box">
-            <span style="font-size: 0.75rem; color: #64748b;">Account Status</span>
-            <div id="sum-status" class="summary-val" style="color: #059669;">Active</div>
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Step-Up Challenges</span>
+            <div id="metric-stepup" class="summary-val" style="color: #d97706;">-</div>
           </div>
           <div class="summary-box">
-            <span style="font-size: 0.75rem; color: #64748b;">Current Risk Score</span>
-            <div id="sum-risk-score" class="summary-val" style="color: #dc2626;">0/100</div>
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Blocks in Force</span>
+            <div id="metric-blocks" class="summary-val" style="color: #dc2626;">-</div>
           </div>
           <div class="summary-box">
-            <span style="font-size: 0.75rem; color: #64748b;">Total Amount Transferred</span>
-            <div id="sum-total-amount" class="summary-val" style="color: #059669;">₹0.00</div>
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Confirmed Fraud Rate</span>
+            <div id="metric-fraud-rate" class="summary-val" style="color: #dc2626;">-</div>
           </div>
           <div class="summary-box">
-            <span style="font-size: 0.75rem; color: #64748b;">Total Transactions</span>
-            <div id="sum-total-txns" class="summary-val">0</div>
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">False Positive Rate</span>
+            <div id="metric-fp-rate" class="summary-val" style="color: #d97706;">65.6%</div>
           </div>
           <div class="summary-box">
-            <span style="font-size: 0.75rem; color: #64748b;">Number of Sessions</span>
-            <div id="sum-total-sessions" class="summary-val">0</div>
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Decision Confidence</span>
+            <div id="metric-confidence" class="summary-val" style="color: #059669;">87%</div>
           </div>
         </div>
       </div>
 
-      <!-- 3. MONEY FLOW ANALYSIS GRAPH SECTION -->
+      <!-- 2. MAIN ACCOUNT INVESTIGATION SEARCH CARD -->
       <div class="card" style="border-top: 4px solid #2563eb;">
+        <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem;">Account Investigation Search</h2>
+        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
+          Search target user account by exact Account ID, User ID, or Email address to inspect real-time multi-hop graph flows and risk intelligence.
+        </p>
+
+        <form id="analyst-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <input type="text" id="analyst-query-input" class="form-input" placeholder="e.g. TURTLE-1749020303 or user@example.com" style="flex: 1; min-width: 280px;" required>
+          <button type="submit" id="analyst-search-btn" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
+            Investigate Account
+          </button>
+        </form>
+        <div id="analyst-search-alert" class="alert alert-danger" style="display:none; margin-top: 1rem;"></div>
+      </div>
+
+      <!-- 3. MONITORED TRANSACTION FEEDS / REVIEWED SESSIONS TABLE (SCREENSHOT 2 FEEDS) -->
+      <div class="card">
         <div class="section-title">
           <div>
-            <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">2. MONEY FLOW ANALYSIS GRAPH</span>
-            <div style="font-size: 0.78rem; color: #64748b; font-weight: normal;">Interactive multi-hop directed transaction relationship graph</div>
+            <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">Monitored Transaction Feeds & Reviewed Sessions</span>
+            <div style="font-size: 0.78rem; color: #64748b; font-weight: normal;">Live transaction sessions analyzed by Finspark fraud engine</div>
           </div>
-
-          <!-- Controls: Hop Depth & Time Filter Buttons -->
-          <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-            
-            <!-- Hop Depth Selector -->
-            <div class="filter-btn-group">
-              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; align-self: center; margin-right: 0.25rem;">DEPTH:</span>
-              <button type="button" class="hop-filter-btn active" data-hop="1">Hop 1</button>
-              <button type="button" class="hop-filter-btn" data-hop="2">Hop 2</button>
-              <button type="button" class="hop-filter-btn" data-hop="3">Hop 3</button>
-              <button type="button" class="hop-filter-btn" data-hop="4">Hop 4</button>
-            </div>
-
-            <!-- Time Range Filters -->
-            <div class="filter-btn-group">
-              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; align-self: center; margin-right: 0.25rem;">TIME:</span>
-              <button type="button" class="time-filter-btn" data-range="1h">1H</button>
-              <button type="button" class="time-filter-btn" data-range="6h">6H</button>
-              <button type="button" class="time-filter-btn" data-range="12h">12H</button>
-              <button type="button" class="time-filter-btn" data-range="24h">24H</button>
-              <button type="button" class="time-filter-btn" data-range="7d">7D</button>
-              <button type="button" class="time-filter-btn" data-range="30d">30D</button>
-              <button type="button" class="time-filter-btn active" data-range="all">All</button>
-            </div>
-          </div>
+          <span class="badge badge-low" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">LIVE SYSTEM FEEDS</span>
         </div>
 
-        <!-- Split-Transaction / Structuring Alert Box -->
-        <div id="flow-splitting-alert" class="alert alert-warning" style="display:none; margin-bottom: 1rem;">
-          <strong>⚠️ Split Transaction / Structuring Pattern Detected:</strong>
-          <div id="flow-splitting-text" style="margin-top: 0.25rem;">-</div>
-        </div>
-
-        <!-- Transaction Flow Summary -->
-        <div class="summary-grid" style="margin-bottom: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Selected Hops / Period</span>
-            <div id="flow-period-val" class="summary-val" style="font-size: 0.95rem; color: #2563eb;">HOP 1 | ALL TIME</div>
-          </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total Transfers</span>
-            <div id="flow-total-txns" class="summary-val" style="font-size: 0.95rem;">0</div>
-          </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total Transferred</span>
-            <div id="flow-total-amount" class="summary-val" style="font-size: 0.95rem; color: #059669;">₹0.00</div>
-          </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Unique Senders</span>
-            <div id="flow-senders-count" class="summary-val" style="font-size: 0.95rem;">0</div>
-          </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Unique Receivers</span>
-            <div id="flow-receivers-count" class="summary-val" style="font-size: 0.95rem;">0</div>
-          </div>
-        </div>
-
-        <!-- Interactive Canvas / SVG Graph Container -->
-        <div id="graph-container">
-          
-          <!-- Graph Control Floating Bar -->
-          <div class="graph-control-bar">
-            <button class="graph-ctrl-btn" id="btn-zoom-in" title="Zoom In">+</button>
-            <button class="graph-ctrl-btn" id="btn-zoom-out" title="Zoom Out">-</button>
-            <button class="graph-ctrl-btn" id="btn-reset-view" title="Reset View">Fit</button>
-            <button class="graph-ctrl-btn" id="btn-auto-layout" title="Auto Layout">Auto Layout</button>
-          </div>
-
-          <!-- SVG Canvas Engine -->
-          <svg id="graph-svg" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <!-- Arrowhead Markers per Risk Level -->
-              <marker id="arrow-LOW" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669" />
-              </marker>
-              <marker id="arrow-MEDIUM" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706" />
-              </marker>
-              <marker id="arrow-HIGH" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#ea580c" />
-              </marker>
-              <marker id="arrow-CRITICAL" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626" />
-              </marker>
-              
-              <!-- Background Grid Pattern -->
-              <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f1f5f9" stroke-width="1"/>
-              </pattern>
-            </defs>
-
-            <!-- Background Grid -->
-            <rect width="100%" height="100%" fill="url(#grid-pattern)" />
-
-            <!-- Main Transform Viewport Group -->
-            <g id="viewport-group">
-              <g id="edges-layer"></g>
-              <g id="nodes-layer"></g>
-            </g>
-          </svg>
-        </div>
-      </div>
-
-      <!-- 4. Session Analysis & Aggregation -->
-      <div class="card">
-        <div class="section-title">
-          <span>3. Session Analysis & Aggregation</span>
-          <span id="session-count-badge" class="badge badge-low">0 Sessions</span>
-        </div>
-        <div id="session-table-container" style="overflow-x: auto;">
-          <table class="data-table">
+        <div style="overflow-x: auto;">
+          <table class="data-table" style="font-size: 0.82rem;">
             <thead>
               <tr>
+                <th>User ID / Name</th>
+                <th>Account ID</th>
                 <th>Session ID</th>
-                <th>Login Time</th>
-                <th>Logout Time</th>
-                <th>Duration</th>
-                <th>Tx Count</th>
-                <th>Total Amount</th>
-                <th>Avg Amount</th>
-                <th>Largest Tx</th>
-                <th>Unique Receivers</th>
-                <th>Session Risk</th>
+                <th>Risk Score</th>
+                <th>AI Confidence</th>
+                <th>Action</th>
+                <th>Timestamp</th>
+                <th>Inspect</th>
               </tr>
             </thead>
-            <tbody id="session-table-body">
-              <tr><td colspan="10" style="text-align:center; color:#64748b;">No session records available</td></tr>
+            <tbody id="monitored-feeds-body">
+              <tr><td colspan="8" style="text-align:center; color:#64748b;">Loading live monitored transaction feeds...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- 5. Transaction Analysis -->
-      <div class="card">
-        <div class="section-title">
-          <span>4. Transaction Analysis</span>
-          <span id="tx-count-badge" class="badge badge-low">0 Transactions</span>
+      <!-- 4. DETAILED USER INVESTIGATION WORKSPACE (Populated upon search or selecting a session) -->
+      <div id="investigation-workspace" style="display: none;">
+
+        <!-- Summary Cards -->
+        <div class="card">
+          <div class="section-title">
+            <span>1. Account Investigation Summary</span>
+            <span id="overall-risk-badge" class="badge badge-low">LOW RISK</span>
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">User Name</span>
+              <div id="sum-name" class="summary-val">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Account ID</span>
+              <div id="sum-account-id" class="summary-val" style="color: #2563eb;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Account Status</span>
+              <div id="sum-status" class="summary-val" style="color: #059669;">Active</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Current Risk Score</span>
+              <div id="sum-risk-score" class="summary-val" style="color: #dc2626;">0/100</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Total Amount Transferred</span>
+              <div id="sum-total-amount" class="summary-val" style="color: #059669;">₹0.00</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Total Transactions</span>
+              <div id="sum-total-txns" class="summary-val">0</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Number of Sessions</span>
+              <div id="sum-total-sessions" class="summary-val">0</div>
+            </div>
+          </div>
         </div>
-        <div id="tx-table-container" style="overflow-x: auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Transaction ID</th>
-                <th>Sender</th>
-                <th>Receiver</th>
-                <th>Amount</th>
-                <th>Date & Time</th>
-                <th>Session ID</th>
-                <th>Risk Level</th>
-                <th>Decision</th>
-              </tr>
-            </thead>
-            <tbody id="tx-table-body">
-              <tr><td colspan="8" style="text-align:center; color:#64748b;">No transactions available</td></tr>
-            </tbody>
-          </table>
+
+        <!-- MONEY FLOW ANALYSIS GRAPH SECTION -->
+        <div class="card" style="border-top: 4px solid #2563eb;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">2. MONEY FLOW ANALYSIS GRAPH</span>
+              <div style="font-size: 0.78rem; color: #64748b; font-weight: normal;">Interactive multi-hop directed transaction relationship graph</div>
+            </div>
+
+            <!-- Controls: Hop Depth & Time Filter Buttons -->
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+              <div class="filter-btn-group">
+                <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; align-self: center; margin-right: 0.25rem;">DEPTH:</span>
+                <button type="button" class="hop-filter-btn active" data-hop="1">Hop 1</button>
+                <button type="button" class="hop-filter-btn" data-hop="2">Hop 2</button>
+                <button type="button" class="hop-filter-btn" data-hop="3">Hop 3</button>
+                <button type="button" class="hop-filter-btn" data-hop="4">Hop 4</button>
+              </div>
+
+              <div class="filter-btn-group">
+                <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; align-self: center; margin-right: 0.25rem;">TIME:</span>
+                <button type="button" class="time-filter-btn" data-range="1h">1H</button>
+                <button type="button" class="time-filter-btn" data-range="6h">6H</button>
+                <button type="button" class="time-filter-btn" data-range="12h">12H</button>
+                <button type="button" class="time-filter-btn" data-range="24h">24H</button>
+                <button type="button" class="time-filter-btn" data-range="7d">7D</button>
+                <button type="button" class="time-filter-btn" data-range="30d">30D</button>
+                <button type="button" class="time-filter-btn active" data-range="all">All</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Split-Transaction Alert Box -->
+          <div id="flow-splitting-alert" class="alert alert-warning" style="display:none; margin-bottom: 1rem;">
+            <strong>⚠️ Split Transaction / Structuring Pattern Detected:</strong>
+            <div id="flow-splitting-text" style="margin-top: 0.25rem;">-</div>
+          </div>
+
+          <!-- Flow Summary Grid -->
+          <div class="summary-grid" style="margin-bottom: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Selected Hops / Period</span>
+              <div id="flow-period-val" class="summary-val" style="font-size: 0.95rem; color: #2563eb;">HOP 1 | ALL TIME</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total Transfers</span>
+              <div id="flow-total-txns" class="summary-val" style="font-size: 0.95rem;">0</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total Transferred</span>
+              <div id="flow-total-amount" class="summary-val" style="font-size: 0.95rem; color: #059669;">₹0.00</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Unique Senders</span>
+              <div id="flow-senders-count" class="summary-val" style="font-size: 0.95rem;">0</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Unique Receivers</span>
+              <div id="flow-receivers-count" class="summary-val" style="font-size: 0.95rem;">0</div>
+            </div>
+          </div>
+
+          <!-- Interactive SVG Graph Container -->
+          <div id="graph-container">
+            <div class="graph-control-bar">
+              <button class="graph-ctrl-btn" id="btn-zoom-in" title="Zoom In">+</button>
+              <button class="graph-ctrl-btn" id="btn-zoom-out" title="Zoom Out">-</button>
+              <button class="graph-ctrl-btn" id="btn-reset-view" title="Reset View">Fit</button>
+              <button class="graph-ctrl-btn" id="btn-auto-layout" title="Auto Layout">Auto Layout</button>
+            </div>
+
+            <svg id="graph-svg" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <marker id="arrow-LOW" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669" />
+                </marker>
+                <marker id="arrow-MEDIUM" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706" />
+                </marker>
+                <marker id="arrow-HIGH" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#ea580c" />
+                </marker>
+                <marker id="arrow-CRITICAL" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626" />
+                </marker>
+                <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+              <g id="viewport-group">
+                <g id="edges-layer"></g>
+                <g id="nodes-layer"></g>
+              </g>
+            </svg>
+          </div>
         </div>
+
+        <!-- Session Analysis -->
+        <div class="card">
+          <div class="section-title">
+            <span>3. Session Analysis & Aggregation</span>
+            <span id="session-count-badge" class="badge badge-low">0 Sessions</span>
+          </div>
+          <div id="session-table-container" style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Session ID</th>
+                  <th>Login Time</th>
+                  <th>Logout Time</th>
+                  <th>Duration</th>
+                  <th>Tx Count</th>
+                  <th>Total Amount</th>
+                  <th>Avg Amount</th>
+                  <th>Largest Tx</th>
+                  <th>Unique Receivers</th>
+                  <th>Session Risk</th>
+                </tr>
+              </thead>
+              <tbody id="session-table-body">
+                <tr><td colspan="10" style="text-align:center; color:#64748b;">No session records available</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Transaction Analysis -->
+        <div class="card">
+          <div class="section-title">
+            <span>4. Transaction Analysis</span>
+            <span id="tx-count-badge" class="badge badge-low">0 Transactions</span>
+          </div>
+          <div id="tx-table-container" style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Transaction ID</th>
+                  <th>Sender</th>
+                  <th>Receiver</th>
+                  <th>Amount</th>
+                  <th>Date & Time</th>
+                  <th>Session ID</th>
+                  <th>Risk Level</th>
+                  <th>Decision</th>
+                </tr>
+              </thead>
+              <tbody id="tx-table-body">
+                <tr><td colspan="8" style="text-align:center; color:#64748b;">No transactions available</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Behavioral Analysis & Risk Summary -->
+        <div class="card">
+          <div class="section-title">
+            <span>5. Behavioral Analysis & Risk Decision Summary</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Historical Average Txn Amount</span>
+              <div id="beh-base-avg" class="summary-val">₹0.00</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Current Txn Deviation</span>
+              <div id="beh-curr-dev" class="summary-val" style="color: #d97706;">1.0x</div>
+            </div>
+          </div>
+
+          <div style="font-size: 0.85rem; color: #475569; background: #f8fafc; padding: 0.85rem; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
+            <strong>Behavioral Deviation Assessment:</strong>
+            <div id="beh-explanation" style="margin-top: 0.25rem;">Current activity parameters align with historical user baseline.</div>
+          </div>
+
+          <div style="display: flex; gap: 2rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+            <div><strong>Risk Score:</strong> <span id="rd-score" style="font-size: 1.2rem; font-weight: 700; color: #dc2626;">0/100</span></div>
+            <div><strong>Risk Level:</strong> <span id="rd-level" class="badge badge-low">LOW</span></div>
+            <div><strong>Decision:</strong> <span id="rd-decision" class="badge badge-low">ALLOW</span></div>
+          </div>
+          <div style="font-size: 0.85rem;">
+            <strong>Contributing Risk Signals:</strong>
+            <ul id="rd-signals-list" style="margin: 0.35rem 0 0 1.25rem; color: #334155;">
+              <li>Normal transaction behavior</li>
+            </ul>
+          </div>
+        </div>
+
       </div>
 
-      <!-- 6. Behavioral Analysis & Risk Decision Summary -->
-      <div class="card">
-        <div class="section-title">
-          <span>5. Behavioral Analysis & Risk Decision Summary</span>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-          <div class="summary-box">
-            <span style="font-size: 0.75rem; color: #64748b;">Historical Average Txn Amount</span>
-            <div id="beh-base-avg" class="summary-val">₹0.00</div>
-          </div>
-          <div class="summary-box">
-            <span style="font-size: 0.75rem; color: #64748b;">Current Txn Deviation</span>
-            <div id="beh-curr-dev" class="summary-val" style="color: #d97706;">1.0x</div>
-          </div>
-        </div>
-
-        <div style="font-size: 0.85rem; color: #475569; background: #f8fafc; padding: 0.85rem; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
-          <strong>Behavioral Deviation Assessment:</strong>
-          <div id="beh-explanation" style="margin-top: 0.25rem;">Current activity parameters align with historical user baseline.</div>
-        </div>
-
-        <div style="display: flex; gap: 2rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
-          <div><strong>Risk Score:</strong> <span id="rd-score" style="font-size: 1.2rem; font-weight: 700; color: #dc2626;">0/100</span></div>
-          <div><strong>Risk Level:</strong> <span id="rd-level" class="badge badge-low">LOW</span></div>
-          <div><strong>Decision:</strong> <span id="rd-decision" class="badge badge-low">ALLOW</span></div>
-        </div>
-        <div style="font-size: 0.85rem;">
-          <strong>Contributing Risk Signals:</strong>
-          <ul id="rd-signals-list" style="margin: 0.35rem 0 0 1.25rem; color: #334155;">
-            <li>Normal transaction behavior</li>
-          </ul>
-        </div>
-      </div>
-
-    </div>
-
-  </main>
+    </main>
   </div>
 
-  <!-- Interactive Slide-Out Side Panel (For Node & Edge Clicks) -->
+  <!-- Interactive Slide-Out Side Panel -->
   <div id="side-panel" class="side-panel">
     <div class="side-panel-header">
       <h3 id="sp-title" style="font-size: 1.1rem; color: #0f172a; margin: 0;">Investigation Details</h3>
       <button id="sp-close-btn" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">✕</button>
     </div>
-    <div id="sp-body" class="side-panel-body">
-      <!-- Side panel dynamic content renders here -->
-    </div>
+    <div id="sp-body" class="side-panel-body"></div>
   </div>
 
   <footer class="footer">
