@@ -124,7 +124,6 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.textContent = 'Signing in & verifying device fingerprint...';
       }
 
-      // Collect real client environment fingerprint & system details
       const clientEnv = collectRealClientEnvironment();
 
       try {
@@ -157,6 +156,46 @@ document.addEventListener('DOMContentLoaded', () => {
           submitBtn.textContent = 'Sign In to Banking';
         }
         showAlert('A network error occurred. Please check your connection and try again.');
+      }
+    });
+  }
+
+  // Temporary ATO Engine Session Hijack Test Handler
+  const hijackBtn = document.getElementById('sim-hijack-btn');
+  const hijackInput = document.getElementById('sim-hijack-session-id');
+
+  if (hijackBtn) {
+    hijackBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      hideAlert();
+
+      const sessionId = hijackInput ? hijackInput.value.trim() : '';
+      if (!sessionId) {
+        return showAlert('Please enter an active Session ID to simulate hijacking.');
+      }
+
+      showAlert('Injecting simulated hijacked request with altered device signature...', false);
+
+      try {
+        const res = await fetch('/api/analyst/simulate-ato-attack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            attackPreset: 'CROSS_COUNTRY_HIJACK'
+          })
+        });
+
+        const data = await res.json();
+        if (data && data.success) {
+          const score = data.evaluation?.riskScore || 100;
+          const dec = data.evaluation?.action || 'BLOCK';
+          showAlert(`⚡ ATO Hijack Detected! Mismatch Risk Score: ${score}/100 [Decision: ${dec}]. Session Blocked & Alert sent to Analyst Portal.`, false);
+        } else {
+          showAlert('Failed to process session hijack simulation.');
+        }
+      } catch (err) {
+        showAlert('Network error simulating session hijack.');
       }
     });
   }

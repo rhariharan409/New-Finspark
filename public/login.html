@@ -45,6 +45,18 @@
       <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: #64748b;">
         Don't have an account? <a href="signup.html" style="color: #2563eb; text-decoration: none; font-weight: 600;">Register here</a>
       </div>
+
+      <!-- TEMPORARY ATO ENGINE CROSS-VERIFICATION TEST CONTROL -->
+      <div style="margin-top: 1.5rem; padding: 0.85rem; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; font-size: 0.8rem;">
+        <div style="font-weight: 700; color: #92400e; margin-bottom: 0.35rem;">⚡ ATO Test Mode: Session Hijack Simulation</div>
+        <p style="color: #78350f; margin-bottom: 0.5rem; font-size: 0.75rem;">Test cross-verification against stored baseline specs in Supabase by reusing an active session ID with an altered browser/device signature:</p>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <input type="text" id="sim-hijack-session-id" class="form-input" placeholder="Active Session ID (e.g. SES-1CBEEA71)..." style="font-size: 0.78rem; padding: 0.35rem 0.5rem; flex: 1; min-width: 180px;">
+          <button type="button" id="sim-hijack-btn" class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.78rem; font-weight: 700;">
+            🏴‍☠️ Hijack Session
+          </button>
+        </div>
+      </div>
     </div>
   </main>
 
