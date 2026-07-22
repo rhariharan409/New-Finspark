@@ -858,6 +858,35 @@
             </div>
           </div>
 
+          <!-- ATO ATTACK SIMULATOR CARD -->
+          <div class="card" style="border-top: 4px solid #7c3aed; margin-bottom: 1.5rem; background: #faf5ff;">
+            <div class="section-title">
+              <div>
+                <span style="font-size: 1.05rem; font-weight: 700; color: #5b21b6;">⚡ ATO ATTACK SIMULATOR (TEST MODE FOR PROJECT DEMO)</span>
+                <div style="font-size: 0.8rem; color: #6b21a8;">Simulate real-time session hijacking attack vectors to evaluate engine response live</div>
+              </div>
+              <span class="badge" style="background:#f3e8ff; color:#6b21a8; border:1px solid #d8b4fe; font-weight:700;">DEMO TEST MODE</span>
+            </div>
+
+            <p style="font-size: 0.85rem; color: #581c87; margin-bottom: 1rem;">
+              Select an attack preset below to inject a simulated hijacked request against this user session and observe the risk engine score jump, rule triggering, and automated enforcement in real time:
+            </p>
+
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline" style="border-color: #7c3aed; color: #7c3aed; font-weight: 700;" onclick="triggerSimulatedATOAttack('BROWSER_SWITCH')">
+                🦊 Simulate Browser Switch (Firefox / Linux) [+40 Risk]
+              </button>
+              <button type="button" class="btn btn-danger" style="background: #7c3aed; border-color: #7c3aed; font-weight: 700;" onclick="triggerSimulatedATOAttack('CROSS_COUNTRY_HIJACK')">
+                🌍 Simulate Cross-Country Hijack (Germany IP + Firefox) [+95 Risk - BLOCK]
+              </button>
+              <button type="button" class="btn btn-outline" style="border-color: #dc2626; color: #dc2626; font-weight: 700;" onclick="triggerSimulatedATOAttack('SESSION_REPLAY')">
+                ⚡ Simulate Session Replay Attack [+80 Risk]
+              </button>
+            </div>
+
+            <div id="ato-simulator-feedback-alert" class="alert alert-success" style="display:none; margin-top: 1rem;"></div>
+          </div>
+
           <!-- 7. ANALYST ACTION CONSOLE -->
           <div class="card" style="border-top: 4px solid #2563eb;">
             <div class="section-title">

@@ -1,7 +1,7 @@
 /**
  * FINSPARK - Session Integrity Engine (Account Takeover / ATO Protection)
- * Rule-based Session Integrity Engine that establishes a trusted environment profile at login
- * and continuously evaluates subsequent requests against the baseline to detect session hijacking/ATO.
+ * Captures real client environment baselines upon authentication and continuously validates
+ * subsequent requests against database records to detect Account Takeover (ATO).
  */
 
 import { supabase } from '../db/supabaseClient.js';
@@ -134,22 +134,25 @@ function parseUserAgent(uaString = '') {
 }
 
 /**
- * Helper to extract IP and Geolocation details
+ * Helper to extract IP and Geolocation details, giving priority to real client environment payloads
  */
 function extractRequestGeoDetails(req) {
+  const clientEnv = req.body?.clientEnv || {};
   const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket?.remoteAddress || req.ip || '127.0.0.1';
-  const userAgent = req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
-  const language = req.headers['accept-language']?.split(',')[0] || 'en-US';
-  const timezone = req.headers['x-timezone'] || req.body?.timezone || 'Asia/Kolkata';
+  const userAgent = clientEnv.userAgent || req.headers['user-agent'] || 'Mozilla/5.0';
+  const language = clientEnv.language || req.headers['accept-language']?.split(',')[0] || 'en-US';
+  const timezone = clientEnv.timezone || req.headers['x-timezone'] || 'Asia/Kolkata';
 
-  // Extract simulated/custom headers or defaults
   const country = req.headers['x-country'] || 'India';
   const region = req.headers['x-region'] || 'Tamil Nadu';
   const city = req.headers['x-city'] || 'Chennai';
-  const deviceFingerprint = req.headers['x-device-fingerprint'] || req.body?.deviceFingerprint || `FP-${Buffer.from(userAgent + ip).toString('base64').substring(0, 16)}`;
-  const screenResolution = req.headers['x-screen-res'] || req.body?.screenResolution || '1920x1080';
+  const deviceFingerprint = clientEnv.deviceFingerprint || req.headers['x-device-fingerprint'] || `FP-DEV-${Buffer.from(userAgent + ip).toString('base64').substring(0, 12)}`;
+  const screenResolution = clientEnv.screenResolution || req.headers['x-screen-res'] || '1920x1080';
 
-  const { browserName, browserVersion, os } = parseUserAgent(userAgent);
+  const parsed = parseUserAgent(userAgent);
+  const browserName = clientEnv.browserName || parsed.browserName;
+  const browserVersion = clientEnv.browserVersion || parsed.browserVersion;
+  const operatingSystem = clientEnv.operatingSystem || parsed.os;
 
   return {
     ipAddress: ip,
@@ -163,14 +166,14 @@ function extractRequestGeoDetails(req) {
     deviceId: req.headers['x-device-id'] || `DEV-${deviceFingerprint.substring(0, 8)}`,
     browserName,
     browserVersion,
-    operatingSystem: os,
+    operatingSystem,
     screenResolution
   };
 }
 
 export const sessionIntegrityEngine = {
   /**
-   * 1. CREATE TRUSTED SESSION PROFILE UPON LOGIN
+   * 1. CREATE TRUSTED SESSION PROFILE UPON LOGIN & PERSIST TO DB
    */
   async createTrustedSessionProfile({ sessionId, userId, accountId, req }) {
     if (!sessionId || !userId) return null;
@@ -204,20 +207,24 @@ export const sessionIntegrityEngine = {
 
     trustedSessionProfiles.set(sessionId, trustedProfile);
 
-    // Persist to Supabase if table exists (gracefully handle fallback)
+    // Persist to Supabase trusted_session_profiles table
     try {
-      await supabase.from('session_profiles').upsert([{
+      await supabase.from('trusted_session_profiles').upsert([{
         session_id: sessionId,
         user_id: userId,
         account_id: trustedProfile.accountId,
         device_fingerprint: details.deviceFingerprint,
         browser_name: details.browserName,
+        browser_version: details.browserVersion,
         operating_system: details.operatingSystem,
         user_agent: details.userAgent,
         ip_address: details.ipAddress,
         country: details.country,
+        region: details.region,
         city: details.city,
         timezone: details.timezone,
+        language: details.language,
+        screen_resolution: details.screenResolution,
         login_timestamp: now.toISOString()
       }]);
     } catch (err) {}
@@ -243,7 +250,39 @@ export const sessionIntegrityEngine = {
 
     let trusted = trustedSessionProfiles.get(sessionId);
 
-    // Fallback: Create dynamic baseline if not in memory
+    // If not in memory, query Supabase trusted_session_profiles table
+    if (!trusted) {
+      try {
+        const { data } = await supabase.from('trusted_session_profiles').select('*').eq('session_id', sessionId).single();
+        if (data) {
+          trusted = {
+            sessionId: data.session_id,
+            userId: data.user_id,
+            accountId: data.account_id || userId,
+            deviceId: `DEV-${(data.device_fingerprint || '').substring(0, 8)}`,
+            deviceFingerprint: data.device_fingerprint,
+            browserName: data.browser_name,
+            browserVersion: data.browser_version,
+            operatingSystem: data.operating_system,
+            userAgent: data.user_agent,
+            ipAddress: data.ip_address,
+            country: data.country,
+            region: data.region,
+            city: data.city,
+            timezone: data.timezone,
+            language: data.language,
+            screenResolution: data.screen_resolution,
+            loginTimestamp: data.login_timestamp,
+            sessionExpiry: new Date(new Date(data.login_timestamp).getTime() + 2 * 3600 * 1000).toISOString(),
+            requestCount: 1,
+            lastSeenTimestamp: new Date().toISOString()
+          };
+          trustedSessionProfiles.set(sessionId, trusted);
+        }
+      } catch (e) {}
+    }
+
+    // Fallback baseline if no DB record found
     if (!trusted) {
       const details = extractRequestGeoDetails(req);
       trusted = {
@@ -275,6 +314,13 @@ export const sessionIntegrityEngine = {
     trusted.lastSeenTimestamp = new Date().toISOString();
 
     const current = extractRequestGeoDetails(req);
+    return this.evaluateProfilesComparison(trusted, current);
+  },
+
+  /**
+   * Helper to perform comparison and rule score calculation
+   */
+  async evaluateProfilesComparison(trusted, current) {
     const triggeredRules = [];
     let totalRiskScore = 0;
 
@@ -290,11 +336,11 @@ export const sessionIntegrityEngine = {
     if (!isDeviceMatched) {
       const rule = SESSION_INTEGRITY_RULES.find(r => r.ruleId === 'DEVICE_FINGERPRINT_CHANGED');
       totalRiskScore += rule.weight;
-      triggeredRules.push({ ...rule, evidence: `Device fingerprint '${current.deviceFingerprint}' differs from trusted '${trusted.deviceFingerprint}'` });
+      triggeredRules.push({ ...rule, evidence: `Device fingerprint '${current.deviceFingerprint}' differs from trusted baseline '${trusted.deviceFingerprint}'` });
     }
 
     // Compare Country (+35)
-    const isCountryMatched = current.country.toLowerCase() === trusted.country.toLowerCase();
+    const isCountryMatched = (current.country || '').toLowerCase() === (trusted.country || '').toLowerCase();
     if (!isCountryMatched) {
       const rule = SESSION_INTEGRITY_RULES.find(r => r.ruleId === 'COUNTRY_CHANGED');
       totalRiskScore += rule.weight;
@@ -302,7 +348,7 @@ export const sessionIntegrityEngine = {
     }
 
     // Compare Browser (+20)
-    const isBrowserMatched = current.browserName.toLowerCase() === trusted.browserName.toLowerCase();
+    const isBrowserMatched = (current.browserName || '').toLowerCase() === (trusted.browserName || '').toLowerCase();
     if (!isBrowserMatched) {
       const rule = SESSION_INTEGRITY_RULES.find(r => r.ruleId === 'BROWSER_CHANGED');
       totalRiskScore += rule.weight;
@@ -310,7 +356,7 @@ export const sessionIntegrityEngine = {
     }
 
     // Compare Operating System (+20)
-    const isOSMatched = current.operatingSystem.toLowerCase() === trusted.operatingSystem.toLowerCase();
+    const isOSMatched = (current.operatingSystem || '').toLowerCase() === (trusted.operatingSystem || '').toLowerCase();
     if (!isOSMatched) {
       const rule = SESSION_INTEGRITY_RULES.find(r => r.ruleId === 'OS_CHANGED');
       totalRiskScore += rule.weight;
@@ -318,11 +364,11 @@ export const sessionIntegrityEngine = {
     }
 
     // Compare City / Location (+15)
-    const isLocationMatched = current.city.toLowerCase() === trusted.city.toLowerCase();
+    const isLocationMatched = (current.city || '').toLowerCase() === (trusted.city || '').toLowerCase();
     if (!isLocationMatched && isCountryMatched) {
       const rule = SESSION_INTEGRITY_RULES.find(r => r.ruleId === 'LOCATION_CHANGED');
       totalRiskScore += rule.weight;
-      triggeredRules.push({ ...rule, evidence: `Location city changed from '${trusted.city}' to '${current.city}'` });
+      triggeredRules.push({ ...rule, evidence: `City changed from '${trusted.city}' to '${current.city}'` });
     }
 
     // Compare User Agent (+15)
@@ -386,10 +432,10 @@ export const sessionIntegrityEngine = {
       language: isLangMatched ? 'Matched' : 'Changed'
     };
 
-    // Full Analyst Evidence Record
+    // Full Evidence Record
     const evidenceRecord = {
-      sessionId,
-      userId,
+      sessionId: trusted.sessionId,
+      userId: trusted.userId,
       accountId: trusted.accountId,
       detectionReason: 'Account Takeover (ATO)',
       riskScore: finalScore,
@@ -425,15 +471,15 @@ export const sessionIntegrityEngine = {
       triggeredRules
     };
 
-    sessionIntegrityEvidence.set(sessionId, evidenceRecord);
+    sessionIntegrityEvidence.set(trusted.sessionId, evidenceRecord);
 
     // Persist suspicious evidence to risk_decisions table for analyst portal
     if (action !== 'ALLOW') {
       try {
         await riskRepository.createRiskDecision({
           transaction_id: `ATO-${Date.now().toString(36).toUpperCase()}`,
-          user_id: userId,
-          session_id: sessionId,
+          user_id: trusted.userId,
+          session_id: trusted.sessionId,
           risk_score: finalScore,
           risk_level: riskLevel,
           decision: action,
@@ -455,7 +501,94 @@ export const sessionIntegrityEngine = {
   },
 
   /**
-   * 3. GET EVIDENCE RECORD FOR A SESSION ID
+   * 3. SIMULATE ATO ATTACK (TEST MODE FOR PROJECT DEMO)
+   */
+  async simulateATOAttack({ sessionId, attackPreset, customParams }) {
+    let trusted = trustedSessionProfiles.get(sessionId);
+    if (!trusted) {
+      // Query DB for trusted profile
+      try {
+        const { data } = await supabase.from('trusted_session_profiles').select('*').eq('session_id', sessionId).single();
+        if (data) {
+          trusted = {
+            sessionId: data.session_id,
+            userId: data.user_id,
+            accountId: data.account_id,
+            deviceId: `DEV-${(data.device_fingerprint || '').substring(0, 8)}`,
+            deviceFingerprint: data.device_fingerprint,
+            browserName: data.browser_name,
+            browserVersion: data.browser_version,
+            operatingSystem: data.operating_system,
+            userAgent: data.user_agent,
+            ipAddress: data.ip_address,
+            country: data.country,
+            region: data.region,
+            city: data.city,
+            timezone: data.timezone,
+            language: data.language,
+            screenResolution: data.screen_resolution,
+            loginTimestamp: data.login_timestamp,
+            sessionExpiry: new Date(Date.now() + 2 * 3600 * 1000).toISOString()
+          };
+        }
+      } catch (e) {}
+    }
+
+    if (!trusted) {
+      trusted = {
+        sessionId: sessionId || 'SES-882341',
+        userId: 'USR-001',
+        accountId: 'ACC-001',
+        deviceId: 'Windows Laptop',
+        deviceFingerprint: 'FP-CANVAS-TRUSTED-123',
+        browserName: 'Chrome',
+        browserVersion: '126.0',
+        operatingSystem: 'Windows 11',
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0)',
+        ipAddress: '49.207.54.12',
+        country: 'India',
+        region: 'Tamil Nadu',
+        city: 'Chennai',
+        timezone: 'Asia/Kolkata',
+        language: 'en-US',
+        screenResolution: '1920x1080',
+        loginTimestamp: new Date().toISOString(),
+        sessionExpiry: new Date(Date.now() + 2 * 3600 * 1000).toISOString()
+      };
+    }
+
+    let simulatedCurrent = { ...trusted };
+
+    if (attackPreset === 'BROWSER_SWITCH') {
+      simulatedCurrent.browserName = 'Firefox';
+      simulatedCurrent.browserVersion = '125.0';
+      simulatedCurrent.operatingSystem = 'Linux';
+      simulatedCurrent.deviceFingerprint = 'FP-CANVAS-HIJACKED-998';
+    } else if (attackPreset === 'CROSS_COUNTRY_HIJACK') {
+      simulatedCurrent.deviceFingerprint = 'FP-CANVAS-ATTACKER-DE';
+      simulatedCurrent.browserName = 'Firefox';
+      simulatedCurrent.browserVersion = '125.0';
+      simulatedCurrent.operatingSystem = 'Linux';
+      simulatedCurrent.ipAddress = '185.220.101.5';
+      simulatedCurrent.country = 'Germany';
+      simulatedCurrent.region = 'Berlin';
+      simulatedCurrent.city = 'Berlin';
+      simulatedCurrent.timezone = 'Europe/Berlin';
+    } else if (attackPreset === 'SESSION_REPLAY') {
+      simulatedCurrent.deviceFingerprint = 'FP-CANVAS-REPLAY-889';
+      simulatedCurrent.ipAddress = '103.22.180.1';
+      simulatedCurrent.country = 'Russia';
+      simulatedCurrent.city = 'Moscow';
+    } else if (customParams) {
+      simulatedCurrent = { ...simulatedCurrent, ...customParams };
+    }
+
+    const evaluation = await this.evaluateProfilesComparison(trusted, simulatedCurrent);
+    return evaluation;
+  },
+
+  /**
+   * 4. GET EVIDENCE RECORD FOR A SESSION ID
    */
   getEvidenceForSession(sessionId) {
     if (!sessionId) return null;
@@ -463,7 +596,7 @@ export const sessionIntegrityEngine = {
   },
 
   /**
-   * 4. GET ALL SUSPICIOUS SESSIONS FOR ANALYST QUEUE
+   * 5. GET ALL EVIDENCE RECORDS FOR QUEUE
    */
   getAllEvidenceRecords() {
     return Array.from(sessionIntegrityEvidence.values());

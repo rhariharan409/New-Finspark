@@ -920,6 +920,43 @@ function renderATOPageVisualization(queryTarget, atoData, evidenceData) {
 }
 
 /**
+ * ATO ATTACK SIMULATOR HANDLER FOR PROJECT DEMO
+ */
+window.triggerSimulatedATOAttack = async function(attackPreset) {
+  const feedbackEl = document.getElementById('ato-simulator-feedback-alert');
+  const sessionId = document.getElementById('ato-sum-session-id')?.textContent || 'SES-882341';
+
+  try {
+    const res = await fetch('/api/analyst/simulate-ato-attack', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, attackPreset })
+    });
+
+    const data = await res.json();
+    if (feedbackEl) {
+      feedbackEl.style.display = 'block';
+      feedbackEl.className = 'alert alert-success';
+      feedbackEl.textContent = `Simulated attack '${attackPreset}' injected! Risk engine recalculated ATO score live.`;
+    }
+
+    // Re-render ATO Visualization Page with updated simulated evaluation data!
+    if (data && data.evaluation) {
+      const ev = data.evaluation.evidence;
+      if (ev) {
+        renderATOPageVisualization(sessionId, { found: true, identity: { full_name: ev.originalProfile?.user_name || 'User' } }, ev);
+      }
+    }
+  } catch (err) {
+    if (feedbackEl) {
+      feedbackEl.style.display = 'block';
+      feedbackEl.className = 'alert alert-danger';
+      feedbackEl.textContent = 'Failed to execute simulated attack.';
+    }
+  }
+};
+
+/**
  * 7. ANALYST ACTION CONSOLE HANDLER
  */
 window.executeAnalystATOAction = async function(action) {

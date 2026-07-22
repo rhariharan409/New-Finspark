@@ -250,6 +250,35 @@ router.get('/session-integrity/:sessionId', (req, res) => {
 });
 
 /**
+ * ATO Attack Simulator API (Test Mode for Project Demo)
+ * POST /api/analyst/simulate-ato-attack
+ */
+router.post('/simulate-ato-attack', async (req, res) => {
+  try {
+    const { sessionId, attackPreset, customParams } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ success: false, message: 'Session ID is required to simulate ATO attack.' });
+    }
+
+    const evaluation = await sessionIntegrityEngine.simulateATOAttack({
+      sessionId,
+      attackPreset,
+      customParams
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `ATO Attack Simulation executed using preset '${attackPreset || 'CUSTOM'}'.`,
+      evaluation
+    });
+
+  } catch (err) {
+    console.error('Simulate ATO attack error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to simulate ATO attack.' });
+  }
+});
+
+/**
  * Unified Threat Intelligence Dashboard API
  * GET /api/analyst/threat-intel?query=...
  */
