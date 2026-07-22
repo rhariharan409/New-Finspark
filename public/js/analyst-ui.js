@@ -1,10 +1,23 @@
 /**
- * FINSPARK - Analyst Portal & Real-Time Money Flow Analysis Controller
- * Provides Account Investigation, Dynamic Session Aggregations, Real-Time Directed Money Flow Visualization, Time Range Filtering, Connection Details Modal, and Structuring Alerts.
+ * FINSPARK - Professional Fraud Investigation Graph Controller
+ * Interactive SVG Directed Money Flow Graph with Multi-Hop Traversal (Hops 1-4), Time Range Filtering, Zoom & Pan Viewport, Dragging, Risk Color Propagation, and Side Panels.
  */
 
-let currentInvestigationData = null;
-let currentSelectedRange = 'all';
+let currentQuery = '';
+let currentHops = 1;
+let currentTimeRange = 'all';
+
+let graphData = null; // Holds { nodes, edges, summary, target_user_id }
+let nodePositions = {}; // Holds { userId: { x, y } }
+let isDraggingNode = false;
+let draggedNodeId = null;
+let dragOffset = { x: 0, y: 0 };
+
+// Viewport Zoom & Pan State
+let transform = { scale: 1, translateX: 0, translateY: 0 };
+let isPanningView = false;
+let panStart = { x: 0, y: 0 };
+
 let autoRefreshTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -32,7 +45,7 @@ async function initAnalystPortal() {
     return;
   }
 
-  // Bind Logout Button
+  // Logout Button
   const logoutBtn = document.getElementById('analyst-logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
@@ -42,7 +55,7 @@ async function initAnalystPortal() {
     });
   }
 
-  // Bind Search Form
+  // Search Form
   const form = document.getElementById('analyst-search-form');
   const queryInput = document.getElementById('analyst-query-input');
   const alertEl = document.getElementById('analyst-search-alert');
@@ -52,55 +65,80 @@ async function initAnalystPortal() {
       e.preventDefault();
       if (alertEl) alertEl.style.display = 'none';
 
-      const query = queryInput.value.trim();
-      if (!query) return;
+      const q = queryInput.value.trim();
+      if (!q) return;
 
+      currentQuery = q;
       const submitBtn = document.getElementById('analyst-search-btn');
       submitBtn.disabled = true;
       submitBtn.textContent = 'Investigating...';
 
-      await executeInvestigation(query, true);
+      await executeFullInvestigation(currentQuery, true);
       submitBtn.disabled = false;
       submitBtn.textContent = 'Investigate Account';
     });
   }
 
-  // Bind Time Filter Buttons
-  const filterBtns = document.querySelectorAll('.time-filter-btn');
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', (e) => {
+  // Hop Depth Filter Buttons
+  const hopBtns = document.querySelectorAll('.hop-filter-btn');
+  hopBtns.forEach(btn => {
+    btn.addEventListener('click', async (e) => {
       e.preventDefault();
-      filterBtns.forEach(b => b.classList.remove('active'));
+      hopBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      currentSelectedRange = btn.getAttribute('data-range') || 'all';
+      currentHops = parseInt(btn.getAttribute('data-hop')) || 1;
 
-      if (currentInvestigationData) {
-        renderMoneyFlowSection(currentInvestigationData, currentSelectedRange);
+      if (currentQuery) {
+        await loadMoneyFlowGraph(currentQuery, currentHops, currentTimeRange);
       }
     });
   });
 
-  // Bind Connection Modal Close Button
-  const modalCloseBtn = document.getElementById('modal-close-btn');
-  const modalOverlay = document.getElementById('connection-modal');
-  if (modalCloseBtn && modalOverlay) {
-    modalCloseBtn.addEventListener('click', () => { modalOverlay.style.display = 'none'; });
-    modalOverlay.addEventListener('click', (e) => {
-      if (e.target === modalOverlay) modalOverlay.style.display = 'none';
-    });
-  }
+  // Time Range Filter Buttons
+  const timeBtns = document.querySelectorAll('.time-filter-btn');
+  timeBtns.forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      timeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentTimeRange = btn.getAttribute('data-range') || 'all';
 
-  // Start periodic 6s silent refresh
+      if (currentQuery) {
+        await loadMoneyFlowGraph(currentQuery, currentHops, currentTimeRange);
+      }
+    });
+  });
+
+  // Graph Zoom / Pan Control Buttons
+  document.getElementById('btn-zoom-in')?.addEventListener('click', () => zoomViewport(1.2));
+  document.getElementById('btn-zoom-out')?.addEventListener('click', () => zoomViewport(0.8));
+  document.getElementById('btn-reset-view')?.addEventListener('click', () => resetViewport());
+  document.getElementById('btn-auto-layout')?.addEventListener('click', () => {
+    nodePositions = {};
+    if (graphData) renderGraph(graphData);
+  });
+
+  // Side Panel Close Button
+  document.getElementById('sp-close-btn')?.addEventListener('click', closeSidePanel);
+
+  // Setup SVG Canvas Dragging / Pan Listeners
+  setupGraphInteractions();
+
+  // Periodic 6s silent refresh
   autoRefreshTimer = setInterval(async () => {
-    if (currentInvestigationData && currentInvestigationData.query) {
-      await executeInvestigation(currentInvestigationData.query, false);
+    if (currentQuery) {
+      await executeFullInvestigation(currentQuery, false);
     }
   }, 6000);
 }
 
-async function executeInvestigation(query, isManualSearch = false) {
+/**
+ * Main Account Investigation Orchestrator
+ */
+async function executeFullInvestigation(query, isManualSearch = false) {
   const alertEl = document.getElementById('analyst-search-alert');
   try {
+    // 1. Fetch main account correlation intelligence
     const res = await fetch(`/api/analyst/investigate?accountNumber=${encodeURIComponent(query)}`);
     const data = await res.json();
 
@@ -115,27 +153,34 @@ async function executeInvestigation(query, isManualSearch = false) {
       return;
     }
 
-    currentInvestigationData = data;
-    renderInvestigationData(data, isManualSearch);
+    renderInvestigationSummary(data);
+
+    // 2. Load Multi-Hop Money Flow Graph
+    await loadMoneyFlowGraph(query, currentHops, currentTimeRange, isManualSearch);
+
+    const workspace = document.getElementById('investigation-workspace');
+    if (workspace) workspace.style.display = 'block';
+
+    if (isManualSearch && workspace) {
+      window.scrollTo({ top: workspace.offsetTop - 80, behavior: 'smooth' });
+    }
 
   } catch (err) {
     if (isManualSearch && alertEl) {
-      alertEl.textContent = 'Network error executing account investigation query.';
+      alertEl.textContent = 'Network error executing account investigation.';
       alertEl.style.display = 'block';
     }
   }
 }
 
-function renderInvestigationData(data, shouldScroll = false) {
-  const workspace = document.getElementById('investigation-workspace');
-  if (!workspace || !data.identity) return;
-
-  workspace.style.display = 'block';
+/**
+ * Renders Top Summary Cards & Session/Transaction Tables
+ */
+function renderInvestigationSummary(data) {
   const id = data.identity;
   const tx = data.transactions;
   const risk = data.risk_summary;
 
-  // 1. Investigation Summary
   document.getElementById('sum-name').textContent = id.full_name || 'N/A';
   document.getElementById('sum-account-id').textContent = id.account_id || 'N/A';
   document.getElementById('sum-status').textContent = (id.account_status || 'active').toUpperCase();
@@ -150,10 +195,7 @@ function renderInvestigationData(data, shouldScroll = false) {
     riskBadge.className = risk.risk_level === 'CRITICAL' ? 'badge badge-critical' : (risk.risk_level === 'HIGH' ? 'badge badge-high' : (risk.risk_level === 'MEDIUM' ? 'badge badge-medium' : 'badge badge-low'));
   }
 
-  // 2. MONEY FLOW ANALYSIS SECTION
-  renderMoneyFlowSection(data, currentSelectedRange);
-
-  // 3. Session Analysis & Aggregation Table (Fixed to use backend dynamic session summaries)
+  // Session Analysis Table
   const sessionBody = document.getElementById('session-table-body');
   const sessionBadge = document.getElementById('session-count-badge');
   const sessionList = data.session_summaries || [];
@@ -185,12 +227,11 @@ function renderInvestigationData(data, shouldScroll = false) {
     }).join('');
   }
 
-  // 4. Transaction Analysis Table
+  // Transaction Analysis Table
   const txBody = document.getElementById('tx-table-body');
   const txBadge = document.getElementById('tx-count-badge');
   const txList = tx.transactions_list || [];
   if (txBadge) txBadge.textContent = `${txList.length} Transactions`;
-
   const usersMap = data.users_map || {};
 
   if (txList.length === 0) {
@@ -219,13 +260,12 @@ function renderInvestigationData(data, shouldScroll = false) {
     }).join('');
   }
 
-  // 5. Behavioral Analysis & Structuring Detection
+  // Behavioral Analysis
   const base = data.baseline_comparison;
   document.getElementById('beh-base-avg').textContent = `₹${(base.historical_baseline?.average_transaction_amount || 0).toFixed(2)}`;
   document.getElementById('beh-curr-dev').textContent = `${base.current_activity?.deviation_ratio || 1.0}x`;
   document.getElementById('beh-explanation').textContent = base.explanation;
 
-  // Risk Decision Summary
   document.getElementById('rd-score').textContent = `${risk.final_risk_score}/100`;
   const rdLevel = document.getElementById('rd-level');
   const rdDecision = document.getElementById('rd-decision');
@@ -243,306 +283,505 @@ function renderInvestigationData(data, shouldScroll = false) {
   if (signalsList) {
     signalsList.innerHTML = signals.map(sig => `<li>${sig}</li>`).join('');
   }
-
-  if (shouldScroll) {
-    window.scrollTo({ top: workspace.offsetTop - 80, behavior: 'smooth' });
-  }
 }
 
 /**
- * Renders the Real-Time Database-Driven Money Flow Analysis Section
+ * Loads Multi-Hop Money Flow Data from backend API
  */
-function renderMoneyFlowSection(data, range = 'all') {
-  const canvas = document.getElementById('money-flow-canvas');
-  if (!canvas || !data || !data.transactions) return;
-
-  const targetUser = data.identity;
-  const usersMap = data.users_map || {};
-  const allTxns = data.transactions.transactions_list || [];
-
-  // Filter transactions by selected time range
-  const nowMs = Date.now();
-  let timeLimitMs = 0;
-  let rangeLabel = 'ALL TIME';
-
-  if (range === '1h') { timeLimitMs = 60 * 60 * 1000; rangeLabel = 'LAST 1 HOUR'; }
-  else if (range === '10h') { timeLimitMs = 10 * 60 * 60 * 1000; rangeLabel = 'LAST 10 HOURS'; }
-  else if (range === '24h') { timeLimitMs = 24 * 60 * 60 * 1000; rangeLabel = 'LAST 24 HOURS'; }
-  else if (range === '7d') { timeLimitMs = 7 * 24 * 60 * 60 * 1000; rangeLabel = 'LAST 7 DAYS'; }
-
-  const filteredTxns = timeLimitMs > 0
-    ? allTxns.filter(t => (nowMs - new Date(t.transaction_timestamp || t.created_at).getTime()) <= timeLimitMs)
-    : allTxns;
-
-  // Update Summary Metrics
-  document.getElementById('flow-period-val').textContent = rangeLabel;
-  document.getElementById('flow-total-txns').textContent = filteredTxns.length;
-
-  const totalAmount = filteredTxns.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-  document.getElementById('flow-total-amount').textContent = `₹${totalAmount.toFixed(2)}`;
-
-  const sendersSet = new Set(filteredTxns.map(t => t.sender_user_id).filter(Boolean));
-  const receiversSet = new Set(filteredTxns.map(t => t.receiver_user_id).filter(Boolean));
-  document.getElementById('flow-senders-count').textContent = sendersSet.size;
-  document.getElementById('flow-receivers-count').textContent = receiversSet.size;
-
-  // Most Active Sender & Receiver calculation
-  const senderCounts = {};
-  const receiverCounts = {};
-  let maxTxAmount = 0;
-
-  filteredTxns.forEach(t => {
-    const amt = parseFloat(t.amount) || 0;
-    if (amt > maxTxAmount) maxTxAmount = amt;
-    senderCounts[t.sender_user_id] = (senderCounts[t.sender_user_id] || 0) + 1;
-    receiverCounts[t.receiver_user_id] = (receiverCounts[t.receiver_user_id] || 0) + 1;
-  });
-
-  let topSenderId = Object.keys(senderCounts).sort((a,b) => senderCounts[b] - senderCounts[a])[0];
-  let topReceiverId = Object.keys(receiverCounts).sort((a,b) => receiverCounts[b] - receiverCounts[a])[0];
-
-  const topSenderName = topSenderId ? (usersMap[topSenderId]?.full_name || topSenderId) : 'None';
-  const topReceiverName = topReceiverId ? (usersMap[topReceiverId]?.full_name || topReceiverId) : 'None';
-
-  document.getElementById('flow-top-sender').textContent = topSenderName;
-  document.getElementById('flow-top-receiver').textContent = topReceiverName;
-  document.getElementById('flow-largest-tx').textContent = `₹${maxTxAmount.toFixed(2)}`;
-
-  // Transaction Splitting / Structuring Detector on filtered subset
-  const splittingAlert = document.getElementById('flow-splitting-alert');
-  const splittingText = document.getElementById('flow-splitting-text');
-  let splitDetected = false;
-
-  // Group transfers by pair (sender -> receiver)
-  const edgePairs = {};
-  filteredTxns.forEach(t => {
-    const key = `${t.sender_user_id}--->${t.receiver_user_id}`;
-    if (!edgePairs[key]) {
-      edgePairs[key] = {
-        sender_id: t.sender_user_id,
-        receiver_id: t.receiver_user_id,
-        sender_name: usersMap[t.sender_user_id]?.full_name || usersMap[t.sender_user_id]?.account_id || t.sender_user_id,
-        receiver_name: usersMap[t.receiver_user_id]?.full_name || usersMap[t.receiver_user_id]?.account_id || t.receiver_user_id,
-        transactions: [],
-        total_amount: 0
-      };
-    }
-    edgePairs[key].transactions.push(t);
-    edgePairs[key].total_amount += parseFloat(t.amount) || 0;
-  });
-
-  const pairKeys = Object.keys(edgePairs);
-  for (const k of pairKeys) {
-    const pair = edgePairs[k];
-    if (pair.transactions.length >= 3) {
-      splitDetected = true;
-      if (splittingText) {
-        splittingText.textContent = `Repeated transfer pattern detected: ${pair.transactions.length} transactions totaling ₹${pair.total_amount.toFixed(2)} between ${pair.sender_name} ➔ ${pair.receiver_name}.`;
-      }
-      break;
-    }
-  }
-
-  if (splittingAlert) {
-    splittingAlert.style.display = splitDetected ? 'block' : 'none';
-  }
-
-  // Render Directed Money Flow Graph Nodes & Edges
-  if (filteredTxns.length === 0) {
-    canvas.innerHTML = `
-      <div style="text-align: center; color: #64748b; padding: 3rem 1rem;">
-        <div style="font-size: 1.1rem; font-weight: 600; color: #0f172a; margin-bottom: 0.35rem;">No Money Transfers Recorded for Selected Time Period (${rangeLabel})</div>
-        <p style="font-size: 0.85rem;">Select another time range or execute a transfer in User Banking to see real-time flow.</p>
-      </div>
-    `;
-    return;
-  }
-
-  // Separate incoming senders and outgoing receivers for searched target user
-  const targetUserId = targetUser.user_id;
-  const targetName = targetUser.full_name || targetUser.account_id;
-
-  const incomingSenders = [];
-  const outgoingReceivers = [];
-
-  pairKeys.forEach(k => {
-    const pair = edgePairs[k];
-    if (pair.receiver_id === targetUserId) {
-      incomingSenders.push(pair);
-    } else if (pair.sender_id === targetUserId) {
-      outgoingReceivers.push(pair);
-    }
-  });
-
-  let graphHTML = `<div style="display: flex; flex-direction: column; gap: 2rem; width: 100%;">`;
-
-  // Incoming Money Flow Section (Senders ---> Target User)
-  if (incomingSenders.length > 0) {
-    graphHTML += `
-      <div>
-        <div style="font-size: 0.85rem; font-weight: 700; color: #059669; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">
-          ⬇ MONEY RECEIVED BY ${targetName.toUpperCase()}
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-          ${incomingSenders.map((pair, idx) => {
-            const lastTx = pair.transactions[0];
-            const riskColor = pair.total_amount >= 50000 ? '#dc2626' : (pair.transactions.length >= 3 ? '#d97706' : '#2563eb');
-            const encodedKey = encodeURIComponent(JSON.stringify({ pairKey: `${pair.sender_id}--->${pair.receiver_id}`, range }));
-
-            return `
-              <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; flex-wrap: wrap; gap: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-                
-                <!-- Sender Node -->
-                <div class="flow-node">
-                  <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">SENDER</span>
-                  <strong style="font-size: 0.95rem; color: #0f172a; margin-top: 0.15rem;">${pair.sender_name}</strong>
-                  <span style="font-size: 0.7rem; color: #64748b; margin-top: 0.1rem;">${pair.sender_id}</span>
-                </div>
-
-                <!-- Directed Money Arrow Edge Box -->
-                <div class="flow-edge-box" onclick="openConnectionModal('${encodedKey}')" style="border-left: 4px solid ${riskColor}; text-align: center; flex: 1; min-width: 220px;">
-                  <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">DIRECTED TRANSFER FLOW ──▶</div>
-                  <div style="font-size: 1.15rem; font-weight: 800; color: ${riskColor}; margin: 0.15rem 0;">
-                    ₹${pair.total_amount.toFixed(2)}
-                  </div>
-                  <div style="font-size: 0.75rem; color: #475569;">
-                    <strong>${pair.transactions.length}</strong> transaction${pair.transactions.length > 1 ? 's' : ''} | Last: ${new Date(lastTx.transaction_timestamp || lastTx.created_at).toLocaleTimeString()}
-                  </div>
-                  <div style="font-size: 0.7rem; color: #2563eb; margin-top: 0.25rem; font-weight: 600;">🔍 Click to view breakdown</div>
-                </div>
-
-                <!-- Target Receiver Node -->
-                <div class="flow-node target-user">
-                  <span style="font-size: 0.75rem; color: #059669; font-weight: 700;">TARGET RECEIVER</span>
-                  <strong style="font-size: 0.95rem; color: #065f46; margin-top: 0.15rem;">${targetName}</strong>
-                  <span style="font-size: 0.7rem; color: #047857; margin-top: 0.1rem;">${targetUserId}</span>
-                </div>
-
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  // Outgoing Money Flow Section (Target User ---> Receivers)
-  if (outgoingReceivers.length > 0) {
-    graphHTML += `
-      <div>
-        <div style="font-size: 0.85rem; font-weight: 700; color: #2563eb; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px;">
-          ⬆ MONEY SENT BY ${targetName.toUpperCase()}
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
-          ${outgoingReceivers.map((pair) => {
-            const lastTx = pair.transactions[0];
-            const riskColor = pair.total_amount >= 50000 ? '#dc2626' : (pair.transactions.length >= 3 ? '#d97706' : '#2563eb');
-            const encodedKey = encodeURIComponent(JSON.stringify({ pairKey: `${pair.sender_id}--->${pair.receiver_id}`, range }));
-
-            return `
-              <div style="display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; flex-wrap: wrap; gap: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-                
-                <!-- Target Sender Node -->
-                <div class="flow-node target-user">
-                  <span style="font-size: 0.75rem; color: #059669; font-weight: 700;">TARGET SENDER</span>
-                  <strong style="font-size: 0.95rem; color: #065f46; margin-top: 0.15rem;">${targetName}</strong>
-                  <span style="font-size: 0.7rem; color: #047857; margin-top: 0.1rem;">${targetUserId}</span>
-                </div>
-
-                <!-- Directed Money Arrow Edge Box -->
-                <div class="flow-edge-box" onclick="openConnectionModal('${encodedKey}')" style="border-left: 4px solid ${riskColor}; text-align: center; flex: 1; min-width: 220px;">
-                  <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">DIRECTED TRANSFER FLOW ──▶</div>
-                  <div style="font-size: 1.15rem; font-weight: 800; color: ${riskColor}; margin: 0.15rem 0;">
-                    ₹${pair.total_amount.toFixed(2)}
-                  </div>
-                  <div style="font-size: 0.75rem; color: #475569;">
-                    <strong>${pair.transactions.length}</strong> transaction${pair.transactions.length > 1 ? 's' : ''} | Last: ${new Date(lastTx.transaction_timestamp || lastTx.created_at).toLocaleTimeString()}
-                  </div>
-                  <div style="font-size: 0.7rem; color: #2563eb; margin-top: 0.25rem; font-weight: 600;">🔍 Click to view breakdown</div>
-                </div>
-
-                <!-- Receiver Node -->
-                <div class="flow-node">
-                  <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">RECEIVER</span>
-                  <strong style="font-size: 0.95rem; color: #0f172a; margin-top: 0.15rem;">${pair.receiver_name}</strong>
-                  <span style="font-size: 0.7rem; color: #64748b; margin-top: 0.1rem;">${pair.receiver_id}</span>
-                </div>
-
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  graphHTML += `</div>`;
-  canvas.innerHTML = graphHTML;
-}
-
-/**
- * Opens Interactive Connection Modal showing individual transactions between sender and receiver
- */
-window.openConnectionModal = function(encodedData) {
-  if (!currentInvestigationData) return;
-
+async function loadMoneyFlowGraph(query, hops, range, isResetPositions = false) {
   try {
-    const { pairKey, range } = JSON.parse(decodeURIComponent(encodedData));
-    const [senderId, receiverId] = pairKey.split('--->');
-    const usersMap = currentInvestigationData.users_map || {};
-    const allTxns = currentInvestigationData.transactions.transactions_list || [];
+    const res = await fetch(`/api/analyst/money-flow?accountNumber=${encodeURIComponent(query)}&hops=${hops}&timeRange=${range}`);
+    const data = await res.json();
 
-    const nowMs = Date.now();
-    let timeLimitMs = 0;
-    if (range === '1h') timeLimitMs = 60 * 60 * 1000;
-    else if (range === '10h') timeLimitMs = 10 * 60 * 60 * 1000;
-    else if (range === '24h') timeLimitMs = 24 * 60 * 60 * 1000;
-    else if (range === '7d') timeLimitMs = 7 * 24 * 60 * 60 * 1000;
-
-    const matchedTxns = allTxns.filter(t => {
-      const isMatch = t.sender_user_id === senderId && t.receiver_user_id === receiverId;
-      if (!isMatch) return false;
-      if (timeLimitMs > 0) {
-        return (nowMs - new Date(t.transaction_timestamp || t.created_at).getTime()) <= timeLimitMs;
-      }
-      return true;
-    });
-
-    const senderName = usersMap[senderId]?.full_name || senderId;
-    const receiverName = usersMap[receiverId]?.full_name || receiverId;
-    const totalAmt = matchedTxns.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-
-    const titleEl = document.getElementById('modal-title');
-    if (titleEl) titleEl.textContent = `Transfer Details: ${senderName} ➔ ${receiverName}`;
-
-    const summaryBar = document.getElementById('modal-summary-bar');
-    if (summaryBar) {
-      summaryBar.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-          <div><strong>Total Flow:</strong> <span style="color: #059669; font-weight: 700; font-size: 1.05rem;">₹${totalAmt.toFixed(2)}</span></div>
-          <div><strong>Transactions Count:</strong> ${matchedTxns.length}</div>
-          <div><strong>Time Range:</strong> ${range.toUpperCase()}</div>
-        </div>
-      `;
+    if (!res.ok || !data.found) {
+      return;
     }
 
-    const tableBody = document.getElementById('modal-table-body');
-    if (tableBody) {
-      tableBody.innerHTML = matchedTxns.map(t => `
-        <tr>
-          <td><strong>${t.transaction_id}</strong></td>
-          <td style="font-weight:700; color:#059669;">₹${parseFloat(t.amount).toFixed(2)}</td>
-          <td>${new Date(t.transaction_timestamp || t.created_at).toLocaleString()}</td>
-          <td><span class="badge badge-low">${t.transaction_status || 'completed'}</span></td>
-          <td><span class="badge ${t.risk_level === 'CRITICAL' ? 'badge-critical' : (t.risk_level === 'HIGH' ? 'badge-high' : 'badge-low')}">${t.risk_level || 'LOW'}</span></td>
-        </tr>
-      `).join('');
-    }
+    graphData = data;
+    if (isResetPositions) nodePositions = {};
 
-    const modal = document.getElementById('connection-modal');
-    if (modal) modal.style.display = 'flex';
+    updateFlowSummaryMetrics(data);
+    renderGraph(data);
 
   } catch (err) {
-    console.error('Open connection modal error:', err);
+    console.error('Load money flow graph error:', err);
   }
+}
+
+/**
+ * Updates Money Flow Summary Bar and Structuring Warning Box
+ */
+function updateFlowSummaryMetrics(data) {
+  const sum = data.summary || {};
+  document.getElementById('flow-period-val').textContent = `HOP ${data.max_hops} | ${data.time_range.toUpperCase()}`;
+  document.getElementById('flow-total-txns').textContent = sum.total_transactions || 0;
+  document.getElementById('flow-total-amount').textContent = `₹${(sum.total_amount_transferred || 0).toFixed(2)}`;
+  document.getElementById('flow-senders-count').textContent = sum.unique_senders_count || 0;
+  document.getElementById('flow-receivers-count').textContent = sum.unique_receivers_count || 0;
+
+  const splitAlert = document.getElementById('flow-splitting-alert');
+  const splitText = document.getElementById('flow-splitting-text');
+  if (sum.split_pattern_detected) {
+    if (splitText) splitText.textContent = sum.split_warning_text;
+    if (splitAlert) splitAlert.style.display = 'block';
+  } else {
+    if (splitAlert) splitAlert.style.display = 'none';
+  }
+}
+
+/**
+ * SVG GRAPH ENGINE: Renders Interactive Directed Nodes & Edges
+ */
+function renderGraph(data) {
+  const nodesLayer = document.getElementById('nodes-layer');
+  const edgesLayer = document.getElementById('edges-layer');
+  if (!nodesLayer || !edgesLayer) return;
+
+  nodesLayer.innerHTML = '';
+  edgesLayer.innerHTML = '';
+
+  const nodes = data.nodes || [];
+  const edges = data.edges || [];
+  const targetId = data.target_user_id;
+
+  // Auto-calculate node positions if not dragged
+  const svgEl = document.getElementById('graph-svg');
+  const width = svgEl.clientWidth || 900;
+  const height = svgEl.clientHeight || 520;
+
+  const centerX = width / 2;
+  const centerY = height / 2;
+
+  // Position target user in center
+  if (!nodePositions[targetId]) {
+    nodePositions[targetId] = { x: centerX, y: centerY };
+  }
+
+  // Partition other nodes into incoming (senders) & outgoing (receivers)
+  const incomingNodeIds = [];
+  const outgoingNodeIds = [];
+  const otherNodeIds = [];
+
+  edges.forEach(e => {
+    if (e.target === targetId && !incomingNodeIds.includes(e.source)) incomingNodeIds.push(e.source);
+    if (e.source === targetId && !outgoingNodeIds.includes(e.target)) outgoingNodeIds.push(e.target);
+  });
+
+  nodes.forEach(n => {
+    if (n.id !== targetId && !incomingNodeIds.includes(n.id) && !outgoingNodeIds.includes(n.id)) {
+      otherNodeIds.push(n.id);
+    }
+  });
+
+  // Calculate layout coordinates for incoming nodes (top semicircle)
+  incomingNodeIds.forEach((id, idx) => {
+    if (!nodePositions[id]) {
+      const step = Math.PI / (incomingNodeIds.length + 1);
+      const angle = Math.PI + step * (idx + 1);
+      nodePositions[id] = {
+        x: centerX + 260 * Math.cos(angle),
+        y: centerY + 180 * Math.sin(angle)
+      };
+    }
+  });
+
+  // Calculate layout coordinates for outgoing nodes (bottom semicircle)
+  outgoingNodeIds.forEach((id, idx) => {
+    if (!nodePositions[id]) {
+      const step = Math.PI / (outgoingNodeIds.length + 1);
+      const angle = step * (idx + 1);
+      nodePositions[id] = {
+        x: centerX + 260 * Math.cos(angle),
+        y: centerY + 180 * Math.sin(angle)
+      };
+    }
+  });
+
+  // Multi-hop secondary nodes (outer perimeter)
+  otherNodeIds.forEach((id, idx) => {
+    if (!nodePositions[id]) {
+      const step = (2 * Math.PI) / (otherNodeIds.length || 1);
+      const angle = step * idx;
+      nodePositions[id] = {
+        x: centerX + 360 * Math.cos(angle),
+        y: centerY + 240 * Math.sin(angle)
+      };
+    }
+  });
+
+  // 1. Render Directed Edges
+  edges.forEach(edge => {
+    const srcPos = nodePositions[edge.source];
+    const tgtPos = nodePositions[edge.target];
+    if (!srcPos || !tgtPos) return;
+
+    const riskColor = edge.highest_risk_level === 'CRITICAL' ? '#dc2626' : (edge.highest_risk_level === 'HIGH' ? '#ea580c' : (edge.highest_risk_level === 'MEDIUM' ? '#d97706' : '#059669'));
+
+    const edgeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    edgeG.setAttribute('class', 'edge-group');
+    edgeG.style.cursor = 'pointer';
+    edgeG.onclick = (e) => {
+      e.stopPropagation();
+      openEdgeSidePanel(edge);
+    };
+
+    // Curved edge line
+    const dx = tgtPos.x - srcPos.x;
+    const dy = tgtPos.y - srcPos.y;
+    const cx = (srcPos.x + tgtPos.x) / 2 - dy * 0.15;
+    const cy = (srcPos.y + tgtPos.y) / 2 + dx * 0.15;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${srcPos.x} ${srcPos.y} Q ${cx} ${cy} ${tgtPos.x} ${tgtPos.y}`);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', riskColor);
+    path.setAttribute('stroke-width', edge.is_split_pattern ? '3.5' : '2');
+    path.setAttribute('marker-end', `url(#arrow-${edge.highest_risk_level || 'LOW'})`);
+    if (edge.is_split_pattern) path.setAttribute('stroke-dasharray', '6 3');
+    path.setAttribute('class', 'edge-line');
+
+    // Edge Label Container
+    const textX = (srcPos.x + tgtPos.x) / 2;
+    const textY = (srcPos.y + tgtPos.y) / 2 - 8;
+
+    const labelG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', textX - 45);
+    rect.setAttribute('y', textY - 14);
+    rect.setAttribute('width', '90');
+    rect.setAttribute('height', '24');
+    rect.setAttribute('rx', '4');
+    rect.setAttribute('fill', '#ffffff');
+    rect.setAttribute('stroke', riskColor);
+    rect.setAttribute('stroke-width', '1');
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', textX);
+    text.setAttribute('y', textY + 2);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('fill', '#0f172a');
+    text.setAttribute('font-size', '10px');
+    text.setAttribute('font-weight', '700');
+    text.textContent = `₹${edge.total_amount.toFixed(0)} (${edge.transaction_count})`;
+
+    labelG.appendChild(rect);
+    labelG.appendChild(text);
+
+    edgeG.appendChild(path);
+    edgeG.appendChild(labelG);
+    edgesLayer.appendChild(edgeG);
+  });
+
+  // 2. Render Nodes
+  nodes.forEach(node => {
+    const pos = nodePositions[node.id];
+    if (!pos) return;
+
+    const isTarget = node.is_target;
+    const borderColor = isTarget ? '#2563eb' : (node.risk_level === 'CRITICAL' ? '#dc2626' : (node.risk_level === 'HIGH' ? '#ea580c' : (node.risk_level === 'MEDIUM' ? '#d97706' : '#059669')));
+    const bgColor = isTarget ? '#eff6ff' : '#ffffff';
+    const badgeColor = node.risk_level === 'CRITICAL' ? '#dc2626' : (node.risk_level === 'HIGH' ? '#ea580c' : (node.risk_level === 'MEDIUM' ? '#d97706' : '#059669'));
+
+    const nodeG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    nodeG.setAttribute('class', 'node-group');
+    nodeG.setAttribute('transform', `translate(${pos.x - 75}, ${pos.y - 35})`);
+    
+    // Node Card Rect
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('width', '150');
+    rect.setAttribute('height', '70');
+    rect.setAttribute('rx', '8');
+    rect.setAttribute('fill', bgColor);
+    rect.setAttribute('stroke', borderColor);
+    rect.setAttribute('stroke-width', isTarget ? '3' : '1.5');
+    if (isTarget) rect.setAttribute('filter', 'drop-shadow(0 4px 6px rgba(37,99,235,0.25))');
+
+    // Risk Badge Pill
+    const badgeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    badgeRect.setAttribute('x', '95');
+    badgeRect.setAttribute('y', '6');
+    badgeRect.setAttribute('width', '48');
+    badgeRect.setAttribute('height', '14');
+    badgeRect.setAttribute('rx', '3');
+    badgeRect.setAttribute('fill', badgeColor);
+
+    const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    badgeText.setAttribute('x', '119');
+    badgeText.setAttribute('y', '16');
+    badgeText.setAttribute('text-anchor', 'middle');
+    badgeText.setAttribute('fill', '#ffffff');
+    badgeText.setAttribute('font-size', '8px');
+    badgeText.setAttribute('font-weight', '700');
+    badgeText.textContent = node.risk_level;
+
+    // Node Title (User Name)
+    const titleText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    titleText.setAttribute('x', '10');
+    titleText.setAttribute('y', '22');
+    titleText.setAttribute('fill', '#0f172a');
+    titleText.setAttribute('font-size', '11px');
+    titleText.setAttribute('font-weight', '700');
+    titleText.textContent = truncateString(node.full_name, 14);
+
+    // Account ID
+    const accText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    accText.setAttribute('x', '10');
+    accText.setAttribute('y', '36');
+    accText.setAttribute('fill', '#2563eb');
+    accText.setAttribute('font-size', '9px');
+    accText.setAttribute('font-weight', '600');
+    accText.textContent = node.account_id;
+
+    // Stats Line: Sent / Recv
+    const statsText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    statsText.setAttribute('x', '10');
+    statsText.setAttribute('y', '54');
+    statsText.setAttribute('fill', '#475569');
+    statsText.setAttribute('font-size', '9px');
+    statsText.textContent = `Sent: ₹${node.total_sent} | Recv: ₹${node.total_received}`;
+
+    nodeG.appendChild(rect);
+    nodeG.appendChild(badgeRect);
+    nodeG.appendChild(badgeText);
+    nodeG.appendChild(titleText);
+    nodeG.appendChild(accText);
+    nodeG.appendChild(statsText);
+
+    // Node Click Listener -> Open Node Side Panel
+    nodeG.onclick = (e) => {
+      e.stopPropagation();
+      openNodeSidePanel(node);
+    };
+
+    // Node Drag Listeners
+    nodeG.onmousedown = (e) => {
+      e.stopPropagation();
+      isDraggingNode = true;
+      draggedNodeId = node.id;
+      const pt = getSVGPoint(e);
+      dragOffset = { x: pt.x - pos.x, y: pt.y - pos.y };
+    };
+
+    nodesLayer.appendChild(nodeG);
+  });
+
+  applyViewportTransform();
+}
+
+/**
+ * Side Panel Renderer for Node Click
+ */
+function openNodeSidePanel(node) {
+  const panel = document.getElementById('side-panel');
+  const title = document.getElementById('sp-title');
+  const body = document.getElementById('sp-body');
+  if (!panel || !body) return;
+
+  if (title) title.textContent = `User Node Details: ${node.full_name}`;
+
+  const levelClass = node.risk_level === 'CRITICAL' ? 'badge-critical' : (node.risk_level === 'HIGH' ? 'badge-high' : (node.risk_level === 'MEDIUM' ? 'badge-medium' : 'badge-low'));
+
+  body.innerHTML = `
+    <!-- User Overview -->
+    <div style="background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <strong style="font-size: 1.05rem; color: #0f172a;">${node.full_name}</strong>
+        <span class="badge ${levelClass}">${node.risk_level} RISK</span>
+      </div>
+      <div style="font-size: 0.85rem; color: #475569;">
+        <div><strong>Account ID:</strong> <span style="color: #2563eb;">${node.account_id}</span></div>
+        <div><strong>Email:</strong> ${node.email}</div>
+        <div><strong>Account Status:</strong> <span style="color: #059669; font-weight: 600;">${node.account_status.toUpperCase()}</span></div>
+      </div>
+    </div>
+
+    <!-- Financial Statistics -->
+    <h4 style="font-size: 0.9rem; color: #0f172a; margin-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">Financial Activity</h4>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
+      <div class="summary-box">
+        <span style="font-size: 0.7rem; color: #64748b;">Total Amount Sent</span>
+        <div style="font-weight: 700; color: #dc2626; font-size: 1.1rem; margin-top: 0.15rem;">₹${node.total_sent.toFixed(2)}</div>
+      </div>
+      <div class="summary-box">
+        <span style="font-size: 0.7rem; color: #64748b;">Total Amount Received</span>
+        <div style="font-weight: 700; color: #059669; font-size: 1.1rem; margin-top: 0.15rem;">₹${node.total_received.toFixed(2)}</div>
+      </div>
+      <div class="summary-box">
+        <span style="font-size: 0.7rem; color: #64748b;">Total Transactions</span>
+        <div style="font-weight: 700; color: #0f172a; font-size: 1.1rem; margin-top: 0.15rem;">${node.transaction_count}</div>
+      </div>
+      <div class="summary-box">
+        <span style="font-size: 0.7rem; color: #64748b;">Active Sessions</span>
+        <div style="font-weight: 700; color: #0f172a; font-size: 1.1rem; margin-top: 0.15rem;">${node.session_count}</div>
+      </div>
+    </div>
+
+    <!-- Risk & Behavioral Baselines -->
+    <h4 style="font-size: 0.9rem; color: #0f172a; margin-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">Risk Assessment & Behavior</h4>
+    <div style="font-size: 0.85rem; color: #334155; background: #f8fafc; padding: 0.85rem; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 1.25rem;">
+      <div><strong>Risk Score:</strong> <span style="font-weight: 700; color: #dc2626;">${node.risk_score}/100</span></div>
+      <div><strong>Latest Decision:</strong> <span class="badge ${levelClass}">${node.latest_decision}</span></div>
+      <div style="margin-top: 0.35rem;"><strong>Baseline Average:</strong> ₹${node.baseline_avg.toFixed(2)}</div>
+      <div><strong>Largest Transaction:</strong> ₹${node.largest_tx.toFixed(2)}</div>
+    </div>
+
+    <button type="button" class="btn btn-primary btn-full" onclick="investigateNodeUser('${node.account_id}')">
+      Focus Investigation on ${node.full_name}
+    </button>
+  `;
+
+  panel.classList.add('open');
+}
+
+/**
+ * Side Panel Renderer for Edge Click
+ */
+function openEdgeSidePanel(edge) {
+  const panel = document.getElementById('side-panel');
+  const title = document.getElementById('sp-title');
+  const body = document.getElementById('sp-body');
+  if (!panel || !body) return;
+
+  if (title) title.textContent = `Directed Flow: ${edge.source_name} ➔ ${edge.target_name}`;
+
+  const levelClass = edge.highest_risk_level === 'CRITICAL' ? 'badge-critical' : (edge.highest_risk_level === 'HIGH' ? 'badge-high' : (edge.highest_risk_level === 'MEDIUM' ? 'badge-medium' : 'badge-low'));
+
+  body.innerHTML = `
+    <!-- Edge Summary -->
+    <div style="background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+        <strong style="font-size: 1rem; color: #0f172a;">${edge.source_name} ➔ ${edge.target_name}</strong>
+        <span class="badge ${levelClass}">${edge.highest_risk_level} RISK</span>
+      </div>
+      <div style="font-size: 0.85rem; color: #475569;">
+        <div><strong>Total Money Transferred:</strong> <span style="color: #059669; font-weight: 700;">₹${edge.total_amount.toFixed(2)}</span></div>
+        <div><strong>Transaction Count:</strong> ${edge.transaction_count}</div>
+        <div><strong>Last Transfer Time:</strong> ${new Date(edge.last_timestamp).toLocaleString()}</div>
+      </div>
+    </div>
+
+    ${edge.is_split_pattern ? `
+      <div class="alert alert-warning" style="margin-bottom: 1.25rem;">
+        <strong>⚠️ Structuring Warning:</strong> Multiple rapid transfers detected between these accounts.
+      </div>
+    ` : ''}
+
+    <!-- Itemized Transactions Table -->
+    <h4 style="font-size: 0.9rem; color: #0f172a; margin-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">Itemized Transfers</h4>
+    <div style="overflow-x: auto;">
+      <table class="data-table" style="font-size: 0.8rem;">
+        <thead>
+          <tr>
+            <th>Txn ID</th>
+            <th>Amount</th>
+            <th>Timestamp</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${edge.transactions.map(t => `
+            <tr>
+              <td><strong>${t.transaction_id}</strong></td>
+              <td style="font-weight:700; color:#059669;">₹${parseFloat(t.amount).toFixed(2)}</td>
+              <td>${new Date(t.transaction_timestamp || t.created_at).toLocaleTimeString()}</td>
+              <td><span class="badge badge-low">${t.transaction_status || 'completed'}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  panel.classList.add('open');
+}
+
+function closeSidePanel() {
+  document.getElementById('side-panel')?.classList.remove('open');
+}
+
+window.investigateNodeUser = function(accId) {
+  closeSidePanel();
+  const input = document.getElementById('analyst-query-input');
+  if (input) input.value = accId;
+  currentQuery = accId;
+  executeFullInvestigation(accId, true);
 };
+
+/**
+ * Setup SVG Mouse Viewport Pan & Node Dragging Event Handlers
+ */
+function setupGraphInteractions() {
+  const svg = document.getElementById('graph-svg');
+  if (!svg) return;
+
+  svg.addEventListener('mousedown', (e) => {
+    if (e.target.id === 'graph-svg' || e.target.tagName === 'rect') {
+      isPanningView = true;
+      panStart = { x: e.clientX - transform.translateX, y: e.clientY - transform.translateY };
+    }
+  });
+
+  svg.addEventListener('mousemove', (e) => {
+    if (isDraggingNode && draggedNodeId) {
+      const pt = getSVGPoint(e);
+      nodePositions[draggedNodeId] = {
+        x: pt.x - dragOffset.x,
+        y: pt.y - dragOffset.y
+      };
+      if (graphData) renderGraph(graphData);
+    } else if (isPanningView) {
+      transform.translateX = e.clientX - panStart.x;
+      transform.translateY = e.clientY - panStart.y;
+      applyViewportTransform();
+    }
+  });
+
+  svg.addEventListener('mouseup', () => {
+    isDraggingNode = false;
+    draggedNodeId = null;
+    isPanningView = false;
+  });
+
+  svg.addEventListener('mouseleave', () => {
+    isDraggingNode = false;
+    draggedNodeId = null;
+    isPanningView = false;
+  });
+}
+
+function getSVGPoint(e) {
+  const svg = document.getElementById('graph-svg');
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  const cursorPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+  return {
+    x: (cursorPt.x - transform.translateX) / transform.scale,
+    y: (cursorPt.y - transform.translateY) / transform.scale
+  };
+}
+
+function zoomViewport(factor) {
+  transform.scale *= factor;
+  transform.scale = Math.min(3, Math.max(0.4, transform.scale));
+  applyViewportTransform();
+}
+
+function resetViewport() {
+  transform = { scale: 1, translateX: 0, translateY: 0 };
+  applyViewportTransform();
+}
+
+function applyViewportTransform() {
+  const group = document.getElementById('viewport-group');
+  if (group) {
+    group.setAttribute('transform', `translate(${transform.translateX}, ${transform.translateY}) scale(${transform.scale})`);
+  }
+}
+
+function truncateString(str, num) {
+  if (!str) return '';
+  if (str.length <= num) return str;
+  return str.slice(0, num) + '...';
+}

@@ -171,6 +171,37 @@ router.get('/investigate', async (req, res) => {
 });
 
 /**
+ * Multi-Hop Money Flow Analysis API
+ * GET /api/analyst/money-flow?accountNumber=...&hops=1&timeRange=all
+ */
+router.get('/money-flow', async (req, res) => {
+  try {
+    const query = (req.query.accountNumber || req.query.query || '').trim();
+    const hops = parseInt(req.query.hops) || 1;
+    const timeRange = req.query.timeRange || 'all';
+
+    if (!query) {
+      return res.status(400).json({ success: false, message: 'Account Number, User ID, or Email is required.' });
+    }
+
+    const flowData = await correlationEngine.correlateMultiHopMoneyFlow(query, hops, timeRange);
+
+    if (!flowData.found) {
+      return res.status(404).json({ success: false, found: false, message: flowData.message });
+    }
+
+    return res.status(200).json({
+      success: true,
+      ...flowData
+    });
+
+  } catch (err) {
+    console.error('Money flow API error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to retrieve money flow graph data.' });
+  }
+});
+
+/**
  * Action Center - Record Analyst Decision / Action API
  * POST /api/analyst/action
  */

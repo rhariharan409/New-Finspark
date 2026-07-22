@@ -511,5 +511,237 @@ export const correlationEngine = {
       console.error('Correlation Engine Error:', err.message);
       throw err;
     }
+  },
+
+  /**
+   * Performs real-time multi-hop breadth-first graph traversal for Money Flow Analysis
+   * Supports hops 1-4, time range filtering, loop prevention, user details resolution, and risk decision aggregation.
+   */
+  async correlateMultiHopMoneyFlow(queryIdentifier, maxHops = 1, timeRange = 'all') {
+    if (!queryIdentifier) throw new Error('Query is required for money flow analysis.');
+
+    const cleanQuery = queryIdentifier.trim();
+    const parsedHops = Math.min(4, Math.max(1, parseInt(maxHops) || 1));
+
+    // 1. Find target user
+    const { data: matchedUsers } = await supabase
+      .from('users')
+      .select('*')
+      .or(`account_id.eq.${cleanQuery},user_id.eq.${cleanQuery},email.eq.${cleanQuery},account_id.ilike.%${cleanQuery}%,user_id.ilike.%${cleanQuery}%,email.ilike.%${cleanQuery}%`)
+      .limit(1);
+
+    if (!matchedUsers || matchedUsers.length === 0) {
+      return { found: false, message: `Account '${cleanQuery}' not found in database.` };
+    }
+
+    const targetUser = matchedUsers[0];
+    const targetUserId = targetUser.user_id;
+
+    // Time cutoff calculation
+    const nowMs = Date.now();
+    let cutoffMs = 0;
+    if (timeRange === '1h') cutoffMs = nowMs - (1 * 3600 * 1000);
+    else if (timeRange === '6h') cutoffMs = nowMs - (6 * 3600 * 1000);
+    else if (timeRange === '12h') cutoffMs = nowMs - (12 * 3600 * 1000);
+    else if (timeRange === '24h') cutoffMs = nowMs - (24 * 3600 * 1000);
+    else if (timeRange === '7d') cutoffMs = nowMs - (7 * 86400 * 1000);
+    else if (timeRange === '30d') cutoffMs = nowMs - (30 * 86400 * 1000);
+
+    // 2. Breadth-First Multi-Hop Traversal with Cycle/Loop Prevention
+    const visitedUserIds = new Set([targetUserId]);
+    let currentLevelUserIds = [targetUserId];
+
+    const collectedTxMap = new Map();
+
+    for (let hop = 1; hop <= parsedHops; hop++) {
+      if (currentLevelUserIds.length === 0) break;
+
+      // Query sent transactions
+      const { data: sentData } = await supabase
+        .from('transactions')
+        .select('*')
+        .in('sender_user_id', currentLevelUserIds);
+
+      // Query received transactions
+      const { data: recvData } = await supabase
+        .from('transactions')
+        .select('*')
+        .in('receiver_user_id', currentLevelUserIds);
+
+      const levelTxns = [...(sentData || []), ...(recvData || [])];
+      const nextLevelUserIds = new Set();
+
+      for (const t of levelTxns) {
+        // Filter by timeRange if specified
+        if (cutoffMs > 0) {
+          const tMs = new Date(t.transaction_timestamp || t.created_at).getTime();
+          if (tMs < cutoffMs) continue;
+        }
+
+        if (!collectedTxMap.has(t.transaction_id)) {
+          collectedTxMap.set(t.transaction_id, t);
+        }
+
+        if (t.sender_user_id && !visitedUserIds.has(t.sender_user_id)) {
+          nextLevelUserIds.add(t.sender_user_id);
+          visitedUserIds.add(t.sender_user_id);
+        }
+        if (t.receiver_user_id && !visitedUserIds.has(t.receiver_user_id)) {
+          nextLevelUserIds.add(t.receiver_user_id);
+          visitedUserIds.add(t.receiver_user_id);
+        }
+      }
+
+      currentLevelUserIds = Array.from(nextLevelUserIds);
+    }
+
+    const allTxns = Array.from(collectedTxMap.values()).sort(
+      (a, b) => new Date(b.transaction_timestamp || b.created_at) - new Date(a.transaction_timestamp || a.created_at)
+    );
+
+    // 3. Resolve User Profiles for Discovered Nodes
+    const allDiscoveredUserIds = Array.from(visitedUserIds);
+    const { data: resolvedUsersData } = await supabase
+      .from('users')
+      .select('*')
+      .in('user_id', allDiscoveredUserIds);
+
+    const usersMap = new Map();
+    (resolvedUsersData || []).forEach(u => usersMap.set(u.user_id, u));
+    if (!usersMap.has(targetUserId)) usersMap.set(targetUserId, targetUser);
+
+    // Fetch Risk Decisions per user
+    const { data: riskDecisionsData } = await supabase
+      .from('risk_decisions')
+      .select('*')
+      .in('user_id', allDiscoveredUserIds);
+
+    const userRiskMap = {};
+    (riskDecisionsData || []).forEach(r => {
+      if (!userRiskMap[r.user_id] || (r.risk_score || 0) > (userRiskMap[r.user_id].risk_score || 0)) {
+        userRiskMap[r.user_id] = r;
+      }
+    });
+
+    // Fetch Sessions count per user
+    const { data: sessionData } = await supabase
+      .from('sessions')
+      .select('user_id, session_id');
+
+    const sessionCountMap = {};
+    (sessionData || []).forEach(s => {
+      sessionCountMap[s.user_id] = (sessionCountMap[s.user_id] || 0) + 1;
+    });
+
+    // 4. Build Nodes
+    const nodes = [];
+    allDiscoveredUserIds.forEach(uId => {
+      const uObj = usersMap.get(uId) || { user_id: uId, account_id: uId, full_name: uId, email: '', account_status: 'active' };
+      const uSentTxns = allTxns.filter(t => t.sender_user_id === uId);
+      const uRecvTxns = allTxns.filter(t => t.receiver_user_id === uId);
+
+      const totalSent = uSentTxns.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+      const totalRecv = uRecvTxns.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+      const totalTxCount = uSentTxns.length + uRecvTxns.length;
+
+      const userRiskObj = userRiskMap[uId] || {};
+      const riskScore = userRiskObj.risk_score || (totalSent > 50000 || totalTxCount > 5 ? 75 : 15);
+      let riskLevel = userRiskObj.risk_level || (riskScore >= 80 ? 'CRITICAL' : (riskScore >= 60 ? 'HIGH' : (riskScore >= 30 ? 'MEDIUM' : 'LOW')));
+
+      const sentAmounts = uSentTxns.map(t => parseFloat(t.amount) || 0);
+      const avgSent = uSentTxns.length > 0 ? totalSent / uSentTxns.length : 0;
+      const maxTx = sentAmounts.length > 0 ? Math.max(...sentAmounts) : 0;
+
+      nodes.push({
+        id: uId,
+        is_target: uId === targetUserId,
+        full_name: uObj.full_name || uObj.account_id || uId,
+        account_id: uObj.account_id || uId,
+        email: uObj.email || 'N/A',
+        account_status: uObj.account_status || 'active',
+        total_sent: Math.round(totalSent * 100) / 100,
+        total_received: Math.round(totalRecv * 100) / 100,
+        transaction_count: totalTxCount,
+        session_count: sessionCountMap[uId] || 1,
+        risk_score: riskScore,
+        risk_level: riskLevel,
+        latest_decision: userRiskObj.risk_decision || (riskLevel === 'CRITICAL' ? 'BLOCK' : (riskLevel === 'HIGH' ? 'REVIEW' : 'ALLOW')),
+        baseline_avg: Math.round(avgSent * 100) / 100,
+        largest_tx: Math.round(maxTx * 100) / 100
+      });
+    });
+
+    // 5. Aggregate Directed Edges
+    const edgePairsMap = new Map();
+    allTxns.forEach(t => {
+      const edgeKey = `${t.sender_user_id}--->${t.receiver_user_id}`;
+      const senderObj = usersMap.get(t.sender_user_id);
+      const recvObj = usersMap.get(t.receiver_user_id);
+
+      const senderName = senderObj?.full_name || senderObj?.account_id || t.sender_user_id;
+      const recvName = recvObj?.full_name || recvObj?.account_id || t.receiver_user_id;
+
+      if (!edgePairsMap.has(edgeKey)) {
+        edgePairsMap.set(edgeKey, {
+          id: edgeKey,
+          source: t.sender_user_id,
+          target: t.receiver_user_id,
+          source_name: senderName,
+          target_name: recvName,
+          source_account: senderObj?.account_id || t.sender_user_id,
+          target_account: recvObj?.account_id || t.receiver_user_id,
+          total_amount: 0,
+          transaction_count: 0,
+          last_timestamp: t.transaction_timestamp || t.created_at,
+          highest_risk_level: 'LOW',
+          transactions: []
+        });
+      }
+
+      const edge = edgePairsMap.get(edgeKey);
+      const amt = parseFloat(t.amount) || 0;
+      edge.total_amount += amt;
+      edge.transaction_count += 1;
+      edge.transactions.push(t);
+
+      if (t.risk_level === 'CRITICAL' || edge.highest_risk_level === 'CRITICAL') edge.highest_risk_level = 'CRITICAL';
+      else if (t.risk_level === 'HIGH' || edge.highest_risk_level === 'HIGH') edge.highest_risk_level = 'HIGH';
+      else if (t.risk_level === 'MEDIUM' || edge.highest_risk_level === 'MEDIUM') edge.highest_risk_level = 'MEDIUM';
+    });
+
+    const edges = Array.from(edgePairsMap.values()).map(e => {
+      e.total_amount = Math.round(e.total_amount * 100) / 100;
+      e.is_split_pattern = e.transactions.length >= 3;
+      return e;
+    });
+
+    // 6. Calculate Summary Metrics
+    const totalAmount = edges.reduce((sum, e) => sum + e.total_amount, 0);
+    const sendersSet = new Set(edges.map(e => e.source));
+    const receiversSet = new Set(edges.map(e => e.target));
+
+    let splitWarning = null;
+    const splitEdge = edges.find(e => e.is_split_pattern);
+    if (splitEdge) {
+      splitWarning = `Possible Split Transaction Pattern Detected: ${splitEdge.transaction_count} rapid transfers totaling ₹${splitEdge.total_amount.toFixed(2)} between ${splitEdge.source_name} ➔ ${splitEdge.target_name}.`;
+    }
+
+    return {
+      found: true,
+      query: cleanQuery,
+      target_user_id: targetUserId,
+      max_hops: parsedHops,
+      time_range: timeRange,
+      nodes,
+      edges,
+      summary: {
+        total_transactions: allTxns.length,
+        total_amount_transferred: Math.round(totalAmount * 100) / 100,
+        unique_senders_count: sendersSet.size,
+        unique_receivers_count: receiversSet.size,
+        split_pattern_detected: !!splitEdge,
+        split_warning_text: splitWarning
+      }
+    };
   }
 };

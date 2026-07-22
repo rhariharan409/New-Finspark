@@ -21,7 +21,7 @@
     }
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 1rem;
     }
     .summary-box {
@@ -37,9 +37,14 @@
       margin-top: 0.2rem;
       word-break: break-all;
     }
-    .time-filter-btn {
-      padding: 0.3rem 0.75rem;
-      font-size: 0.78rem;
+    .filter-btn-group {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+    .time-filter-btn, .hop-filter-btn {
+      padding: 0.28rem 0.65rem;
+      font-size: 0.76rem;
       font-weight: 600;
       border-radius: 4px;
       border: 1px solid #cbd5e1;
@@ -48,60 +53,106 @@
       cursor: pointer;
       transition: all 0.15s ease;
     }
-    .time-filter-btn.active, .time-filter-btn:hover {
+    .time-filter-btn.active, .time-filter-btn:hover,
+    .hop-filter-btn.active, .hop-filter-btn:hover {
       background: #2563eb;
       color: #ffffff;
       border-color: #2563eb;
     }
-    /* Flow Canvas Node & Arrow Styles */
-    .flow-node {
+
+    /* Graph Canvas & Controls */
+    #graph-container {
+      position: relative;
       background: #ffffff;
-      border: 2px solid #2563eb;
+      border: 1px solid #e2e8f0;
       border-radius: 8px;
-      padding: 0.65rem 1rem;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-      display: inline-flex;
-      flex-direction: column;
-      align-items: center;
-      min-width: 140px;
-      text-align: center;
+      height: 520px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
     }
-    .flow-node.target-user {
-      border-color: #059669;
-      background: #ecfdf5;
+    #graph-svg {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
     }
-    .flow-edge-box {
-      background: #ffffff;
+    #graph-svg:active {
+      cursor: grabbing;
+    }
+    .graph-control-bar {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255, 255, 255, 0.95);
       border: 1px solid #cbd5e1;
       border-radius: 6px;
-      padding: 0.4rem 0.75rem;
-      cursor: pointer;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      transition: transform 0.15s ease, border-color 0.15s ease;
-    }
-    .flow-edge-box:hover {
-      transform: translateY(-2px);
-      border-color: #2563eb;
-    }
-    /* Modal */
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(15, 23, 42, 0.55);
       display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
+      gap: 4px;
+      padding: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      z-index: 10;
     }
-    .modal-content {
+    .graph-ctrl-btn {
       background: #ffffff;
-      border-radius: 8px;
-      width: 90%;
-      max-width: 650px;
-      padding: 1.5rem;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-      max-height: 85vh;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: #0f172a;
+      cursor: pointer;
+    }
+    .graph-ctrl-btn:hover {
+      background: #f1f5f9;
+      border-color: #2563eb;
+      color: #2563eb;
+    }
+
+    /* Node & Edge Styles */
+    .node-group {
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    .node-group:hover {
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.12));
+    }
+    .edge-line {
+      stroke-linecap: round;
+      transition: stroke 0.2s ease, stroke-width 0.2s ease;
+    }
+    .edge-line:hover {
+      stroke-width: 4px !important;
+      cursor: pointer;
+    }
+
+    /* Side Panel / Modal */
+    .side-panel {
+      position: fixed;
+      top: 0; right: -420px;
+      width: 400px;
+      height: 100vh;
+      background: #ffffff;
+      border-left: 1px solid #cbd5e1;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.12);
+      transition: right 0.25s ease;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+    }
+    .side-panel.open {
+      right: 0;
+    }
+    .side-panel-header {
+      padding: 1.25rem;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+    }
+    .side-panel-body {
+      padding: 1.25rem;
       overflow-y: auto;
+      flex: 1;
     }
   </style>
 </head>
@@ -126,7 +177,7 @@
     <div class="card" style="border-top: 4px solid #2563eb;">
       <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem;">Account Investigation Search</h2>
       <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
-        Search target user account by exact Account ID, User ID, or Email address to inspect real-time money flow and risk intelligence.
+        Search target user account by exact Account ID, User ID, or Email address to inspect real-time multi-hop graph flows and risk intelligence.
       </p>
 
       <form id="analyst-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
@@ -180,35 +231,51 @@
         </div>
       </div>
 
-      <!-- 3. MONEY FLOW ANALYSIS SECTION -->
+      <!-- 3. MONEY FLOW ANALYSIS GRAPH SECTION -->
       <div class="card" style="border-top: 4px solid #2563eb;">
         <div class="section-title">
           <div>
-            <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">2. MONEY FLOW ANALYSIS</span>
-            <div style="font-size: 0.78rem; color: #64748b; font-weight: normal;">Real-time transaction flow between connected accounts</div>
+            <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">2. MONEY FLOW ANALYSIS GRAPH</span>
+            <div style="font-size: 0.78rem; color: #64748b; font-weight: normal;">Interactive multi-hop directed transaction relationship graph</div>
           </div>
 
-          <!-- Time Range Filter Buttons -->
-          <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;" id="time-filter-buttons">
-            <button type="button" class="time-filter-btn" data-range="1h">Last 1 Hour</button>
-            <button type="button" class="time-filter-btn" data-range="10h">Last 10 Hours</button>
-            <button type="button" class="time-filter-btn" data-range="24h">Last 24 Hours</button>
-            <button type="button" class="time-filter-btn" data-range="7d">Last 7 Days</button>
-            <button type="button" class="time-filter-btn active" data-range="all">All Time</button>
+          <!-- Controls: Hop Depth & Time Filter Buttons -->
+          <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            
+            <!-- Hop Depth Selector -->
+            <div class="filter-btn-group">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; align-self: center; margin-right: 0.25rem;">DEPTH:</span>
+              <button type="button" class="hop-filter-btn active" data-hop="1">Hop 1</button>
+              <button type="button" class="hop-filter-btn" data-hop="2">Hop 2</button>
+              <button type="button" class="hop-filter-btn" data-hop="3">Hop 3</button>
+              <button type="button" class="hop-filter-btn" data-hop="4">Hop 4</button>
+            </div>
+
+            <!-- Time Range Filters -->
+            <div class="filter-btn-group">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; align-self: center; margin-right: 0.25rem;">TIME:</span>
+              <button type="button" class="time-filter-btn" data-range="1h">1H</button>
+              <button type="button" class="time-filter-btn" data-range="6h">6H</button>
+              <button type="button" class="time-filter-btn" data-range="12h">12H</button>
+              <button type="button" class="time-filter-btn" data-range="24h">24H</button>
+              <button type="button" class="time-filter-btn" data-range="7d">7D</button>
+              <button type="button" class="time-filter-btn" data-range="30d">30D</button>
+              <button type="button" class="time-filter-btn active" data-range="all">All</button>
+            </div>
           </div>
         </div>
 
         <!-- Split-Transaction / Structuring Alert Box -->
         <div id="flow-splitting-alert" class="alert alert-warning" style="display:none; margin-bottom: 1rem;">
-          <strong>⚠️ Transaction Splitting / Structuring Pattern Detected:</strong>
+          <strong>⚠️ Split Transaction / Structuring Pattern Detected:</strong>
           <div id="flow-splitting-text" style="margin-top: 0.25rem;">-</div>
         </div>
 
         <!-- Transaction Flow Summary -->
         <div class="summary-grid" style="margin-bottom: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
           <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Selected Period</span>
-            <div id="flow-period-val" class="summary-val" style="font-size: 0.95rem; color: #2563eb;">ALL TIME</div>
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Selected Hops / Period</span>
+            <div id="flow-period-val" class="summary-val" style="font-size: 0.95rem; color: #2563eb;">HOP 1 | ALL TIME</div>
           </div>
           <div class="summary-box">
             <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total Transfers</span>
@@ -226,23 +293,51 @@
             <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Unique Receivers</span>
             <div id="flow-receivers-count" class="summary-val" style="font-size: 0.95rem;">0</div>
           </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Most Active Sender</span>
-            <div id="flow-top-sender" class="summary-val" style="font-size: 0.85rem;">None</div>
-          </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Most Active Receiver</span>
-            <div id="flow-top-receiver" class="summary-val" style="font-size: 0.85rem;">None</div>
-          </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Largest Transfer</span>
-            <div id="flow-largest-tx" class="summary-val" style="font-size: 0.95rem; color: #dc2626;">₹0.00</div>
-          </div>
         </div>
 
-        <!-- Dynamic Directed Money Flow Graph Visualizer -->
-        <div id="money-flow-canvas" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; min-height: 380px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: center; gap: 1.5rem;">
-          <p style="text-align: center; color: #64748b;">Loading real-time money flow graph...</p>
+        <!-- Interactive Canvas / SVG Graph Container -->
+        <div id="graph-container">
+          
+          <!-- Graph Control Floating Bar -->
+          <div class="graph-control-bar">
+            <button class="graph-ctrl-btn" id="btn-zoom-in" title="Zoom In">+</button>
+            <button class="graph-ctrl-btn" id="btn-zoom-out" title="Zoom Out">-</button>
+            <button class="graph-ctrl-btn" id="btn-reset-view" title="Reset View">Fit</button>
+            <button class="graph-ctrl-btn" id="btn-auto-layout" title="Auto Layout">Auto Layout</button>
+          </div>
+
+          <!-- SVG Canvas Engine -->
+          <svg id="graph-svg" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <!-- Arrowhead Markers per Risk Level -->
+              <marker id="arrow-LOW" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669" />
+              </marker>
+              <marker id="arrow-MEDIUM" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706" />
+              </marker>
+              <marker id="arrow-HIGH" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#ea580c" />
+              </marker>
+              <marker id="arrow-CRITICAL" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626" />
+              </marker>
+              
+              <!-- Background Grid Pattern -->
+              <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+              </pattern>
+            </defs>
+
+            <!-- Background Grid -->
+            <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+
+            <!-- Main Transform Viewport Group -->
+            <g id="viewport-group">
+              <g id="edges-layer"></g>
+              <g id="nodes-layer"></g>
+            </g>
+          </svg>
         </div>
       </div>
 
@@ -340,34 +435,14 @@
 
   </main>
 
-  <!-- Interactive Connection Details Modal -->
-  <div id="connection-modal" class="modal-overlay" style="display:none;">
-    <div class="modal-content">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1rem;">
-        <h3 id="modal-title" style="font-size: 1.1rem; color: #0f172a; margin: 0;">Transaction Flow Details</h3>
-        <button id="modal-close-btn" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">✕</button>
-      </div>
-
-      <div id="modal-summary-bar" style="background: #f8fafc; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; border: 1px solid #e2e8f0;">
-        <!-- Connection metrics -->
-      </div>
-
-      <div style="overflow-x: auto;">
-        <table class="data-table" style="font-size: 0.8rem;">
-          <thead>
-            <tr>
-              <th>Transaction ID</th>
-              <th>Amount</th>
-              <th>Date & Time</th>
-              <th>Status</th>
-              <th>Risk Level</th>
-            </tr>
-          </thead>
-          <tbody id="modal-table-body">
-            <!-- Transactions list -->
-          </tbody>
-        </table>
-      </div>
+  <!-- Interactive Slide-Out Side Panel (For Node & Edge Clicks) -->
+  <div id="side-panel" class="side-panel">
+    <div class="side-panel-header">
+      <h3 id="sp-title" style="font-size: 1.1rem; color: #0f172a; margin: 0;">Investigation Details</h3>
+      <button id="sp-close-btn" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">✕</button>
+    </div>
+    <div id="sp-body" class="side-panel-body">
+      <!-- Side panel dynamic content renders here -->
     </div>
   </div>
 
