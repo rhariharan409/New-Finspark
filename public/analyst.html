@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Analyst Portal - FINSPARK</title>
   <link rel="stylesheet" href="css/style.css">
+  <!-- Supabase JS Client for Realtime Subscriptions -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     .layout-wrapper {
       display: flex;
@@ -33,17 +35,21 @@
       padding: 0;
       margin: 0;
     }
+    .sidebar-menu li {
+      margin-bottom: 0.25rem;
+    }
     .sidebar-menu li a {
       display: flex;
       align-items: center;
       gap: 0.65rem;
-      padding: 0.6rem 0.75rem;
-      font-size: 0.85rem;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.88rem;
       font-weight: 600;
       color: #334155;
       text-decoration: none;
       border-radius: 6px;
       transition: all 0.15s ease;
+      cursor: pointer;
     }
     .sidebar-menu li a:hover {
       background: #e2e8f0;
@@ -56,7 +62,7 @@
     .content-area {
       flex: 1;
       padding: 1.5rem 2rem;
-      max-width: 1200px;
+      max-width: 1350px;
     }
     .section-title {
       font-size: 1.05rem;
@@ -73,7 +79,7 @@
     }
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 1rem;
     }
     .summary-box {
@@ -83,7 +89,7 @@
       padding: 0.85rem;
     }
     .summary-val {
-      font-size: 1.2rem;
+      font-size: 1.25rem;
       font-weight: 700;
       color: #0f172a;
       margin-top: 0.2rem;
@@ -205,121 +211,223 @@
   </nav>
 
   <div class="layout-wrapper">
-    <!-- LEFT SIDEBAR NAVIGATION -->
+    <!-- LEFT SIDEBAR NAVIGATION (STREAMLINED ONLY 3 ITEMS) -->
     <aside class="sidebar">
       <div>
-        <div class="nav-group-title">INVESTIGATION PORTAL</div>
+        <div class="nav-group-title">ANALYST CONSOLE</div>
         <ul class="sidebar-menu">
-          <li><a href="analyst.html" class="active">🔍 Main Dashboard & Investigation</a></li>
-        </ul>
-      </div>
-
-      <div>
-        <div class="nav-group-title">THREAT INTELLIGENCE</div>
-        <ul class="sidebar-menu">
-          <li><a href="threat-intel.html">⚡ Unified Threat Dashboard</a></li>
-          <li><a href="ato.html">🛡️ Account Takeover (ATO)</a></li>
-          <li><a href="threat-intel.html?module=mule">💸 Money Mule / Laundering</a></li>
-          <li><a href="threat-intel.html?module=stuffing">🔑 Credential Stuffing</a></li>
-          <li><a href="threat-intel.html?module=card">💳 Card Fraud</a></li>
-          <li><a href="threat-intel.html?module=synthetic">👤 Synthetic Identity</a></li>
-          <li><a href="threat-intel.html?module=api">⚡ API Abuse</a></li>
-          <li><a href="threat-intel.html?module=insider">🏢 Insider Threat</a></li>
-          <li><a href="threat-intel.html?module=device">📱 Device Intelligence</a></li>
+          <li><a id="nav-dashboard" class="active">📊 Dashboard</a></li>
+          <li><a id="nav-investigation">🔍 Investigation & Money Flow</a></li>
+          <li><a id="nav-settings">⚙️ Settings</a></li>
         </ul>
       </div>
     </aside>
 
     <main class="content-area">
 
-      <!-- 1. TOP SYSTEM OVERVIEW CARDS (SCREENSHOT 2 METRICS) -->
-      <div class="card" style="border-top: 4px solid #2563eb; margin-bottom: 1.5rem;">
-        <div class="section-title">
-          <span>System Security Posture & Metrics</span>
-          <span class="badge badge-low" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">CORE SECURED</span>
+      <!-- ========================================================= -->
+      <!-- VIEW 1: UNIFIED ANALYST DASHBOARD (DEFAULT PAGE)          -->
+      <!-- ========================================================= -->
+      <div id="dashboard-view-wrapper">
+
+        <!-- SECTION 1: GLOBAL SYSTEM OVERVIEW -->
+        <div class="card" style="border-top: 4px solid #2563eb; margin-bottom: 1.5rem;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">Section 1: Global System Overview</span>
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: normal;">Real-time enterprise fraud detection statistics across all users</div>
+            </div>
+            <span id="live-system-status-badge" class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 0.35rem 0.75rem;">🟢 LIVE REALTIME CONNECTED</span>
+          </div>
+
+          <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.85rem;">
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Total Sessions Scanned</span>
+              <div id="metric-sessions-scanned" class="summary-val" style="color: #0f172a;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Allowed Sessions</span>
+              <div id="metric-allowed-sessions" class="summary-val" style="color: #059669;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Step-Up Sessions</span>
+              <div id="metric-stepup-sessions" class="summary-val" style="color: #d97706;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Blocked Sessions</span>
+              <div id="metric-blocked-sessions" class="summary-val" style="color: #dc2626;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Total Users</span>
+              <div id="metric-total-users" class="summary-val" style="color: #2563eb;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Active Users</span>
+              <div id="metric-active-users" class="summary-val" style="color: #059669;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Total Transactions</span>
+              <div id="metric-total-txns" class="summary-val" style="color: #0f172a;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Total Alerts Generated</span>
+              <div id="metric-total-alerts" class="summary-val" style="color: #dc2626;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Average Risk Score</span>
+              <div id="metric-avg-risk-score" class="summary-val" style="color: #d97706;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">High Risk Sessions</span>
+              <div id="metric-high-risk-sessions" class="summary-val" style="color: #dc2626;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Medium Risk Sessions</span>
+              <div id="metric-med-risk-sessions" class="summary-val" style="color: #d97706;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Low Risk Sessions</span>
+              <div id="metric-low-risk-sessions" class="summary-val" style="color: #059669;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Decision Confidence</span>
+              <div id="metric-decision-confidence" class="summary-val" style="color: #059669;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Last Scan Time</span>
+              <div id="metric-last-scan-time" class="summary-val" style="font-size: 0.85rem; color: #475569;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Live System Status</span>
+              <div id="metric-live-status" class="summary-val" style="font-size: 0.85rem; color: #059669;">ONLINE (REALTIME)</div>
+            </div>
+          </div>
         </div>
 
-        <div class="summary-grid">
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Sessions Scanned</span>
-            <div id="metric-scanned" class="summary-val" style="color: #0f172a;">-</div>
+        <!-- SECTION 2: ALL USER SESSION MONITOR -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">Section 2: All User Session Monitor</span>
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: normal;">Main monitoring console displaying every session record from the database</div>
+            </div>
+            <span id="session-monitor-count" class="badge badge-low">0 SESSIONS</span>
           </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Allowed Logs</span>
-            <div id="metric-allowed" class="summary-val" style="color: #059669;">-</div>
+
+          <!-- Search, Filter & Sort Toolbar -->
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center;">
+            <input type="text" id="session-search-input" class="form-input" placeholder="Search by User Name, User ID, Account Number, Session ID, IP, Location..." style="flex: 2; min-width: 240px;">
+            
+            <select id="session-decision-filter" class="form-input" style="flex: 1; min-width: 140px;">
+              <option value="ALL">All Decisions</option>
+              <option value="ALLOW">Allow Only</option>
+              <option value="STEP-UP">Step-Up Only</option>
+              <option value="BLOCK">Block Only</option>
+              <option value="MONITOR">Monitor Only</option>
+            </select>
+
+            <select id="session-sort-select" class="form-input" style="flex: 1; min-width: 140px;">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="risk-desc">Highest Risk First</option>
+              <option value="risk-asc">Lowest Risk First</option>
+            </select>
           </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Step-Up Challenges</span>
-            <div id="metric-stepup" class="summary-val" style="color: #d97706;">-</div>
+
+          <!-- Table Container -->
+          <div style="overflow-x: auto;">
+            <table class="data-table" style="font-size: 0.78rem;">
+              <thead>
+                <tr>
+                  <th>User Name</th>
+                  <th>User ID</th>
+                  <th>Account Number</th>
+                  <th>Session ID</th>
+                  <th>Login Time</th>
+                  <th>Logout Time</th>
+                  <th>Duration</th>
+                  <th>IP Address</th>
+                  <th>Device</th>
+                  <th>Browser</th>
+                  <th>OS</th>
+                  <th>Location</th>
+                  <th>Risk Score</th>
+                  <th>AI Confidence</th>
+                  <th>Decision</th>
+                  <th>Timestamp</th>
+                  <th>Inspect</th>
+                </tr>
+              </thead>
+              <tbody id="all-sessions-table-body">
+                <tr><td colspan="17" style="text-align:center; color:#64748b; padding: 1.5rem;">Loading session records from Supabase...</td></tr>
+              </tbody>
+            </table>
           </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Blocks in Force</span>
-            <div id="metric-blocks" class="summary-val" style="color: #dc2626;">-</div>
-          </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Confirmed Fraud Rate</span>
-            <div id="metric-fraud-rate" class="summary-val" style="color: #dc2626;">-</div>
-          </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">False Positive Rate</span>
-            <div id="metric-fp-rate" class="summary-val" style="color: #d97706;">65.6%</div>
-          </div>
-          <div class="summary-box">
-            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Decision Confidence</span>
-            <div id="metric-confidence" class="summary-val" style="color: #059669;">87%</div>
+
+          <!-- Pagination Bar -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 0.5rem; font-size: 0.85rem;">
+            <div id="session-pagination-info" style="color: #64748b;">Showing 0 - 0 of 0 sessions</div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="button" id="session-prev-btn" class="btn btn-outline" style="padding: 0.3rem 0.75rem;" disabled>Previous</button>
+              <button type="button" id="session-next-btn" class="btn btn-outline" style="padding: 0.3rem 0.75rem;" disabled>Next</button>
+            </div>
           </div>
         </div>
+
+        <!-- SECTION 3: HIGH RISK INVESTIGATION QUEUE -->
+        <div class="card" style="border-top: 4px solid #dc2626; margin-bottom: 1.5rem;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">Section 3: High Risk Investigation Queue</span>
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: normal;">Automatically collected suspicious sessions (STEP-UP, BLOCK, MONITOR, or Risk Score &ge; 30)</div>
+            </div>
+            <span id="queue-count-badge" class="badge badge-high">0 QUEUED</span>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="data-table" style="font-size: 0.82rem;">
+              <thead>
+                <tr>
+                  <th>User Name</th>
+                  <th>Account Number</th>
+                  <th>Session ID</th>
+                  <th>Risk Score</th>
+                  <th>Decision</th>
+                  <th>Detection Reason</th>
+                  <th>Detected Time</th>
+                  <th>Priority</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="queue-table-body">
+                <tr><td colspan="9" style="text-align:center; color:#64748b; padding: 1.5rem;">No suspicious sessions requiring investigation in queue</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
 
-      <!-- 2. MAIN ACCOUNT INVESTIGATION SEARCH CARD -->
-      <div class="card" style="border-top: 4px solid #2563eb;">
-        <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem;">Account Investigation Search</h2>
-        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
-          Search target user account by exact Account ID, User ID, or Email address to inspect real-time multi-hop graph flows and risk intelligence.
-        </p>
-
-        <form id="analyst-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-          <input type="text" id="analyst-query-input" class="form-input" placeholder="e.g. TURTLE-1749020303 or user@example.com" style="flex: 1; min-width: 280px;" required>
-          <button type="submit" id="analyst-search-btn" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
-            Investigate Account
-          </button>
-        </form>
-        <div id="analyst-search-alert" class="alert alert-danger" style="display:none; margin-top: 1rem;"></div>
-      </div>
-
-      <!-- 3. MONITORED TRANSACTION FEEDS / REVIEWED SESSIONS TABLE (SCREENSHOT 2 FEEDS) -->
-      <div class="card">
-        <div class="section-title">
-          <div>
-            <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">Monitored Transaction Feeds & Reviewed Sessions</span>
-            <div style="font-size: 0.78rem; color: #64748b; font-weight: normal;">Live transaction sessions analyzed by Finspark fraud engine</div>
-          </div>
-          <span class="badge badge-low" style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">LIVE SYSTEM FEEDS</span>
-        </div>
-
-        <div style="overflow-x: auto;">
-          <table class="data-table" style="font-size: 0.82rem;">
-            <thead>
-              <tr>
-                <th>User ID / Name</th>
-                <th>Account ID</th>
-                <th>Session ID</th>
-                <th>Risk Score</th>
-                <th>AI Confidence</th>
-                <th>Action</th>
-                <th>Timestamp</th>
-                <th>Inspect</th>
-              </tr>
-            </thead>
-            <tbody id="monitored-feeds-body">
-              <tr><td colspan="8" style="text-align:center; color:#64748b;">Loading live monitored transaction feeds...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 4. DETAILED USER INVESTIGATION WORKSPACE (Populated upon search or selecting a session) -->
+      <!-- ========================================================= -->
+      <!-- VIEW 2: INVESTIGATION & MONEY FLOW WORKSPACE              -->
+      <!-- ========================================================= -->
       <div id="investigation-workspace" style="display: none;">
+
+        <!-- Search Bar Card -->
+        <div class="card" style="border-top: 4px solid #2563eb;">
+          <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem;">Account & Session Investigation Search</h2>
+          <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
+            Inspect target user account or session ID to inspect real-time multi-hop money flow graph, session telemetry, and risk intelligence.
+          </p>
+
+          <form id="analyst-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <input type="text" id="analyst-query-input" class="form-input" placeholder="e.g. TURTLE-1749020303, USR-001001, or SES-993821" style="flex: 1; min-width: 280px;" required>
+            <button type="submit" id="analyst-search-btn" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
+              Investigate Target
+            </button>
+          </form>
+          <div id="analyst-search-alert" class="alert alert-danger" style="display:none; margin-top: 1rem;"></div>
+        </div>
 
         <!-- Summary Cards -->
         <div class="card">
@@ -549,6 +657,55 @@
 
       </div>
 
+      <!-- ========================================================= -->
+      <!-- VIEW 3: SETTINGS WORKSPACE                                -->
+      <!-- ========================================================= -->
+      <div id="settings-workspace" style="display: none;">
+        <div class="card" style="border-top: 4px solid #2563eb;">
+          <div class="section-title">
+            <span>⚙️ Analyst Console Settings & Environment</span>
+          </div>
+
+          <div style="margin-bottom: 1.5rem;">
+            <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.5rem;">Analyst Profile & RBAC Security</h4>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Active clearance privileges and security role configuration.</p>
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem;">
+              <div style="margin-bottom: 0.35rem;"><strong>Active Analyst ID:</strong> <span id="settings-analyst-id" style="color: #2563eb;">ANL-001001</span></div>
+              <div style="margin-bottom: 0.35rem;"><strong>Email:</strong> <span id="settings-analyst-email">analyst@finspark.com</span></div>
+              <div style="margin-bottom: 0.35rem;"><strong>Role:</strong> Senior Fraud Investigator</div>
+              <div><strong>Clearance Level:</strong> Level 3 - Full Database Telemetry Access</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.5rem;">
+            <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.5rem;">System Risk Engine Thresholds</h4>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Configured threshold boundaries for automated session routing.</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+              <div class="summary-box">
+                <span style="font-size: 0.75rem; color: #059669; font-weight: 700;">ALLOW THRESHOLD</span>
+                <div class="summary-val" style="font-size: 1rem; color: #059669;">Risk Score &lt; 30</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.75rem; color: #d97706; font-weight: 700;">MEDIUM RISK / STEP-UP THRESHOLD</span>
+                <div class="summary-val" style="font-size: 1rem; color: #d97706;">Risk Score 30 - 74</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.75rem; color: #dc2626; font-weight: 700;">BLOCK THRESHOLD</span>
+                <div class="summary-val" style="font-size: 1rem; color: #dc2626;">Risk Score &ge; 75</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.5rem;">Supabase Realtime Stream Engine</h4>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.85rem; border-radius: 6px; color: #166534; font-size: 0.85rem;">
+              <strong>Active Connection:</strong> Supabase PostgreSQL WebSockets Subscriptions enabled for <code>sessions</code>, <code>transactions</code>, <code>risk_decisions</code>, and <code>telemetry_events</code> tables.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -562,7 +719,7 @@
   </div>
 
   <footer class="footer">
-    FINSPARK — Real-Time Transaction Flow & Fraud Investigation Platform
+    FINSPARK — Real-Time Analyst Monitoring & Fraud Intelligence Platform
   </footer>
 
   <script src="js/analyst-ui.js"></script>
