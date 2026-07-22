@@ -8,6 +8,7 @@ import { supabase } from '../db/supabaseClient.js';
 import { correlationEngine } from '../services/correlationEngine.js';
 import { caseService } from '../services/caseService.js';
 import { atoService } from '../services/atoService.js';
+import { unifiedThreatService } from '../services/unifiedThreatService.js';
 import { initCyberAnalystTables, INITIAL_ANALYSTS } from '../db/cyberSchemaInitializer.js';
 import { passwordService } from '../security/passwordService.js';
 
@@ -229,6 +230,35 @@ router.get('/ato', async (req, res) => {
   } catch (err) {
     console.error('ATO API error:', err.message);
     return res.status(500).json({ success: false, message: 'Failed to retrieve Account Takeover threat intelligence.' });
+  }
+});
+
+/**
+ * Unified Threat Intelligence Dashboard API
+ * GET /api/analyst/threat-intel?query=...
+ */
+router.get('/threat-intel', async (req, res) => {
+  try {
+    const query = (req.query.query || req.query.accountNumber || '').trim();
+
+    if (!query) {
+      return res.status(400).json({ success: false, message: 'Search query (User ID, Account Number, Email, Phone, Session ID, or Txn ID) is required.' });
+    }
+
+    const intelData = await unifiedThreatService.analyzeUnifiedThreats(query);
+
+    if (!intelData.found) {
+      return res.status(404).json({ success: false, found: false, message: intelData.message });
+    }
+
+    return res.status(200).json({
+      success: true,
+      ...intelData
+    });
+
+  } catch (err) {
+    console.error('Unified Threat Intel API error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to complete unified threat investigation.' });
   }
 });
 
