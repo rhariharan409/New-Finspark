@@ -1,6 +1,6 @@
 /**
  * FINSPARK - Authentication API Router
- * User Signup, Login, Session Management, Telemetry Logging, and ATO Session Verification.
+ * User Signup, Login, Session Management, Telemetry Logging, and Strict ATO Session Verification.
  */
 
 import express from 'express';
@@ -187,7 +187,12 @@ router.post('/login', async (req, res) => {
 });
 
 /**
- * Demo API: Session ID Login & Real-Time ATO Specification Cross-Verification
+ * STRICT SESSION ID VERIFICATION API
+ * Enforces 4 Database Checks:
+ * 1. Session ID exists in Database
+ * 2. Session status is ACTIVE (Reject terminated / expired)
+ * 3. Incoming device specs match trusted baseline in trusted_session_profiles
+ * 4. Legitimate active session user login
  * POST /api/auth/verify-session-id-login
  */
 router.post('/verify-session-id-login', async (req, res) => {
@@ -198,86 +203,93 @@ router.post('/verify-session-id-login', async (req, res) => {
     if (!cleanSessionId) {
       return res.status(400).json({
         success: false,
-        message: 'Session ID is required.'
+        message: '🚫 ACCESS DENIED: Please enter a Session ID.'
       });
     }
 
-    // 1. Fetch stored trusted profile from Supabase trusted_session_profiles table
-    let trusted = null;
+    // CHECK 1: Query Supabase sessions table to verify existence & active status
+    let dbSession = null;
     try {
       const { data } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('session_id', cleanSessionId)
+        .single();
+      if (data) dbSession = data;
+    } catch (e) {}
+
+    // Also check trusted_session_profiles if not in sessions
+    let trustedProfile = null;
+    try {
+      const { data: tData } = await supabase
         .from('trusted_session_profiles')
         .select('*')
         .eq('session_id', cleanSessionId)
         .single();
-      if (data) trusted = data;
+      if (tData) trustedProfile = tData;
     } catch (e) {}
 
-    // Fallback: Check sessions table for user_id
-    let userId = trusted ? trusted.user_id : null;
-    if (!userId) {
-      try {
-        const { data: sessData } = await supabase
-          .from('sessions')
-          .select('*')
-          .eq('session_id', cleanSessionId)
-          .single();
-        if (sessData) userId = sessData.user_id;
-      } catch (e) {}
-    }
-
-    if (!userId) {
+    // Check if Session ID exists in Database at all
+    if (!dbSession && !trustedProfile) {
       return res.status(404).json({
         success: false,
-        message: `Session ID '${cleanSessionId}' not found in database.`
+        message: `🚫 ACCESS DENIED: Invalid or non-existent Session ID '${cleanSessionId}'.`
       });
     }
 
-    // 2. Fetch User Record
-    const rawUser = await userService.findUserById(userId, true);
-    if (!rawUser) {
-      return res.status(404).json({
+    // CHECK 2: Verify if session is currently ACTIVE (Reject terminated or expired)
+    const sessionStatus = dbSession ? dbSession.session_status : 'active';
+    const isTerminated = sessionStatus === 'terminated' || (dbSession && dbSession.logout_time);
+
+    if (isTerminated) {
+      return res.status(403).json({
         success: false,
-        message: 'User account associated with this session was not found.'
+        message: `🚫 ACCESS DENIED: Session '${cleanSessionId}' has been terminated or expired.`
       });
     }
 
-    // 3. Extract Current Device Specs from Request
+    const targetUserId = dbSession ? dbSession.user_id : trustedProfile.user_id;
+
+    // CHECK 3: Extract current device specs and compare against trusted_session_profiles
     const incomingEnv = clientEnv || {};
     const currentFingerprint = incomingEnv.deviceFingerprint || req.headers['x-device-fingerprint'] || 'FP-UNKNOWN';
     const currentBrowser = incomingEnv.browserName || 'Unknown';
+    const currentOS = incomingEnv.operatingSystem || 'Unknown';
 
-    // 4. Perform Specification Comparison against DB Baseline
     let isMatch = true;
     let mismatchReasons = [];
 
-    if (trusted) {
-      // Compare Device Fingerprint
-      if (trusted.device_fingerprint && currentFingerprint !== trusted.device_fingerprint) {
+    if (trustedProfile) {
+      // Compare Canvas Device Fingerprint
+      if (trustedProfile.device_fingerprint && currentFingerprint !== trustedProfile.device_fingerprint) {
         isMatch = false;
-        mismatchReasons.push(`Device Fingerprint Mismatch (Stored DB: ${trusted.device_fingerprint} vs Current: ${currentFingerprint})`);
+        mismatchReasons.push(`Device Fingerprint Mismatch (Stored DB: ${trustedProfile.device_fingerprint} vs Incoming: ${currentFingerprint})`);
       }
       // Compare Browser Name
-      if (trusted.browser_name && currentBrowser.toLowerCase() !== trusted.browser_name.toLowerCase()) {
+      if (trustedProfile.browser_name && currentBrowser.toLowerCase() !== trustedProfile.browser_name.toLowerCase()) {
         isMatch = false;
-        mismatchReasons.push(`Browser Mismatch (Stored DB: ${trusted.browser_name} vs Current: ${currentBrowser})`);
+        mismatchReasons.push(`Browser Mismatch (Stored DB: ${trustedProfile.browser_name} vs Incoming: ${currentBrowser})`);
+      }
+      // Compare Operating System
+      if (trustedProfile.operating_system && currentOS.toLowerCase() !== trustedProfile.operating_system.toLowerCase()) {
+        isMatch = false;
+        mismatchReasons.push(`OS Mismatch (Stored DB: ${trustedProfile.operating_system} vs Incoming: ${currentOS})`);
       }
     }
 
-    // 5. Enforce Decision
+    // Enforce ATO Block decision if specs differ
     if (!isMatch) {
-      // Record ATO Decision in DB
       try {
         await riskRepository.createRiskDecision({
-          transaction_id: `ATO-${Date.now().toString(36).toUpperCase()}`,
-          user_id: userId,
+          transaction_id: null,
+          user_id: targetUserId,
           session_id: cleanSessionId,
           risk_score: 100,
           risk_level: 'CRITICAL',
           decision: 'BLOCK',
           risk_factors: mismatchReasons,
           baseline_snapshot: {
-            reason: 'Account Takeover (ATO)',
+            reason: 'Account Takeover (ATO) Device Mismatch',
             mismatch_reasons: mismatchReasons
           }
         });
@@ -285,13 +297,19 @@ router.post('/verify-session-id-login', async (req, res) => {
 
       return res.status(403).json({
         success: false,
-        matched: false,
-        reason: 'ATO_DEVICE_MISMATCH',
-        message: `🚫 ACCESS DENIED: Account Takeover (ATO) Detected!\n\nIncoming device specifications do not match the trusted session profile stored in database.\n\n${mismatchReasons.join('\n')}`
+        message: `🚫 ACCESS DENIED: Account Takeover (ATO) Detected!\n\nIncoming device specifications do not match the trusted session baseline stored in database.\n\n${mismatchReasons.join('\n')}`
       });
     }
 
-    // 6. Legitimate Request - Establish Active Session
+    // CHECK 4: Legitimate Active Session & Matched Specs -> Allow Login
+    const rawUser = await userService.findUserById(targetUserId, true);
+    if (!rawUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User account associated with this session was not found.'
+      });
+    }
+
     const safeUser = toSafeUser(rawUser);
     sessionModule.setSessionUser(req, safeUser);
     req.session.sessionId = cleanSessionId;
@@ -300,8 +318,7 @@ router.post('/verify-session-id-login', async (req, res) => {
       if (err) console.error('Session save error:', err.message);
       return res.status(200).json({
         success: true,
-        matched: true,
-        message: '🟢 Session Verified! Device specifications match trusted baseline.',
+        message: `🟢 Session Verified! Device specifications match active session baseline.`,
         redirectUrl: 'dashboard.html',
         user: safeUser
       });
@@ -365,7 +382,11 @@ router.post('/logout', async (req, res) => {
       }
     }
 
-    sessionModule.clearSessionUser(req);
+    if (req.session) {
+      delete req.session.userId;
+      delete req.session.user;
+      delete req.session.username;
+    }
 
     req.session.destroy((err) => {
       if (err) console.error('Session destroy error:', err.message);
