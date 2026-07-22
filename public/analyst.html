@@ -118,6 +118,43 @@
       border-color: #2563eb;
     }
 
+    /* Timeline step node styling */
+    .timeline-node {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      position: relative;
+      padding-bottom: 1.25rem;
+    }
+    .timeline-node:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 36px;
+      bottom: 0;
+      width: 2px;
+      background: #cbd5e1;
+    }
+    .timeline-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #eff6ff;
+      border: 2px solid #2563eb;
+      color: #2563eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      z-index: 2;
+    }
+    .timeline-badge.alert {
+      background: #fef2f2;
+      border-color: #dc2626;
+      color: #dc2626;
+    }
+
     /* Graph Canvas & Controls */
     #graph-container {
       position: relative;
@@ -211,13 +248,14 @@
   </nav>
 
   <div class="layout-wrapper">
-    <!-- LEFT SIDEBAR NAVIGATION (STREAMLINED ONLY 3 ITEMS) -->
+    <!-- LEFT SIDEBAR NAVIGATION -->
     <aside class="sidebar">
       <div>
         <div class="nav-group-title">ANALYST CONSOLE</div>
         <ul class="sidebar-menu">
           <li><a id="nav-dashboard" class="active">📊 Dashboard</a></li>
           <li><a id="nav-investigation">🔍 Investigation & Money Flow</a></li>
+          <li><a id="nav-ato-investigation">🛡️ Account Takeover Investigation</a></li>
           <li><a id="nav-settings">⚙️ Settings</a></li>
         </ul>
       </div>
@@ -658,7 +696,204 @@
       </div>
 
       <!-- ========================================================= -->
-      <!-- VIEW 3: SETTINGS WORKSPACE                                -->
+      <!-- VIEW 3: ACCOUNT TAKEOVER (ATO) INVESTIGATION PAGE          -->
+      <!-- ========================================================= -->
+      <div id="ato-investigation-workspace" style="display: none;">
+        <!-- PAGE HEADER & SEARCH -->
+        <div class="card" style="border-top: 4px solid #dc2626;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.25rem; font-weight: 700; color: #0f172a;">🛡️ ACCOUNT TAKEOVER (ATO) INVESTIGATION</span>
+              <div style="font-size: 0.8rem; color: #64748b;">Visual session integrity analysis, environment baseline comparison, detection timeline, and analyst decision console</div>
+            </div>
+            <span id="ato-page-status-badge" class="badge badge-high" style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding: 0.35rem 0.75rem;">ATO ENGINE ACTIVE</span>
+          </div>
+
+          <!-- ATO Search Bar -->
+          <form id="ato-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
+            <input type="text" id="ato-search-input" class="form-input" placeholder="Search by User ID, Email, Account No, or Session ID..." style="flex: 1; min-width: 280px;" required>
+            <button type="submit" id="ato-search-btn" class="btn btn-danger" style="padding: 0.65rem 1.5rem; font-weight: 700;">
+              🔍 Search & Investigate ATO
+            </button>
+          </form>
+          <div id="ato-search-alert" class="alert alert-danger" style="display:none; margin-top: 1rem;"></div>
+        </div>
+
+        <!-- CONTAINER FOR SEARCH RESULT ATO VISUALIZATION -->
+        <div id="ato-results-container" style="display: none;">
+
+          <!-- TOP SESSION SUMMARY CARD -->
+          <div class="card" style="border-left: 4px solid #dc2626;">
+            <div class="section-title">
+              <span style="font-weight: 700; color: #0f172a;">SESSION INTEGRITY SUMMARY</span>
+              <span id="ato-sum-decision-badge" class="badge badge-critical">BLOCK</span>
+            </div>
+
+            <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">User Name</span>
+                <div id="ato-sum-user" class="summary-val" style="color: #0f172a;">-</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Session ID</span>
+                <div id="ato-sum-session-id" class="summary-val" style="color: #2563eb; font-size: 1rem;">-</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Session Status</span>
+                <div id="ato-sum-status" class="summary-val" style="color: #059669;">ACTIVE</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">ATO Risk Score</span>
+                <div id="ato-sum-risk-score" class="summary-val" style="color: #dc2626;">0/100</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Automated Decision</span>
+                <div id="ato-sum-decision" class="summary-val" style="color: #dc2626;">-</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Detection Reason</span>
+                <div id="ato-sum-reason" class="summary-val" style="color: #991b1b; font-size: 0.95rem;">Account Takeover (ATO)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- GRID FOR ORIGINAL vs CURRENT PROFILES -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem;">
+            <!-- 1. ORIGINAL LOGIN PROFILE -->
+            <div class="card" style="border-top: 4px solid #059669; margin: 0;">
+              <div class="section-title">
+                <span style="color: #059669;">1. ORIGINAL LOGIN PROFILE (TRUSTED BASELINE)</span>
+                <span class="badge badge-low">TRUSTED</span>
+              </div>
+              <div style="font-size: 0.85rem; color: #334155; line-height: 1.8;">
+                <div><strong>Device:</strong> <span id="ato-orig-device">-</span></div>
+                <div><strong>Device Fingerprint:</strong> <code id="ato-orig-fingerprint">-</code></div>
+                <div><strong>Browser:</strong> <span id="ato-orig-browser">-</span></div>
+                <div><strong>Operating System:</strong> <span id="ato-orig-os">-</span></div>
+                <div><strong>IP Address:</strong> <code id="ato-orig-ip">-</code></div>
+                <div><strong>Country:</strong> <span id="ato-orig-country">-</span></div>
+                <div><strong>Timezone:</strong> <span id="ato-orig-timezone">-</span></div>
+                <div><strong>Login Time:</strong> <span id="ato-orig-logintime">-</span></div>
+              </div>
+            </div>
+
+            <!-- 2. CURRENT SESSION PROFILE -->
+            <div class="card" style="border-top: 4px solid #dc2626; margin: 0;">
+              <div class="section-title">
+                <span style="color: #dc2626;">2. CURRENT SESSION PROFILE (INCOMING REQUEST)</span>
+                <span class="badge badge-critical">EVALUATED</span>
+              </div>
+              <div style="font-size: 0.85rem; color: #334155; line-height: 1.8;">
+                <div><strong>Device:</strong> <span id="ato-curr-device">-</span></div>
+                <div><strong>Device Fingerprint:</strong> <code id="ato-curr-fingerprint">-</code></div>
+                <div><strong>Browser:</strong> <span id="ato-curr-browser">-</span></div>
+                <div><strong>Operating System:</strong> <span id="ato-curr-os">-</span></div>
+                <div><strong>IP Address:</strong> <code id="ato-curr-ip">-</code></div>
+                <div><strong>Country:</strong> <span id="ato-curr-country">-</span></div>
+                <div><strong>Timezone:</strong> <span id="ato-curr-timezone">-</span></div>
+                <div><strong>Current Time:</strong> <span id="ato-curr-time">-</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. SESSION COMPARISON -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="section-title">
+              <span>3. SESSION COMPARISON (ENVIRONMENTAL MATCH ANALYSIS)</span>
+              <span class="badge badge-medium">ATTRIBUTE DIFFERENTIAL</span>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="data-table" style="font-size: 0.85rem;">
+                <thead>
+                  <tr>
+                    <th>Attribute Name</th>
+                    <th>Trusted Baseline Value</th>
+                    <th>Current Request Value</th>
+                    <th>Match Status</th>
+                  </tr>
+                </thead>
+                <tbody id="ato-comparison-table-body">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 4. RISK CALCULATION -->
+          <div class="card" style="border-top: 4px solid #d97706; margin-bottom: 1.5rem;">
+            <div class="section-title">
+              <span>4. RISK CALCULATION (CONFIGURABLE WEIGHTED RULE SCORE)</span>
+              <span id="ato-calc-risk-level-badge" class="badge badge-critical">CRITICAL RISK</span>
+            </div>
+            <div id="ato-risk-calc-rules-list" style="margin-bottom: 1rem;">
+              <!-- Triggered rules with point breakdown (+40, +20, etc.) -->
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; font-weight: 700;">
+              <span style="font-size: 1.05rem; color: #0f172a;">TOTAL CALCULATED ATO RISK SCORE</span>
+              <span id="ato-calc-total-score" style="font-size: 1.5rem; color: #dc2626;">175 / 100</span>
+            </div>
+          </div>
+
+          <!-- 5. DETECTION TIMELINE -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="section-title">
+              <span>5. DETECTION TIMELINE (CHRONOLOGICAL EVENT FLOW)</span>
+            </div>
+            <div id="ato-timeline-flow-container" style="padding: 1rem 0.5rem;">
+              <!-- Chronological flow graph / timeline -->
+            </div>
+          </div>
+
+          <!-- 6. INVESTIGATION EVIDENCE -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="section-title">
+              <span>6. INVESTIGATION EVIDENCE & AUDIT PROOF</span>
+            </div>
+            <div id="ato-evidence-checklist" style="margin-bottom: 1rem;">
+              <!-- Checkbox evidence items -->
+            </div>
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem;">
+              <strong>Forensic Summary:</strong>
+              <div id="ato-forensic-summary-text" style="margin-top: 0.25rem; color: #475569;">-</div>
+            </div>
+          </div>
+
+          <!-- 7. ANALYST ACTION CONSOLE -->
+          <div class="card" style="border-top: 4px solid #2563eb;">
+            <div class="section-title">
+              <span>7. ANALYST ACTION CONSOLE</span>
+              <span style="font-size: 0.8rem; color: #64748b;">Execute binding security decision</span>
+            </div>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+              Select an analyst enforcement decision below to override or enforce account security policy and record in audit logs:
+            </p>
+
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline" style="border-color: #059669; color: #059669; font-weight: 700;" onclick="executeAnalystATOAction('ALLOW')">
+                🟢 Allow Session
+              </button>
+              <button type="button" class="btn btn-outline" style="border-color: #d97706; color: #d97706; font-weight: 700;" onclick="executeAnalystATOAction('MONITOR')">
+                🟡 Monitor Activity
+              </button>
+              <button type="button" class="btn btn-outline" style="border-color: #ea580c; color: #ea580c; font-weight: 700;" onclick="executeAnalystATOAction('STEP-UP')">
+                🟠 Challenge Step-Up MFA
+              </button>
+              <button type="button" class="btn btn-danger" style="font-weight: 700;" onclick="executeAnalystATOAction('BLOCK')">
+                🔴 Block & Terminate Session
+              </button>
+              <button type="button" class="btn btn-danger" style="background: #991b1b; border-color: #991b1b; font-weight: 700;" onclick="executeAnalystATOAction('FREEZE_ACCOUNT')">
+                🔒 Freeze User Account
+              </button>
+            </div>
+
+            <div id="ato-action-feedback-alert" class="alert alert-success" style="display:none; margin-top: 1rem;"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- VIEW 4: SETTINGS WORKSPACE                                -->
       <!-- ========================================================= -->
       <div id="settings-workspace" style="display: none;">
         <div class="card" style="border-top: 4px solid #2563eb;">
