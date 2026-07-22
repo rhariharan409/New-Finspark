@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register Account - FINSPARK</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <a href="index.html" class="brand">
+      <span class="brand-icon">⚡</span>
+      <span>FINSPARK</span>
+    </a>
+    <div class="nav-links">
+      <a href="login.html" class="btn btn-outline" style="color: #ffffff; border-color: #475569;">Sign In</a>
+    </div>
+  </nav>
+
+  <main class="container" style="max-width: 480px; margin-top: 2.5rem;">
+    <div class="card" style="padding: 2rem;">
+      <h2 style="font-size: 1.5rem; color: #0f172a; margin-bottom: 0.25rem; text-align: center;">Register Account</h2>
+      <p style="color: #64748b; font-size: 0.85rem; text-align: center; margin-bottom: 1.5rem;">Create a new FINSPARK digital banking account</p>
+
+      <div id="signup-alert" class="alert" style="display:none;"></div>
+
+      <form id="signup-form">
+        <div class="form-group">
+          <label class="form-label" for="signup-name">Full Name</label>
+          <input type="text" id="signup-name" class="form-input" placeholder="e.g. John Doe" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="signup-email">Email Address</label>
+          <input type="email" id="signup-email" class="form-input" placeholder="e.g. john@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="signup-password">Password</label>
+          <input type="password" id="signup-password" class="form-input" placeholder="Minimum 6 characters" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="signup-confirm-password">Confirm Password</label>
+          <input type="password" id="signup-confirm-password" class="form-input" placeholder="Re-enter password" required>
+        </div>
+
+        <button type="submit" id="signup-submit-btn" class="btn btn-primary btn-full" style="padding: 0.75rem; margin-top: 0.5rem;">
+          Create Account
+        </button>
+      </form>
+
+      <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: #64748b;">
+        Already registered? <a href="login.html" style="color: #2563eb; text-decoration: none; font-weight: 600;">Sign in here</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    FINSPARK — Secure Digital Banking
+  </footer>
+
+  <script src="js/signup-ui.js"></script>
+</body>
+</html>

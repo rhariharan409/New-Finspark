@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analyst Portal - FINSPARK</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .summary-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 1rem;
+    }
+    .summary-val {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 0.25rem;
+    }
+  </style>
+</head>
+<body style="background-color: #ffffff;">
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <a href="index.html" class="brand">
+      <span class="brand-icon">⚡</span>
+      <span>FINSPARK</span>
+      <span style="font-size: 0.75rem; background: #1e293b; color: #38bdf8; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; text-transform: uppercase;">Analyst Portal</span>
+    </a>
+    <div class="nav-links">
+      <span id="analyst-info" style="font-size: 0.85rem; color: #cbd5e1;">Analyst</span>
+      <button id="analyst-logout-btn" class="btn btn-danger" style="padding: 0.35rem 0.85rem; font-size: 0.8rem;">Logout</button>
+    </div>
+  </nav>
+
+  <main class="container" style="max-width: 1100px; margin-top: 2rem;">
+    
+    <!-- 1. Account Investigation Search Card -->
+    <div class="card" style="border-top: 4px solid #2563eb;">
+      <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem;">Account Investigation Search</h2>
+      <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
+        Search target user account by exact Account ID, User ID, or Email address to inspect fraud risk intelligence.
+      </p>
+
+      <form id="analyst-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <input type="text" id="analyst-query-input" class="form-input" placeholder="e.g. TURTLE-1749020303 or user@example.com" style="flex: 1; min-width: 280px;" required>
+        <button type="submit" id="analyst-search-btn" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
+          Investigate Account
+        </button>
+      </form>
+      <div id="analyst-search-alert" class="alert alert-danger" style="display:none; margin-top: 1rem;"></div>
+    </div>
+
+    <!-- Investigation Workspace (Hidden until searched) -->
+    <div id="investigation-workspace" style="display: none;">
+
+      <!-- 2. Investigation Summary -->
+      <div class="card">
+        <div class="section-title">
+          <span>1. Investigation Summary</span>
+          <span id="overall-risk-badge" class="badge badge-low">LOW RISK</span>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-box">
+            <span style="font-size: 0.75rem; color: #64748b;">User Name</span>
+            <div id="sum-name" class="summary-val">-</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.75rem; color: #64748b;">Account ID</span>
+            <div id="sum-account-id" class="summary-val" style="color: #2563eb;">-</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.75rem; color: #64748b;">Account Status</span>
+            <div id="sum-status" class="summary-val" style="color: #059669;">Active</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.75rem; color: #64748b;">Current Risk Score</span>
+            <div id="sum-risk-score" class="summary-val" style="color: #dc2626;">0/100</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.75rem; color: #64748b;">Total Amount Transferred</span>
+            <div id="sum-total-amount" class="summary-val" style="color: #059669;">₹0.00</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.75rem; color: #64748b;">Total Transactions</span>
+            <div id="sum-total-txns" class="summary-val">0</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.75rem; color: #64748b;">Number of Sessions</span>
+            <div id="sum-total-sessions" class="summary-val">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Transaction Analysis -->
+      <div class="card">
+        <div class="section-title">
+          <span>2. Transaction Analysis</span>
+          <span id="tx-count-badge" class="badge badge-low">0 Transactions</span>
+        </div>
+        <div id="tx-table-container" style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Transaction ID</th>
+                <th>Sender</th>
+                <th>Receiver</th>
+                <th>Amount</th>
+                <th>Date & Time</th>
+                <th>Session ID</th>
+                <th>Risk Level</th>
+                <th>Decision</th>
+              </tr>
+            </thead>
+            <tbody id="tx-table-body">
+              <tr><td colspan="8" style="text-align:center; color:#64748b;">No transactions available</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 4. Session Analysis -->
+      <div class="card">
+        <div class="section-title">
+          <span>3. Session Analysis & Aggregation</span>
+          <span id="session-count-badge" class="badge badge-low">0 Sessions</span>
+        </div>
+        <div id="session-table-container" style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Session ID</th>
+                <th>Login Time</th>
+                <th>Logout Time</th>
+                <th>Duration</th>
+                <th>Tx Count</th>
+                <th>Total Amount</th>
+                <th>Avg Amount</th>
+                <th>Largest Tx</th>
+                <th>Unique Receivers</th>
+                <th>Session Risk</th>
+              </tr>
+            </thead>
+            <tbody id="session-table-body">
+              <tr><td colspan="10" style="text-align:center; color:#64748b;">No session records available</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 5. Behavioral Analysis & Transaction Splitting Detection -->
+      <div class="card">
+        <div class="section-title">
+          <span>4. Behavioral Analysis & Transaction Splitting Detection</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div class="summary-box">
+            <span style="font-size: 0.75rem; color: #64748b;">Historical Average Txn Amount</span>
+            <div id="beh-base-avg" class="summary-val">₹0.00</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.75rem; color: #64748b;">Current Txn Deviation</span>
+            <div id="beh-curr-dev" class="summary-val" style="color: #d97706;">1.0x</div>
+          </div>
+        </div>
+
+        <div id="structuring-warning-box" class="alert alert-danger" style="display:none;">
+          <strong>Transaction Splitting / Structuring Warning:</strong>
+          <div id="structuring-warning-text" style="margin-top: 0.25rem;">-</div>
+        </div>
+
+        <div style="font-size: 0.85rem; color: #475569; background: #f8fafc; padding: 0.85rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+          <strong>Behavioral Deviation Assessment:</strong>
+          <div id="beh-explanation" style="margin-top: 0.25rem;">Current activity parameters align with historical user baseline.</div>
+        </div>
+      </div>
+
+      <!-- 6. Risk Decision Summary -->
+      <div class="card" style="border-left: 4px solid #dc2626;">
+        <div class="section-title">
+          <span>5. Risk Decision & Contributing Factors</span>
+        </div>
+        <div style="display: flex; gap: 2rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+          <div><strong>Risk Score:</strong> <span id="rd-score" style="font-size: 1.2rem; font-weight: 700; color: #dc2626;">0/100</span></div>
+          <div><strong>Risk Level:</strong> <span id="rd-level" class="badge badge-low">LOW</span></div>
+          <div><strong>Decision:</strong> <span id="rd-decision" class="badge badge-low">ALLOW</span></div>
+        </div>
+        <div style="font-size: 0.85rem;">
+          <strong>Contributing Risk Signals:</strong>
+          <ul id="rd-signals-list" style="margin: 0.35rem 0 0 1.25rem; color: #334155;">
+            <li>Normal transaction behavior</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    FINSPARK — Fraud Investigation Platform
+  </footer>
+
+  <script src="js/analyst-ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "name": "bank-of-turtles",
+  "version": "1.0.0",
+  "description": "Bank of Turtles - Banking Application Foundation with Behavioral Fraud Detection and Explainable Risk Analysis",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "banking",
+    "fraud-detection",
+    "telemetry",
+    "risk-analysis"
+  ],
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0"
+  },
+  "author": "",
+  "license": "ISC"
+}

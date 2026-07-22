@@ -1,0 +1,112 @@
+[
+  {
+    "id": "usr_1784651576277_8tcge",
+    "fullName": "Alice Turtle",
+    "username": "aliceturtle",
+    "email": "alice@turtle.com",
+    "passwordHash": "$2a$10$e9GU3MjIzMvqa0Y0dB3q/eVJD6ZuCXLM8YLlHml.LA0de8zRIaO4O",
+    "accountNumber": "TURTLE-1556539881",
+    "balance": 12500,
+    "createdAt": "2026-07-21T16:32:56.288Z"
+  },
+  {
+    "user_id": "usr_1784652008579_clzi6",
+    "account_id": "TURTLE-3625703586",
+    "full_name": "Test Turtle User",
+    "email": "test_1784652008424@turtlebank.com",
+    "phone": "+1 555 123 4567",
+    "password_hash": "",
+    "created_at": "2026-07-21T16:40:08.454Z",
+    "account_status": "active"
+  },
+  {
+    "user_id": "usr_1784652153523_28iwv",
+    "account_id": "TURTLE-6253849713",
+    "full_name": "Bob Turtle",
+    "email": "bob_1784652153209@turtle.com",
+    "phone": "+1 555 987 6543",
+    "password_hash": "$2a$10$j1ghmvCDkWeOu0fPyue0dOqBwCVNduEPrT4CsXN02DV6nSTCqRHoC",
+    "created_at": "2026-07-21T16:42:33.413Z",
+    "account_status": "active"
+  },
+  {
+    "user_id": "usr_1784652243969_6a3v9",
+    "account_id": "TURTLE-8787637968",
+    "full_name": "Active Turtle",
+    "email": "active_1784652243882@turtle.com",
+    "phone": "+1 555 111 2222",
+    "password_hash": "$2a$10$baUUxbkTV.ItrtHlEZi8iOqdxYdIhfYx7pGzgJmp0f9qr7.IzRZeW",
+    "created_at": "2026-07-21T16:44:03.969Z",
+    "account_status": "active"
+  },
+  {
+    "user_id": "usr_1784652243972_pwknm",
+    "account_id": "TURTLE-2397733728",
+    "full_name": "Suspended Turtle",
+    "email": "suspended_1784652243882@turtle.com",
+    "phone": "+1 555 333 4444",
+    "password_hash": "$2a$10$baUUxbkTV.ItrtHlEZi8iOqdxYdIhfYx7pGzgJmp0f9qr7.IzRZeW",
+    "created_at": "2026-07-21T16:44:03.972Z",
+    "account_status": "suspended"
+  },
+  {
+    "user_id": "usr_1784652299171_schoh",
+    "account_id": "TURTLE-4210216673",
+    "full_name": "Dashboard Tester",
+    "email": "dash_user_1784652299070@turtle.com",
+    "phone": "+1 555 999 8888",
+    "password_hash": "$2a$10$kY.IV.CXTDMUaInRx8f7cuOSZAXzTDc/M0c9NA0RbwyjYb0PF6QAi",
+    "created_at": "2026-07-21T16:44:59.170Z",
+    "account_status": "active"
+  },
+  {
+    "user_id": "usr_1784652392879_yhnmt",
+    "account_id": "TURTLE-7763771372",
+    "full_name": "Hariharan R",
+    "email": "rhariharan409@gmail.com",
+    "phone": "+919025521474",
+    "password_hash": "$2a$10$q8VRfEG3PukSsWfucl1pvuRpXQm8jV1sBvCdEGb51c6Y3QmlmaX1O",
+    "created_at": "2026-07-21T16:46:32.879Z",
+    "account_status": "active"
+  },
+  {
+    "user_id": "usr_1784652580829_e7tyq",
+    "account_id": "TURTLE-9586608040",
+    "full_name": "Session Tester",
+    "email": "ses_user_1784652580584@turtle.com",
+    "phone": "+1 555 777 6666",
+    "password_hash": "$2a$10$mZ5GCpttwQk..SpbZFhO5uSPe68E5MbXQzR2O.UDlpIAzAhBM3Xje",
+    "created_at": "2026-07-21T16:49:40.700Z",
+    "account_status": "active"
+  },
+  {
+    "user_id": "usr_1784652727042_a7s98",
+    "account_id": "TURTLE-9896536381",
+    "full_name": "Termination Tester",
+    "email": "term_user_1784652726895@turtle.com",
+    "phone": "+1 555 222 3333",
+    "password_hash": "$2a$10$oGcodAPH.IywZSG3i5RIsOa0AasEqTmyRFEH6ZRHfJuFadExz9eW2",
+    "created_at": "2026-07-21T16:52:07.013Z",
+    "account_status": "active"
+  },
+  {
+    "user_id": "usr_1784653028235_v18m2",
+    "account_id": "TURTLE-4189542578",
+    "full_name": "Duration Tester",
+    "email": "dur_user_1784653027995@turtle.com",
+    "phone": "+1 555 444 5555",
+    "password_hash": "$2a$10$LtLtd5x91us13zCeaT8eAO7srA10qyffb6sue0OY6woCsSYvt3fuO",
+    "created_at": "2026-07-21T16:57:08.112Z",
+    "account_status": "active"
+  },
+  {
+    "user_id": "usr_1784653380366_2r1nu",
+    "account_id": "TURTLE-1329506369",
+    "full_name": "Live Duration Tester",
+    "email": "live_dur_1784653379451@turtle.com",
+    "phone": "+1 555 888 9999",
+    "password_hash": "$2a$10$qwxRGQJdWpfOegF1gjBWxOVclmFciiQAO60m9B4RnnoZlNKnMiNX6",
+    "created_at": "2026-07-21T17:02:59.940Z",
+    "account_status": "active"
+  }
+]

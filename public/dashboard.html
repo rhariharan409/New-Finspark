@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Banking Dashboard - FINSPARK</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body style="background-color: #ffffff;">
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <a href="index.html" class="brand">
+      <span class="brand-icon">⚡</span>
+      <span>FINSPARK</span>
+    </a>
+    <div class="nav-links">
+      <span id="dash-user-email" style="font-size: 0.85rem; color: #cbd5e1; margin-right: 1rem;">user@example.com</span>
+      <button id="logout-btn" class="btn btn-danger" style="padding: 0.35rem 0.85rem; font-size: 0.85rem;">Logout</button>
+    </div>
+  </nav>
+
+  <!-- Authenticated User Banking Dashboard -->
+  <main id="dashboard-view" class="container" style="max-width: 900px; margin-top: 2rem;">
+    
+    <!-- User Profile & Account Overview Card -->
+    <div class="account-card" style="margin-bottom: 1.5rem; border-top: 4px solid #2563eb;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2 id="dash-welcome-name" style="margin: 0; font-size: 1.5rem; color: #0f172a;">Welcome, User</h2>
+          <p style="margin: 0.25rem 0 0 0; color: #64748b; font-size: 0.9rem;">
+            Account Number: <strong id="dash-account-id" style="color: #2563eb;">TURTLE-0000000000</strong>
+          </p>
+        </div>
+        <div>
+          <span id="dash-account-status" class="badge" style="background: #10b981; color: white; padding: 0.35rem 0.75rem; font-size: 0.85rem;">Account Status: Active</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Send Money Form -->
+    <div class="account-card" style="margin-bottom: 1.5rem;">
+      <h3 style="margin-bottom: 1rem; font-size: 1.15rem; color: #0f172a;">Send Money</h3>
+      
+      <!-- Customer Security Alert Container -->
+      <div id="txn-alert" class="alert" style="display:none; margin-bottom: 1rem;"></div>
+      
+      <form id="txn-form">
+        <div class="form-group">
+          <label class="form-label" for="txn-receiver">Receiver Account Number or Email</label>
+          <input type="text" id="txn-receiver" class="form-input" placeholder="e.g. TURTLE-1749020303 or user@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="txn-amount">Amount (₹ INR)</label>
+          <input type="number" id="txn-amount" step="0.01" min="1" class="form-input" placeholder="e.g. 5000" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="txn-description">Description / Note (Optional)</label>
+          <input type="text" id="txn-description" class="form-input" placeholder="e.g. Payment for invoice">
+        </div>
+
+        <button type="submit" id="txn-submit-btn" class="btn btn-primary btn-full" style="padding: 0.75rem;">
+          Send Transfer
+        </button>
+      </form>
+    </div>
+
+    <!-- Transaction History List -->
+    <div class="account-card">
+      <h3 style="margin-bottom: 1rem; font-size: 1.15rem; color: #0f172a;">Transaction History</h3>
+      <div id="txn-history-list">
+        <p style="color: #64748b; font-size: 0.85rem;">Loading transaction history...</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer" style="margin-top: 3rem;">
+    FINSPARK — Secure Digital Banking
+  </footer>
+
+  <script src="js/dashboard-ui.js"></script>
+</body>
+</html>

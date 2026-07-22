@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Login - FINSPARK</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <a href="index.html" class="brand">
+      <span class="brand-icon">⚡</span>
+      <span>FINSPARK</span>
+    </a>
+    <div class="nav-links">
+      <a href="signup.html" class="btn btn-primary">Register Account</a>
+    </div>
+  </nav>
+
+  <main class="container" style="max-width: 420px; margin-top: 3rem;">
+    <div class="card" style="padding: 2rem;">
+      <h2 style="font-size: 1.5rem; color: #0f172a; margin-bottom: 0.25rem; text-align: center;">User Login</h2>
+      <p style="color: #64748b; font-size: 0.85rem; text-align: center; margin-bottom: 1.5rem;">Access your secure FINSPARK banking account</p>
+
+      <div id="login-alert" class="alert" style="display:none;"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="login-email">Email Address or Account ID</label>
+          <input type="text" id="login-email" class="form-input" placeholder="user@example.com or TURTLE-..." required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="login-password">Password</label>
+          <input type="password" id="login-password" class="form-input" placeholder="Enter password" required>
+        </div>
+
+        <button type="submit" id="login-submit-btn" class="btn btn-primary btn-full" style="padding: 0.75rem; margin-top: 0.5rem;">
+          Sign In to Banking
+        </button>
+      </form>
+
+      <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: #64748b;">
+        Don't have an account? <a href="signup.html" style="color: #2563eb; text-decoration: none; font-weight: 600;">Register here</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    FINSPARK — Secure Digital Banking
+  </footer>
+
+  <script src="js/login-ui.js"></script>
+</body>
+</html>

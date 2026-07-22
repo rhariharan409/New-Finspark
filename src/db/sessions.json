@@ -1,0 +1,70 @@
+[
+  {
+    "session_id": "SES-C6C4A0E4",
+    "user_id": "usr_1784652580829_e7tyq",
+    "login_time": "2026-07-21T16:49:41.699Z",
+    "logout_time": null,
+    "session_status": "active"
+  },
+  {
+    "session_id": "SES-3321F268",
+    "user_id": "usr_1784652580829_e7tyq",
+    "login_time": "2026-07-21T16:49:41.888Z",
+    "logout_time": null,
+    "session_status": "active"
+  },
+  {
+    "session_id": "SES-C0DEFBD7",
+    "user_id": "usr_1784652727042_a7s98",
+    "login_time": "2026-07-21T16:52:07.707Z",
+    "logout_time": "2026-07-21T16:52:07.744Z",
+    "session_status": "terminated"
+  },
+  {
+    "session_id": "SES-6A25C722",
+    "user_id": "usr_1784652392879_yhnmt",
+    "login_time": "2026-07-21T16:53:11.077Z",
+    "logout_time": null,
+    "session_status": "active"
+  },
+  {
+    "session_id": "SES-3AA62B21",
+    "user_id": "usr_1784653028235_v18m2",
+    "login_time": "2026-07-21T16:57:08.271Z",
+    "logout_time": "2026-07-21T16:57:10.295Z",
+    "session_duration_seconds": 2,
+    "session_status": "terminated"
+  },
+  {
+    "session_id": "SES-2EA99A43",
+    "user_id": "usr_1784652392879_yhnmt",
+    "login_time": "2026-07-21T16:58:40.965Z",
+    "logout_time": null,
+    "session_duration_seconds": null,
+    "session_status": "active"
+  },
+  {
+    "session_id": "SES-56F2BC29",
+    "user_id": "usr_1784652392879_yhnmt",
+    "login_time": "2026-07-21T16:58:45.692Z",
+    "logout_time": null,
+    "session_duration_seconds": null,
+    "session_status": "active"
+  },
+  {
+    "session_id": "SES-F30C1F92",
+    "user_id": "usr_1784652392879_yhnmt",
+    "login_time": "2026-07-21T16:58:48.201Z",
+    "logout_time": null,
+    "session_duration_seconds": null,
+    "session_status": "active"
+  },
+  {
+    "session_id": "SES-3AF7A1CD",
+    "user_id": "usr_1784653380366_2r1nu",
+    "login_time": "2026-07-21T17:03:00.505Z",
+    "logout_time": "2026-07-21T17:03:03.805Z",
+    "session_duration_seconds": 3,
+    "session_status": "terminated"
+  }
+]
