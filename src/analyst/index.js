@@ -11,6 +11,7 @@ import { atoService } from '../services/atoService.js';
 import { unifiedThreatService } from '../services/unifiedThreatService.js';
 import { initCyberAnalystTables, INITIAL_ANALYSTS } from '../db/cyberSchemaInitializer.js';
 import { passwordService } from '../security/passwordService.js';
+import { sessionIntegrityEngine } from '../services/sessionIntegrityEngine.js';
 
 const router = express.Router();
 
@@ -231,6 +232,21 @@ router.get('/ato', async (req, res) => {
     console.error('ATO API error:', err.message);
     return res.status(500).json({ success: false, message: 'Failed to retrieve Account Takeover threat intelligence.' });
   }
+});
+
+/**
+ * Session Integrity ATO Evidence API
+ * GET /api/analyst/session-integrity/:sessionId
+ */
+router.get('/session-integrity/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+  const evidence = sessionIntegrityEngine.getEvidenceForSession(sessionId);
+
+  return res.status(200).json({
+    success: true,
+    found: !!evidence,
+    evidence: evidence || null
+  });
 });
 
 /**

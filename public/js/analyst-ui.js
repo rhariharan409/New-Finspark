@@ -661,8 +661,8 @@ function renderSection3InvestigationQueue() {
           <td>${new Date(q.detectedTime).toLocaleString()}</td>
           <td><span class="badge ${prioClass}">${q.priority}</span></td>
           <td>
-            <button type="button" class="btn btn-danger" style="padding: 0.25rem 0.65rem; font-size: 0.75rem;" onclick="inspectSession('${q.sessionId}', '${q.accountId}')">
-              Investigate
+            <button type="button" class="btn btn-danger" style="padding: 0.25rem 0.65rem; font-size: 0.75rem;" onclick="openSessionIntegritySidePanel('${q.sessionId}', '${q.accountId}')">
+              ATO Evidence
             </button>
           </td>
         </tr>
@@ -670,6 +670,132 @@ function renderSection3InvestigationQueue() {
     }).join('');
   }
 }
+
+/**
+ * Open ATO Session Integrity Evidence Drawer / Side Panel
+ */
+window.openSessionIntegritySidePanel = async function(sessionId, accountId) {
+  try {
+    const res = await fetch(`/api/analyst/session-integrity/${encodeURIComponent(sessionId)}`);
+    const data = await res.json();
+    
+    if (data && data.success && data.evidence) {
+      const ev = data.evidence;
+      const panel = document.getElementById('side-panel');
+      const title = document.getElementById('sp-title');
+      const body = document.getElementById('sp-body');
+      if (!panel || !body) return;
+
+      if (title) title.textContent = `ATO Evidence: ${sessionId}`;
+      const decClass = ev.decision === 'BLOCK' ? 'badge-critical' : (ev.decision === 'STEP-UP' ? 'badge-high' : 'badge-medium');
+
+      body.innerHTML = `
+        <div style="background: #fef2f2; border: 1px solid #fecaca; padding: 1rem; border-radius: 6px; margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <div>
+              <span class="badge badge-high" style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; font-weight:700;">[ATO] ACCOUNT TAKEOVER</span>
+              <h4 style="margin: 0.35rem 0 0 0; color: #991b1b;">Session Hijack Integrity Evidence</h4>
+            </div>
+            <span class="badge ${decClass}">${ev.decision}</span>
+          </div>
+          <div style="font-size: 0.85rem; color: #7f1d1d;">
+            <div><strong>Total ATO Risk Score:</strong> <span style="font-weight: 700; color: #dc2626;">${ev.riskScore}/100</span></div>
+            <div><strong>Timestamp:</strong> ${new Date(ev.timestamp).toLocaleString()}</div>
+          </div>
+        </div>
+
+        <!-- Side-by-Side Environmental Baseline Diffs -->
+        <h4 style="font-size: 0.9rem; color: #0f172a; margin-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">Session Environment Baseline Comparison</h4>
+        <div style="overflow-x: auto; margin-bottom: 1.25rem;">
+          <table class="data-table" style="font-size: 0.78rem;">
+            <thead>
+              <tr>
+                <th>Attribute</th>
+                <th>Original Trusted Profile</th>
+                <th>Current Request Profile</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Device Fingerprint</strong></td>
+                <td><code>${ev.originalProfile.deviceFingerprint}</code></td>
+                <td><code>${ev.currentProfile.deviceFingerprint}</code></td>
+                <td><span class="badge ${ev.attributeComparison.deviceFingerprint === 'Matched' ? 'badge-low' : 'badge-critical'}">${ev.attributeComparison.deviceFingerprint}</span></td>
+              </tr>
+              <tr>
+                <td><strong>IP Address</strong></td>
+                <td><code>${ev.originalProfile.ipAddress}</code></td>
+                <td><code>${ev.currentProfile.ipAddress}</code></td>
+                <td><span class="badge ${ev.attributeComparison.ipAddress === 'Matched' ? 'badge-low' : 'badge-high'}">${ev.attributeComparison.ipAddress}</span></td>
+              </tr>
+              <tr>
+                <td><strong>Browser</strong></td>
+                <td>${ev.originalProfile.browser}</td>
+                <td>${ev.currentProfile.browser}</td>
+                <td><span class="badge ${ev.attributeComparison.browser === 'Matched' ? 'badge-low' : 'badge-high'}">${ev.attributeComparison.browser}</span></td>
+              </tr>
+              <tr>
+                <td><strong>Operating System</strong></td>
+                <td>${ev.originalProfile.operatingSystem}</td>
+                <td>${ev.currentProfile.operatingSystem}</td>
+                <td><span class="badge ${ev.attributeComparison.operatingSystem === 'Matched' ? 'badge-low' : 'badge-high'}">${ev.attributeComparison.operatingSystem}</span></td>
+              </tr>
+              <tr>
+                <td><strong>Location</strong></td>
+                <td>${ev.originalProfile.location}</td>
+                <td>${ev.currentProfile.location}</td>
+                <td><span class="badge ${ev.attributeComparison.location === 'Matched' ? 'badge-low' : 'badge-medium'}">${ev.attributeComparison.location}</span></td>
+              </tr>
+              <tr>
+                <td><strong>Country</strong></td>
+                <td>${ev.originalProfile.country}</td>
+                <td>${ev.currentProfile.country}</td>
+                <td><span class="badge ${ev.attributeComparison.country === 'Matched' ? 'badge-low' : 'badge-critical'}">${ev.attributeComparison.country}</span></td>
+              </tr>
+              <tr>
+                <td><strong>Timezone</strong></td>
+                <td>${ev.originalProfile.timezone}</td>
+                <td>${ev.currentProfile.timezone}</td>
+                <td><span class="badge ${ev.attributeComparison.timezone === 'Matched' ? 'badge-low' : 'badge-medium'}">${ev.attributeComparison.timezone}</span></td>
+              </tr>
+              <tr>
+                <td><strong>Language</strong></td>
+                <td>${ev.originalProfile.language}</td>
+                <td>${ev.currentProfile.language}</td>
+                <td><span class="badge ${ev.attributeComparison.language === 'Matched' ? 'badge-low' : 'badge-medium'}">${ev.attributeComparison.language}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Triggered Rules Evidence Breakdown -->
+        <h4 style="font-size: 0.9rem; color: #0f172a; margin-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem;">Triggered ATO Integrity Rules</h4>
+        <div style="margin-bottom: 1.25rem;">
+          ${(ev.triggeredRules || []).map(r => `
+            <div style="background: #fffbeb; border: 1px solid #fde68a; padding: 0.65rem 0.85rem; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.82rem;">
+              <div style="display: flex; justify-content: space-between; font-weight: 700; color: #92400e;">
+                <span>⚡ ${r.ruleName}</span>
+                <span style="color: #dc2626;">+${r.weight} Points</span>
+              </div>
+              <div style="color: #78350f; margin-top: 0.15rem;">${r.evidence || r.description}</div>
+            </div>
+          `).join('') || '<div style="font-size: 0.82rem; color: #059669;">No ATO rule violations detected.</div>'}
+        </div>
+
+        <button type="button" class="btn btn-primary btn-full" onclick="inspectSession('${sessionId}', '${accountId}')">
+          Focus Full Graph Investigation
+        </button>
+      `;
+
+      panel.classList.add('open');
+    } else {
+      inspectSession(sessionId, accountId);
+    }
+  } catch (err) {
+    inspectSession(sessionId, accountId);
+  }
+};
 
 /**
  * Inspect Session / Account Event Handler

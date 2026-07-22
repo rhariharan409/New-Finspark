@@ -9,6 +9,7 @@ import { passwordService } from '../security/passwordService.js';
 import { sessionService } from '../services/sessionService.js';
 import { telemetryService } from '../services/telemetryService.js';
 import { sessionModule } from '../session/index.js';
+import { sessionIntegrityEngine } from '../services/sessionIntegrityEngine.js';
 
 const router = express.Router();
 
@@ -131,6 +132,18 @@ router.post('/login', async (req, res) => {
 
     sessionModule.setSessionUser(req, safeUser);
     req.session.sessionId = activeSession.session_id;
+
+    // Create Trusted Session Profile in Session Integrity Engine for ATO Detection
+    try {
+      await sessionIntegrityEngine.createTrustedSessionProfile({
+        sessionId: activeSession.session_id,
+        userId: rawUser.user_id,
+        accountId: rawUser.account_id,
+        req
+      });
+    } catch (eErr) {
+      console.error('Session Integrity Profile Error:', eErr.message);
+    }
 
     const clientDetails = telemetryService.extractClientDetails(req);
     try {
