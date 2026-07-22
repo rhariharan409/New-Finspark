@@ -160,9 +160,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Temporary ATO Engine Session Hijack Test Handler
+  // Temporary ATO Engine Session Hijack & Legitimate Device Verification Handlers
+  const sameDevBtn = document.getElementById('sim-verify-same-btn');
   const hijackBtn = document.getElementById('sim-hijack-btn');
   const hijackInput = document.getElementById('sim-hijack-session-id');
+
+  if (sameDevBtn) {
+    sameDevBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      hideAlert();
+
+      const sessionId = hijackInput ? hijackInput.value.trim() : '';
+      if (!sessionId) {
+        return showAlert('Please enter an active Session ID to verify.');
+      }
+
+      showAlert('Capturing current laptop specs and verifying against DB baseline...', true);
+      const realEnv = collectRealClientEnvironment();
+
+      try {
+        const res = await fetch('/api/analyst/simulate-ato-attack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            customParams: {
+              deviceFingerprint: realEnv.deviceFingerprint,
+              browserName: realEnv.browserName,
+              browserVersion: realEnv.browserVersion,
+              operatingSystem: realEnv.operatingSystem,
+              userAgent: realEnv.userAgent,
+              screenResolution: realEnv.screenResolution,
+              language: realEnv.language,
+              timezone: realEnv.timezone,
+              country: 'India',
+              city: 'Chennai'
+            }
+          })
+        });
+
+        const data = await res.json();
+        if (data && data.success) {
+          const score = data.evaluation?.riskScore || 0;
+          const dec = data.evaluation?.action || 'ALLOW';
+          if (score < 30) {
+            showAlert(`🟢 Legitimate Request Verified! ATO Risk Score: ${score}/100 [Decision: ${dec}]. All current laptop specs matched DB baseline!`, true);
+          } else {
+            showAlert(`⚠️ Mismatch Detected! Risk Score: ${score}/100 [Decision: ${dec}]. Stored baseline differs from current laptop environment.`, false);
+          }
+        } else {
+          showAlert('Failed to verify laptop specs against database.');
+        }
+      } catch (err) {
+        showAlert('Network error verifying laptop specs against database.');
+      }
+    });
+  }
 
   if (hijackBtn) {
     hijackBtn.addEventListener('click', async (e) => {
@@ -190,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data && data.success) {
           const score = data.evaluation?.riskScore || 100;
           const dec = data.evaluation?.action || 'BLOCK';
-          showAlert(`⚡ ATO Hijack Detected! Mismatch Risk Score: ${score}/100 [Decision: ${dec}]. Session Blocked & Alert sent to Analyst Portal.`, false);
+          showAlert(`⚡ Attacker Hijack Detected! Mismatch Risk Score: ${score}/100 [Decision: ${dec}]. Session Blocked & Alert sent to Analyst Portal.`, false);
         } else {
           showAlert('Failed to process session hijack simulation.');
         }
