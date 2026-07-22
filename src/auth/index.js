@@ -58,7 +58,8 @@ router.post('/signup', async (req, res) => {
 
     const password_hash = await passwordService.hashPassword(password);
     const newUser = await userService.createUser({
-      fullName,
+      full_name: fullName || req.body.full_name || '',
+      fullName: fullName || req.body.full_name || '',
       username: finalUsername,
       email,
       phone,

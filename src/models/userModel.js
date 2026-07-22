@@ -11,26 +11,18 @@ export const ACCOUNT_STATUS = Object.freeze({
 /**
  * Creates a formatted User entity adhering to system field naming standards
  */
-export function createUserEntity({
-  user_id,
-  account_id,
-  full_name,
-  email,
-  phone,
-  password_hash,
-  created_at,
-  account_status
-}) {
-  const timestamp = created_at || new Date().toISOString();
-  const status = account_status || ACCOUNT_STATUS.ACTIVE;
+export function createUserEntity(userData) {
+  const timestamp = userData.created_at || new Date().toISOString();
+  const status = userData.account_status || ACCOUNT_STATUS.ACTIVE;
+  const name = userData.full_name || userData.fullName || '';
 
   return {
-    user_id: user_id || 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
-    account_id: account_id || 'TURTLE-' + Math.floor(1000000000 + Math.random() * 9000000000),
-    full_name: (full_name || '').trim(),
-    email: (email || '').toLowerCase().trim(),
-    phone: (phone || '').trim(),
-    password_hash: password_hash || '',
+    user_id: userData.user_id || 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+    account_id: userData.account_id || 'TURTLE-' + Math.floor(1000000000 + Math.random() * 9000000000),
+    full_name: name.trim(),
+    email: (userData.email || '').toLowerCase().trim(),
+    phone: (userData.phone || '').trim(),
+    password_hash: userData.password_hash || '',
     created_at: timestamp,
     account_status: status
   };

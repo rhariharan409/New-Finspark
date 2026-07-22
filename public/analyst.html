@@ -16,23 +16,92 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
     }
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 1rem;
     }
     .summary-box {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 6px;
-      padding: 1rem;
+      padding: 0.85rem;
     }
     .summary-val {
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       font-weight: 700;
       color: #0f172a;
-      margin-top: 0.25rem;
+      margin-top: 0.2rem;
+      word-break: break-all;
+    }
+    .time-filter-btn {
+      padding: 0.3rem 0.75rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .time-filter-btn.active, .time-filter-btn:hover {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #2563eb;
+    }
+    /* Flow Canvas Node & Arrow Styles */
+    .flow-node {
+      background: #ffffff;
+      border: 2px solid #2563eb;
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 140px;
+      text-align: center;
+    }
+    .flow-node.target-user {
+      border-color: #059669;
+      background: #ecfdf5;
+    }
+    .flow-edge-box {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 0.4rem 0.75rem;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .flow-edge-box:hover {
+      transform: translateY(-2px);
+      border-color: #2563eb;
+    }
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background: #ffffff;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 650px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      max-height: 85vh;
+      overflow-y: auto;
     }
   </style>
 </head>
@@ -57,7 +126,7 @@
     <div class="card" style="border-top: 4px solid #2563eb;">
       <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem;">Account Investigation Search</h2>
       <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
-        Search target user account by exact Account ID, User ID, or Email address to inspect fraud risk intelligence.
+        Search target user account by exact Account ID, User ID, or Email address to inspect real-time money flow and risk intelligence.
       </p>
 
       <form id="analyst-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
@@ -111,34 +180,73 @@
         </div>
       </div>
 
-      <!-- 3. Transaction Analysis -->
-      <div class="card">
+      <!-- 3. MONEY FLOW ANALYSIS SECTION -->
+      <div class="card" style="border-top: 4px solid #2563eb;">
         <div class="section-title">
-          <span>2. Transaction Analysis</span>
-          <span id="tx-count-badge" class="badge badge-low">0 Transactions</span>
+          <div>
+            <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">2. MONEY FLOW ANALYSIS</span>
+            <div style="font-size: 0.78rem; color: #64748b; font-weight: normal;">Real-time transaction flow between connected accounts</div>
+          </div>
+
+          <!-- Time Range Filter Buttons -->
+          <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;" id="time-filter-buttons">
+            <button type="button" class="time-filter-btn" data-range="1h">Last 1 Hour</button>
+            <button type="button" class="time-filter-btn" data-range="10h">Last 10 Hours</button>
+            <button type="button" class="time-filter-btn" data-range="24h">Last 24 Hours</button>
+            <button type="button" class="time-filter-btn" data-range="7d">Last 7 Days</button>
+            <button type="button" class="time-filter-btn active" data-range="all">All Time</button>
+          </div>
         </div>
-        <div id="tx-table-container" style="overflow-x: auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Transaction ID</th>
-                <th>Sender</th>
-                <th>Receiver</th>
-                <th>Amount</th>
-                <th>Date & Time</th>
-                <th>Session ID</th>
-                <th>Risk Level</th>
-                <th>Decision</th>
-              </tr>
-            </thead>
-            <tbody id="tx-table-body">
-              <tr><td colspan="8" style="text-align:center; color:#64748b;">No transactions available</td></tr>
-            </tbody>
-          </table>
+
+        <!-- Split-Transaction / Structuring Alert Box -->
+        <div id="flow-splitting-alert" class="alert alert-warning" style="display:none; margin-bottom: 1rem;">
+          <strong>⚠️ Transaction Splitting / Structuring Pattern Detected:</strong>
+          <div id="flow-splitting-text" style="margin-top: 0.25rem;">-</div>
+        </div>
+
+        <!-- Transaction Flow Summary -->
+        <div class="summary-grid" style="margin-bottom: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
+          <div class="summary-box">
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Selected Period</span>
+            <div id="flow-period-val" class="summary-val" style="font-size: 0.95rem; color: #2563eb;">ALL TIME</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total Transfers</span>
+            <div id="flow-total-txns" class="summary-val" style="font-size: 0.95rem;">0</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total Transferred</span>
+            <div id="flow-total-amount" class="summary-val" style="font-size: 0.95rem; color: #059669;">₹0.00</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Unique Senders</span>
+            <div id="flow-senders-count" class="summary-val" style="font-size: 0.95rem;">0</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Unique Receivers</span>
+            <div id="flow-receivers-count" class="summary-val" style="font-size: 0.95rem;">0</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Most Active Sender</span>
+            <div id="flow-top-sender" class="summary-val" style="font-size: 0.85rem;">None</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Most Active Receiver</span>
+            <div id="flow-top-receiver" class="summary-val" style="font-size: 0.85rem;">None</div>
+          </div>
+          <div class="summary-box">
+            <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Largest Transfer</span>
+            <div id="flow-largest-tx" class="summary-val" style="font-size: 0.95rem; color: #dc2626;">₹0.00</div>
+          </div>
+        </div>
+
+        <!-- Dynamic Directed Money Flow Graph Visualizer -->
+        <div id="money-flow-canvas" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; min-height: 380px; padding: 1.5rem; display: flex; flex-direction: column; justify-content: center; gap: 1.5rem;">
+          <p style="text-align: center; color: #64748b;">Loading real-time money flow graph...</p>
         </div>
       </div>
 
-      <!-- 4. Session Analysis -->
+      <!-- 4. Session Analysis & Aggregation -->
       <div class="card">
         <div class="section-title">
           <span>3. Session Analysis & Aggregation</span>
@@ -167,10 +275,37 @@
         </div>
       </div>
 
-      <!-- 5. Behavioral Analysis & Transaction Splitting Detection -->
+      <!-- 5. Transaction Analysis -->
       <div class="card">
         <div class="section-title">
-          <span>4. Behavioral Analysis & Transaction Splitting Detection</span>
+          <span>4. Transaction Analysis</span>
+          <span id="tx-count-badge" class="badge badge-low">0 Transactions</span>
+        </div>
+        <div id="tx-table-container" style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Transaction ID</th>
+                <th>Sender</th>
+                <th>Receiver</th>
+                <th>Amount</th>
+                <th>Date & Time</th>
+                <th>Session ID</th>
+                <th>Risk Level</th>
+                <th>Decision</th>
+              </tr>
+            </thead>
+            <tbody id="tx-table-body">
+              <tr><td colspan="8" style="text-align:center; color:#64748b;">No transactions available</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 6. Behavioral Analysis & Risk Decision Summary -->
+      <div class="card">
+        <div class="section-title">
+          <span>5. Behavioral Analysis & Risk Decision Summary</span>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
           <div class="summary-box">
@@ -183,22 +318,11 @@
           </div>
         </div>
 
-        <div id="structuring-warning-box" class="alert alert-danger" style="display:none;">
-          <strong>Transaction Splitting / Structuring Warning:</strong>
-          <div id="structuring-warning-text" style="margin-top: 0.25rem;">-</div>
-        </div>
-
-        <div style="font-size: 0.85rem; color: #475569; background: #f8fafc; padding: 0.85rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+        <div style="font-size: 0.85rem; color: #475569; background: #f8fafc; padding: 0.85rem; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
           <strong>Behavioral Deviation Assessment:</strong>
           <div id="beh-explanation" style="margin-top: 0.25rem;">Current activity parameters align with historical user baseline.</div>
         </div>
-      </div>
 
-      <!-- 6. Risk Decision Summary -->
-      <div class="card" style="border-left: 4px solid #dc2626;">
-        <div class="section-title">
-          <span>5. Risk Decision & Contributing Factors</span>
-        </div>
         <div style="display: flex; gap: 2rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
           <div><strong>Risk Score:</strong> <span id="rd-score" style="font-size: 1.2rem; font-weight: 700; color: #dc2626;">0/100</span></div>
           <div><strong>Risk Level:</strong> <span id="rd-level" class="badge badge-low">LOW</span></div>
@@ -216,8 +340,39 @@
 
   </main>
 
+  <!-- Interactive Connection Details Modal -->
+  <div id="connection-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem; margin-bottom: 1rem;">
+        <h3 id="modal-title" style="font-size: 1.1rem; color: #0f172a; margin: 0;">Transaction Flow Details</h3>
+        <button id="modal-close-btn" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">✕</button>
+      </div>
+
+      <div id="modal-summary-bar" style="background: #f8fafc; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.85rem; border: 1px solid #e2e8f0;">
+        <!-- Connection metrics -->
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table class="data-table" style="font-size: 0.8rem;">
+          <thead>
+            <tr>
+              <th>Transaction ID</th>
+              <th>Amount</th>
+              <th>Date & Time</th>
+              <th>Status</th>
+              <th>Risk Level</th>
+            </tr>
+          </thead>
+          <tbody id="modal-table-body">
+            <!-- Transactions list -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <footer class="footer">
-    FINSPARK — Fraud Investigation Platform
+    FINSPARK — Real-Time Transaction Flow & Fraud Investigation Platform
   </footer>
 
   <script src="js/analyst-ui.js"></script>

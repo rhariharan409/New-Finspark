@@ -432,6 +432,53 @@ export const correlationEngine = {
       }
     };
 
+    // Resolve user mapping for all transaction counterparties
+    const userIdsToResolve = new Set();
+    transactions.forEach(t => {
+      if (t.sender_user_id) userIdsToResolve.add(t.sender_user_id);
+      if (t.receiver_user_id) userIdsToResolve.add(t.receiver_user_id);
+    });
+
+    const { data: resolvedUsers } = await supabase
+      .from('users')
+      .select('user_id, full_name, account_id, email')
+      .in('user_id', Array.from(userIdsToResolve));
+
+    const usersMap = {};
+    (resolvedUsers || []).forEach(u => {
+      usersMap[u.user_id] = u;
+    });
+    usersMap[userId] = user;
+
+    // Calculate dynamic session metrics for Session Analysis section
+    const sessionSummaries = sessions.map(s => {
+      const sTxns = transactions.filter(t => t.session_id === s.session_id || (
+        t.sender_user_id === userId &&
+        new Date(t.transaction_timestamp || t.created_at) >= new Date(s.login_time) &&
+        (!s.logout_time || new Date(t.transaction_timestamp || t.created_at) <= new Date(s.logout_time))
+      ));
+
+      const count = sTxns.length;
+      const total = sTxns.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+      const avg = count > 0 ? Math.round((total / count) * 100) / 100 : 0;
+      const max = count > 0 ? Math.max(...sTxns.map(t => parseFloat(t.amount) || 0)) : 0;
+      const uniqueRecv = new Set(sTxns.map(t => t.receiver_user_id).filter(Boolean)).size;
+
+      return {
+        session_id: s.session_id,
+        login_time: s.login_time,
+        logout_time: s.logout_time,
+        session_duration_seconds: s.session_duration_seconds,
+        transaction_count: count,
+        total_amount_transacted: total,
+        average_transaction_amount: avg,
+        largest_transaction_amount: max,
+        unique_receiver_count: uniqueRecv,
+        session_risk_score: count >= 3 || max > 50000 ? 75 : (count > 0 ? 25 : 0),
+        session_risk_level: count >= 3 || max > 50000 ? 'HIGH' : (count > 0 ? 'LOW' : 'LOW')
+      };
+    });
+
     return {
       found: true,
       query: cleanQuery,
@@ -443,6 +490,8 @@ export const correlationEngine = {
       relationship_graph: relationshipGraph,
       ml_anomaly_score: mlAnomalyScore,
       quantum_risk: quantumRiskAssessment,
+      users_map: usersMap,
+      session_summaries: sessionSummaries,
       risk_summary: {
         final_risk_score: finalRiskScore,
         risk_level: riskLevel,
