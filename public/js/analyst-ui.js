@@ -184,7 +184,10 @@ async function initAnalystPortal() {
 function setupViewNavigation() {
   const navDash = document.getElementById('nav-dashboard');
   const navInv = document.getElementById('nav-investigation');
+  const navAlerts = document.getElementById('nav-ato-alerts');
+  const navHighRisk = document.getElementById('nav-high-risk');
   const navATO = document.getElementById('nav-ato-investigation');
+  const navHacker = document.getElementById('nav-hacker');
   const navSet = document.getElementById('nav-settings');
 
   navDash?.addEventListener('click', (e) => {
@@ -197,55 +200,245 @@ function setupViewNavigation() {
     switchAnalystView('investigation');
   });
 
+  navAlerts?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchAnalystView('ato-alerts');
+  });
+
+  navHighRisk?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchAnalystView('high-risk');
+  });
+
   navATO?.addEventListener('click', (e) => {
     e.preventDefault();
     switchAnalystView('ato-investigation');
+  });
+
+  navHacker?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchAnalystView('hacker');
   });
 
   navSet?.addEventListener('click', (e) => {
     e.preventDefault();
     switchAnalystView('settings');
   });
+
+  // Filter & Search bindings for High Risk Sessions
+  document.getElementById('hr-search-input')?.addEventListener('input', (e) => {
+    highRiskSearchQuery = e.target.value.trim();
+    renderHighRiskSessionsWorkspace();
+  });
+
+  document.getElementById('hr-priority-filter')?.addEventListener('change', (e) => {
+    highRiskPriorityFilter = e.target.value;
+    renderHighRiskSessionsWorkspace();
+  });
+
+  setupAnalystHackerSection();
 }
+
+let atoAlertsPollInterval = null;
 
 function switchAnalystView(viewName) {
   const dashView = document.getElementById('dashboard-view-wrapper');
   const invView = document.getElementById('investigation-workspace');
+  const alertsView = document.getElementById('ato-alerts-workspace');
+  const highRiskView = document.getElementById('high-risk-sessions-workspace');
   const atoView = document.getElementById('ato-investigation-workspace');
+  const hackerView = document.getElementById('hacker-workspace');
   const setView = document.getElementById('settings-workspace');
 
   const navDash = document.getElementById('nav-dashboard');
   const navInv = document.getElementById('nav-investigation');
+  const navAlerts = document.getElementById('nav-ato-alerts');
+  const navHighRisk = document.getElementById('nav-high-risk');
   const navATO = document.getElementById('nav-ato-investigation');
+  const navHacker = document.getElementById('nav-hacker');
   const navSet = document.getElementById('nav-settings');
 
-  [navDash, navInv, navATO, navSet].forEach(el => el?.classList.remove('active'));
+  [navDash, navInv, navAlerts, navHighRisk, navATO, navHacker, navSet].forEach(el => el?.classList.remove('active'));
+
+  if (atoAlertsPollInterval) {
+    clearInterval(atoAlertsPollInterval);
+    atoAlertsPollInterval = null;
+  }
 
   if (viewName === 'dashboard') {
     if (dashView) dashView.style.display = 'block';
     if (invView) invView.style.display = 'none';
+    if (alertsView) alertsView.style.display = 'none';
+    if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'none';
+    if (hackerView) hackerView.style.display = 'none';
     if (setView) setView.style.display = 'none';
     navDash?.classList.add('active');
   } else if (viewName === 'investigation') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'block';
+    if (alertsView) alertsView.style.display = 'none';
+    if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'none';
+    if (hackerView) hackerView.style.display = 'none';
     if (setView) setView.style.display = 'none';
     navInv?.classList.add('active');
+  } else if (viewName === 'ato-alerts') {
+    if (dashView) dashView.style.display = 'none';
+    if (invView) invView.style.display = 'none';
+    if (alertsView) alertsView.style.display = 'block';
+    if (highRiskView) highRiskView.style.display = 'none';
+    if (atoView) atoView.style.display = 'none';
+    if (hackerView) hackerView.style.display = 'none';
+    if (setView) setView.style.display = 'none';
+    navAlerts?.classList.add('active');
+    loadAtoAlertsWorkspace();
+    atoAlertsPollInterval = setInterval(loadAtoAlertsWorkspace, 2000);
+  } else if (viewName === 'high-risk') {
+    if (dashView) dashView.style.display = 'none';
+    if (invView) invView.style.display = 'none';
+    if (alertsView) alertsView.style.display = 'none';
+    if (highRiskView) highRiskView.style.display = 'block';
+    if (atoView) atoView.style.display = 'none';
+    if (hackerView) hackerView.style.display = 'none';
+    if (setView) setView.style.display = 'none';
+    navHighRisk?.classList.add('active');
+    renderHighRiskSessionsWorkspace();
   } else if (viewName === 'ato-investigation') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'none';
+    if (alertsView) alertsView.style.display = 'none';
+    if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'block';
+    if (hackerView) hackerView.style.display = 'none';
     if (setView) setView.style.display = 'none';
     navATO?.classList.add('active');
+  } else if (viewName === 'hacker') {
+    if (dashView) dashView.style.display = 'none';
+    if (invView) invView.style.display = 'none';
+    if (alertsView) alertsView.style.display = 'none';
+    if (highRiskView) highRiskView.style.display = 'none';
+    if (atoView) atoView.style.display = 'none';
+    if (hackerView) hackerView.style.display = 'block';
+    if (setView) setView.style.display = 'none';
+    navHacker?.classList.add('active');
   } else if (viewName === 'settings') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'none';
+    if (alertsView) alertsView.style.display = 'none';
+    if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'none';
+    if (hackerView) hackerView.style.display = 'none';
     if (setView) setView.style.display = 'block';
     navSet?.classList.add('active');
   }
+}
+
+function logAnalystHackerTerm(msg, color = '#38bdf8') {
+  const term = document.getElementById('anl-hacker-terminal');
+  if (!term) return;
+  const line = document.createElement('div');
+  line.style.color = color;
+  line.style.marginBottom = '0.2rem';
+  const ts = new Date().toLocaleTimeString();
+  line.textContent = `[${ts}] ${msg}`;
+  term.appendChild(line);
+  term.scrollTop = term.scrollHeight;
+}
+
+function setupAnalystHackerSection() {
+  const verifyBtn = document.getElementById('anl-hacker-verify-btn');
+  const sessionInput = document.getElementById('anl-hacker-session-input');
+  const resultBox = document.getElementById('anl-hacker-verify-result');
+  const clearBtn = document.getElementById('anl-clear-term-btn');
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      const term = document.getElementById('anl-hacker-terminal');
+      if (term) term.innerHTML = '<div style="color: #64748b;">[CONSOLE CLEARED] Ready for ATO threat test.</div>';
+    });
+  }
+
+  if (verifyBtn) {
+    verifyBtn.addEventListener('click', async () => {
+      const sessionId = (sessionInput ? sessionInput.value : '').trim();
+      if (!sessionId) {
+        alert('Please enter a target Session ID.');
+        return;
+      }
+
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = 'Verifying ATO...';
+      logAnalystHackerTerm(`Testing Session ID '${sessionId}' against baseline integrity engine...`, '#fbbf24');
+
+      try {
+        const res = await fetch('/api/auth/verify-session-id-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            clientEnv: {
+              browserName: 'Chrome',
+              operatingSystem: 'Windows 11',
+              deviceFingerprint: 'FP-ANALYST-TEST'
+            }
+          })
+        });
+
+        const data = await res.json();
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = '⚡ Execute Session ID Verification';
+
+        if (resultBox) {
+          resultBox.style.display = 'block';
+        }
+
+        if (res.ok && data.success) {
+          logAnalystHackerTerm(`🟢 [VERIFIED] Session '${sessionId}' active & trusted.`, '#4ade80');
+          if (resultBox) {
+            resultBox.innerHTML = `<div style="color: #4ade80; font-weight:700;">🟢 ACTIVE TRUSTED SESSION</div><div style="color: #94a3b8; margin-top: 0.2rem;">${data.message || 'Baseline specs match.'}</div>`;
+          }
+        } else {
+          logAnalystHackerTerm(`🚫 [ACCESS DENIED] ${data.message || 'ATO breach.'}`, '#f87171');
+          if (resultBox) {
+            resultBox.innerHTML = `<div style="color: #f87171; font-weight:700;">🚫 ACCESS DENIED (ATO BREACH)</div><div style="color: #cbd5e1; margin-top: 0.2rem;">${data.message || 'Baseline mismatch.'}</div>`;
+          }
+        }
+      } catch (e) {
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = '⚡ Execute Session ID Verification';
+        logAnalystHackerTerm(`Error executing session verification.`, '#f87171');
+      }
+    });
+  }
+
+  const presetBtns = document.querySelectorAll('.anl-preset-btn');
+  presetBtns.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const preset = btn.getAttribute('data-preset');
+      const sessionId = (sessionInput ? sessionInput.value : '').trim() || 'SES-ANALYST-SIM';
+
+      logAnalystHackerTerm(`Injecting attack preset '${preset}' against session '${sessionId}'...`, '#fbbf24');
+
+      try {
+        const res = await fetch('/api/analyst/simulate-ato-attack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, attackPreset: preset })
+        });
+
+        const data = await res.json();
+        if (data.success && data.evaluation) {
+          const ev = data.evaluation;
+          logAnalystHackerTerm(`🛡️ [RISK ENGINE EVALUATION] Action: ${ev.action} | Score: ${ev.calculatedRiskScore}/100 | Severity: ${ev.threatLevel}`, ev.action === 'BLOCK' ? '#f87171' : '#fbbf24');
+        } else {
+          logAnalystHackerTerm(`Attack simulation completed.`, '#38bdf8');
+        }
+      } catch (e) {
+        logAnalystHackerTerm(`Error running preset simulation.`, '#f87171');
+      }
+    });
+  });
 }
 
 /**
@@ -594,10 +787,13 @@ function renderSection2AllUserSessions() {
   }
 }
 
+let highRiskSearchQuery = '';
+let highRiskPriorityFilter = 'ALL';
+
 /**
- * SECTION 3: HIGH RISK INVESTIGATION QUEUE TABLE
+ * HIGH RISK SESSIONS WORKSPACE LOADER & FILTER ENGINE
  */
-function renderSection3InvestigationQueue() {
+function renderHighRiskSessionsWorkspace() {
   const usersMap = {};
   rawUsers.forEach(u => { usersMap[u.user_id] = u; });
 
@@ -634,11 +830,12 @@ function renderSection3InvestigationQueue() {
 
       queueSessions.push({
         userName: user.full_name || 'N/A',
+        userId: s.user_id,
         accountId: user.account_id || s.user_id,
         sessionId: s.session_id,
         riskScore: score,
         decision,
-        detectionReason: 'ATO',
+        detectionReason: 'ATO Verification',
         detectedTime: s.login_time,
         priority
       });
@@ -648,40 +845,192 @@ function renderSection3InvestigationQueue() {
   const badgeEl = document.getElementById('queue-count-badge');
   if (badgeEl) badgeEl.textContent = `${queueSessions.length} QUEUED`;
 
+  // Search & Priority Filter Logic
+  let filtered = queueSessions.filter(q => {
+    if (highRiskPriorityFilter !== 'ALL' && q.priority !== highRiskPriorityFilter) return false;
+    if (highRiskSearchQuery) {
+      const query = highRiskSearchQuery.toLowerCase();
+      const matchName = q.userName.toLowerCase().includes(query);
+      const matchAcc = q.accountId.toLowerCase().includes(query);
+      const matchSes = q.sessionId.toLowerCase().includes(query);
+      if (!matchName && !matchAcc && !matchSes) return false;
+    }
+    return true;
+  });
+
   const queueBody = document.getElementById('queue-table-body');
   if (!queueBody) return;
 
-  if (queueSessions.length === 0) {
-    queueBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#64748b; padding: 1.5rem;">No suspicious sessions currently in queue</td></tr>`;
-  } else {
-    queueBody.innerHTML = queueSessions.map(q => {
-      const decClass = q.decision === 'BLOCK' ? 'badge-critical' : (q.decision === 'STEP-UP' ? 'badge-high' : 'badge-medium');
-      const prioClass = q.priority === 'CRITICAL' ? 'badge-critical' : (q.priority === 'HIGH' ? 'badge-high' : 'badge-medium');
-
-      return `
-        <tr>
-          <td><strong>${q.userName}</strong></td>
-          <td style="color:#2563eb; font-weight:600;">${q.accountId}</td>
-          <td><strong>${q.sessionId}</strong></td>
-          <td><span class="badge ${q.riskScore >= 75 ? 'badge-critical' : 'badge-high'}">${q.riskScore}/100</span></td>
-          <td><span class="badge ${decClass}">${q.decision}</span></td>
-          <td>
-            <span class="badge" style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; font-weight:700;">
-              [${q.detectionReason}]
-            </span>
-          </td>
-          <td>${new Date(q.detectedTime).toLocaleString()}</td>
-          <td><span class="badge ${prioClass}">${q.priority}</span></td>
-          <td>
-            <button type="button" class="btn btn-danger" style="padding: 0.25rem 0.65rem; font-size: 0.75rem;" onclick="executeATOAccountInvestigation('${q.sessionId}')">
-              ATO Evidence
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+  if (filtered.length === 0) {
+    queueBody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#64748b; padding: 1.5rem;">No high risk sessions found matching filter criteria</td></tr>`;
+    return;
   }
+
+  queueBody.innerHTML = filtered.map(q => {
+    const decClass = q.decision === 'BLOCK' ? 'badge-critical' : (q.decision === 'STEP-UP' ? 'badge-high' : 'badge-medium');
+    const prioClass = q.priority === 'CRITICAL' ? 'badge-critical' : (q.priority === 'HIGH' ? 'badge-high' : 'badge-medium');
+
+    return `
+      <tr>
+        <td><strong>${q.userName}</strong></td>
+        <td style="color:#2563eb; font-weight:600;">${q.accountId}</td>
+        <td><strong>${q.sessionId}</strong></td>
+        <td><span class="badge ${q.riskScore >= 75 ? 'badge-critical' : 'badge-high'}">${q.riskScore}/100</span></td>
+        <td><span class="badge ${decClass}">${q.decision}</span></td>
+        <td>
+          <span class="badge" style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; font-weight:700;">
+            [${q.detectionReason}]
+          </span>
+        </td>
+        <td>${new Date(q.detectedTime).toLocaleString()}</td>
+        <td><span class="badge ${prioClass}">${q.priority}</span></td>
+        <td>
+          <button type="button" class="btn btn-danger" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; font-weight:700;" onclick="inspectHighRiskSession('${q.sessionId}')">
+            Inspect Risk Analysis
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
+
+function renderSection3InvestigationQueue() {
+  renderHighRiskSessionsWorkspace();
+}
+
+/**
+ * INSPECT HIGH RISK SESSION & COMPUTE DYNAMIC DATABASE PREDICTION RATIONALE
+ */
+window.inspectHighRiskSession = function(sessionId) {
+  const reportCard = document.getElementById('high-risk-report-card');
+  if (!reportCard) return;
+
+  const s = rawSessions.find(sess => sess.session_id === sessionId) || { session_id: sessionId, user_id: 'UNKNOWN', login_time: new Date().toISOString() };
+  const user = rawUsers.find(u => u.user_id === s.user_id) || { full_name: 'Unknown User', account_id: s.user_id };
+  const sTxns = rawTxns.filter(t => t.session_id === sessionId || t.sender_user_id === s.user_id);
+  const sTelemetry = rawTelemetry.filter(t => t.session_id === sessionId || t.user_id === s.user_id);
+  const rObj = rawRisks.find(r => r.session_id === sessionId || r.user_id === s.user_id) || {};
+
+  const totalAmount = sTxns.reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+  const maxTx = sTxns.length > 0 ? Math.max(...sTxns.map(t => parseFloat(t.amount) || 0)) : 0;
+  const uniqueReceivers = new Set(sTxns.map(t => t.receiver_user_id).filter(Boolean));
+
+  let score = rObj.risk_score;
+  if (score === undefined || score === null) {
+    if (maxTx > 50000) score = 85;
+    else if (maxTx > 20000) score = 65;
+    else if (sTxns.length > 0) score = 25;
+    else score = 10;
+  }
+
+  let decision = (rObj.decision || '').toUpperCase();
+  if (!decision) {
+    if (score >= 75) decision = 'BLOCK';
+    else if (score >= 50) decision = 'STEP-UP';
+    else if (score >= 30) decision = 'MONITOR';
+    else decision = 'ALLOW';
+  }
+
+  const tel = sTelemetry[0] || {};
+  const locationInfo = tel.location || 'Localhost / Remote Connection';
+  const ipInfo = tel.ip_address || '127.0.0.1';
+  const deviceInfo = tel.device_type || tel.browser || 'Chrome Browser (Windows 11)';
+
+  // BUILD DYNAMIC PREDICTION REASONS FROM DATABASE REASONING ENGINE
+  const reasons = [];
+
+  if (sTxns.length > 0) {
+    reasons.push(`💸 <strong>High Transaction Velocity & Volume:</strong> Executed ${sTxns.length} transfer(s) totaling <strong>₹${totalAmount.toLocaleString()}</strong> in a fraction of seconds post-login.`);
+  }
+
+  if (maxTx > 50000) {
+    reasons.push(`⚠️ <strong>High-Value Anomaly Spike:</strong> Transferred a high single amount of <strong>₹${maxTx.toLocaleString()}</strong>, exceeding normal risk thresholds.`);
+  }
+
+  if (uniqueReceivers.size > 1) {
+    reasons.push(`🔀 <strong>Multi-Receiver Funds Dispersion:</strong> Rapidly transferred money across <strong>${uniqueReceivers.size} distinct receiver accounts</strong> (${Array.from(uniqueReceivers).join(', ')}).`);
+  }
+
+  if (tel.device_type || tel.device_fingerprint) {
+    reasons.push(`📱 <strong>Unrecognized Device & Browser Environment:</strong> Session initiated from new device environment (<code>${deviceInfo}</code>) differing from historical user baseline.`);
+  }
+
+  if (tel.ip_address || tel.location) {
+    reasons.push(`🌍 <strong>Geographical & IP Address Anomaly:</strong> Access registered from IP address <code>${ipInfo}</code> (${locationInfo}) requiring risk engine challenge.`);
+  }
+
+  if (score >= 75) {
+    reasons.push(`🔴 <strong>Critical System Threat Level:</strong> Accumulated risk weighted score (${score}/100) triggered automated session restriction.`);
+  } else {
+    reasons.push(`🟡 <strong>Elevated Account Monitoring:</strong> Behavioral risk score (${score}/100) flagged for mandatory analyst review.`);
+  }
+
+  // Update Summary Fields
+  document.getElementById('hr-rep-session-id').textContent = s.session_id;
+  document.getElementById('hr-rep-user-name').textContent = user.full_name || 'N/A';
+  document.getElementById('hr-rep-account-id').textContent = user.account_id || s.user_id;
+  document.getElementById('hr-rep-risk-score').textContent = `${score}/100`;
+  document.getElementById('hr-rep-login-time').textContent = new Date(s.login_time).toLocaleString();
+  document.getElementById('hr-rep-location').textContent = `${ipInfo} (${locationInfo})`;
+  document.getElementById('hr-rep-device').textContent = deviceInfo;
+
+  const decBadge = document.getElementById('hr-rep-decision-badge');
+  if (decBadge) {
+    decBadge.textContent = decision;
+    decBadge.className = `badge ${decision === 'BLOCK' ? 'badge-critical' : (decision === 'STEP-UP' ? 'badge-high' : 'badge-medium')}`;
+  }
+
+  // Render Reasons List
+  const reasonsEl = document.getElementById('hr-rep-reasons-list');
+  if (reasonsEl) {
+    reasonsEl.innerHTML = `<ul style="margin:0; padding-left: 1.25rem; list-style-type: disc;">${reasons.map(r => `<li style="margin-bottom: 0.4rem;">${r}</li>`).join('')}</ul>`;
+  }
+
+  // Render Transactions Table
+  const txnsBody = document.getElementById('hr-rep-txns-body');
+  if (txnsBody) {
+    if (sTxns.length === 0) {
+      txnsBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#64748b; padding: 1rem;">No monetary transactions recorded during this session</td></tr>`;
+    } else {
+      txnsBody.innerHTML = sTxns.map(t => `
+        <tr>
+          <td><strong style="color:#2563eb;">${t.transaction_id}</strong></td>
+          <td>${t.receiver_user_id}</td>
+          <td><strong>₹${parseFloat(t.amount).toLocaleString()}</strong></td>
+          <td>${new Date(t.transaction_timestamp || t.created_at).toLocaleString()}</td>
+          <td><span class="badge badge-low">${(t.transaction_status || 'completed').toUpperCase()}</span></td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  // Render Telemetry Table
+  const telBody = document.getElementById('hr-rep-telemetry-body');
+  if (telBody) {
+    if (sTelemetry.length === 0) {
+      telBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#64748b; padding: 1rem;">No telemetry events recorded for this session</td></tr>`;
+    } else {
+      telBody.innerHTML = sTelemetry.map(e => `
+        <tr>
+          <td><code>${e.event_id || 'EVT-LOG'}</code></td>
+          <td><strong>${e.event_type}</strong></td>
+          <td><span class="badge badge-high">${e.event_category || 'security'}</span></td>
+          <td><code>${e.ip_address || ipInfo}</code></td>
+          <td>${new Date(e.created_at || s.login_time).toLocaleString()}</td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  // Bind Print Button
+  const printBtn = document.getElementById('hr-print-btn');
+  if (printBtn) {
+    printBtn.onclick = () => window.print();
+  }
+
+  reportCard.style.display = 'block';
+  reportCard.scrollIntoView({ behavior: 'smooth' });
+};
 
 /**
  * EXECUTE ACCOUNT TAKEOVER (ATO) INVESTIGATION PAGE SEARCH & VISUALIZATION
@@ -1557,4 +1906,156 @@ function truncateString(str, num) {
   if (!str) return '';
   if (str.length <= num) return str;
   return str.slice(0, num) + '...';
+}
+
+/**
+ * ATO Verification Requests Workspace Loader for Analyst Portal
+ */
+let cachedAtoAlerts = [];
+
+async function loadAtoAlertsWorkspace() {
+  const tableBody = document.getElementById('ato-alerts-table-body');
+  const countBadge = document.getElementById('ato-alerts-count-badge');
+  if (!tableBody) return;
+
+  try {
+    const res = await fetch('/api/analyst/ato-alerts');
+    const data = await res.json();
+
+    if (!res.ok || !data.alerts) return;
+
+    cachedAtoAlerts = data.alerts;
+    if (countBadge) countBadge.textContent = `${cachedAtoAlerts.length} REQUESTS`;
+
+    if (cachedAtoAlerts.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="13" style="text-align:center; color:#64748b; padding: 1.5rem;">No ATO verification requests found in database</td></tr>`;
+      return;
+    }
+
+    tableBody.innerHTML = cachedAtoAlerts.map((r, idx) => {
+      const createdStr = new Date(r.created_at).toLocaleTimeString();
+      const expiresStr = r.expires_at ? new Date(r.expires_at).toLocaleTimeString() : 'N/A';
+      const formattedAmount = `₹${parseFloat(r.amount).toLocaleString()}`;
+
+      // Badges for confirmations
+      let initBadge = `<span class="badge" style="background:#fef3c7; color:#92400e;">PENDING</span>`;
+      if (r.initiator_confirmation === 'APPROVED') initBadge = `<span class="badge" style="background:#d1fae5; color:#065f46;">APPROVED</span>`;
+      else if (r.initiator_confirmation === 'CANCELLED') initBadge = `<span class="badge" style="background:#fee2e2; color:#991b1b;">CANCELLED</span>`;
+
+      let userBadge = `<span class="badge" style="background:#fef3c7; color:#92400e;">PENDING</span>`;
+      if (r.trusted_user_confirmation === 'APPROVED') userBadge = `<span class="badge" style="background:#d1fae5; color:#065f46;">APPROVED</span>`;
+      else if (r.trusted_user_confirmation === 'DENIED') userBadge = `<span class="badge" style="background:#fee2e2; color:#991b1b;">DENIED</span>`;
+
+      let statusBadge = `<span class="badge" style="background:#fef3c7; color:#92400e;">PENDING</span>`;
+      if (r.status === 'COMPLETED') statusBadge = `<span class="badge" style="background:#d1fae5; color:#065f46;">COMPLETED</span>`;
+      else if (r.status === 'BLOCKED') statusBadge = `<span class="badge" style="background:#fee2e2; color:#991b1b;">BLOCKED</span>`;
+      else if (r.status === 'EXPIRED') statusBadge = `<span class="badge" style="background:#f1f5f9; color:#475569;">EXPIRED</span>`;
+
+      return `
+        <tr>
+          <td><strong style="color: #2563eb;">${r.transaction_id}</strong></td>
+          <td><code>${r.session_id}</code></td>
+          <td>${r.user_id}</td>
+          <td><strong>${formattedAmount}</strong></td>
+          <td>${r.receiver || r.receiver_user_id}</td>
+          <td>${initBadge}</td>
+          <td>${userBadge}</td>
+          <td><span class="badge" style="background:#d1fae5; color:#065f46;">${r.risk_decision || 'ALLOW'}</span></td>
+          <td><strong>${r.status}</strong></td>
+          <td>${statusBadge}</td>
+          <td>${createdStr}</td>
+          <td>${expiresStr}</td>
+          <td>
+            <button type="button" class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="inspectAtoMatrix(${idx})">
+              Matrix
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Auto-inspect first request if matrix not showing
+    if (cachedAtoAlerts.length > 0 && document.getElementById('ato-matrix-card')?.style.display !== 'block') {
+      inspectAtoMatrix(0);
+    }
+
+  } catch (err) {
+    console.error('Error loading ATO alerts workspace:', err);
+  }
+}
+
+window.inspectAtoMatrix = function(index) {
+  if (cachedAtoAlerts && cachedAtoAlerts[index]) {
+    renderApprovalStatusMatrix(cachedAtoAlerts[index]);
+  }
+};
+
+function renderApprovalStatusMatrix(req) {
+  const matrixCard = document.getElementById('ato-matrix-card');
+  if (!matrixCard || !req) return;
+
+  document.getElementById('matrix-req-id').textContent = `${req.transaction_id} (Session: ${req.session_id})`;
+
+  // Requirement 1: Initiator Confirmation
+  const initVal = req.initiator_confirmation || 'PENDING';
+  let initBg = '#fef3c7', initFg = '#92400e';
+  if (initVal === 'APPROVED') { initBg = '#d1fae5'; initFg = '#065f46'; }
+  else if (initVal === 'CANCELLED') { initBg = '#fee2e2'; initFg = '#991b1b'; }
+  document.getElementById('matrix-val-initiator').innerHTML = `<span class="badge" style="background:${initBg}; color:${initFg};">${initVal}</span>`;
+
+  // Requirement 2: Trusted User Confirmation
+  const userVal = req.trusted_user_confirmation || 'PENDING';
+  let userBg = '#fef3c7', userFg = '#92400e';
+  if (userVal === 'APPROVED') { userBg = '#d1fae5'; userFg = '#065f46'; }
+  else if (userVal === 'DENIED') { userBg = '#fee2e2'; userFg = '#991b1b'; }
+  document.getElementById('matrix-val-user').innerHTML = `<span class="badge" style="background:${userBg}; color:${userFg};">${userVal}</span>`;
+
+  // Requirement 3: Risk Engine Decision
+  const riskVal = req.risk_decision || 'ALLOW';
+  let riskBg = '#d1fae5', riskFg = '#065f46';
+  if (riskVal === 'BLOCK') { riskBg = '#fee2e2'; riskFg = '#991b1b'; }
+  document.getElementById('matrix-val-risk').innerHTML = `<span class="badge" style="background:${riskBg}; color:${riskFg};">${riskVal}</span>`;
+
+  // Requirement 4: Transaction Integrity
+  document.getElementById('matrix-val-integrity').innerHTML = `<span class="badge" style="background:#d1fae5; color:#065f46;">VALID</span>`;
+
+  // Requirement 5: Final Decision
+  const finalVal = req.status || 'PENDING_VERIFICATION';
+  let finalBg = '#fef3c7', finalFg = '#92400e';
+  if (finalVal === 'COMPLETED') { finalBg = '#d1fae5'; finalFg = '#065f46'; }
+  else if (finalVal === 'BLOCKED') { finalBg = '#fee2e2'; finalFg = '#991b1b'; }
+  else if (finalVal === 'EXPIRED' || finalVal === 'CANCELLED') { finalBg = '#f1f5f9'; finalFg = '#475569'; }
+  document.getElementById('matrix-val-final').innerHTML = `<span class="badge" style="background:${finalBg}; color:${finalFg};">${finalVal}</span>`;
+  
+  const badgeEl = document.getElementById('matrix-final-status-badge');
+  if (badgeEl) {
+    badgeEl.textContent = finalVal;
+    badgeEl.style.background = finalBg;
+    badgeEl.style.color = finalFg;
+  }
+
+  // Outcome Banner
+  const banner = document.getElementById('matrix-outcome-banner');
+  if (banner) {
+    if (finalVal === 'COMPLETED') {
+      banner.style.background = '#d1fae5'; banner.style.color = '#065f46'; banner.style.borderColor = '#6ee7b7';
+      banner.textContent = '🟢 TRANSACTION COMPLETED — Initiator confirmed, legitimate user approved, and risk engine allowed.';
+    } else if (finalVal === 'BLOCKED') {
+      if (userVal === 'DENIED') {
+        banner.style.background = '#fee2e2'; banner.style.color = '#991b1b'; banner.style.borderColor = '#fca5a5';
+        banner.textContent = '🛡️ ATO ATTEMPT PREVENTED — Legitimate user denied this transaction.';
+      } else {
+        banner.style.background = '#fee2e2'; banner.style.color = '#991b1b'; banner.style.borderColor = '#fca5a5';
+        banner.textContent = '🚫 TRANSACTION BLOCKED — Risk engine or security rules blocked transaction.';
+      }
+    } else if (finalVal === 'EXPIRED') {
+      banner.style.background = '#f1f5f9'; banner.style.color = '#475569'; banner.style.borderColor = '#cbd5e1';
+      banner.textContent = '⏱️ APPROVAL EXPIRED — Verification request timed out after 5 minutes.';
+    } else {
+      banner.style.background = '#fffbeb'; banner.style.color = '#92400e'; banner.style.borderColor = '#fde68a';
+      banner.textContent = '⏳ WAITING FOR APPROVAL — Pending dual confirmation and risk evaluation.';
+    }
+  }
+
+  matrixCard.style.display = 'block';
 }

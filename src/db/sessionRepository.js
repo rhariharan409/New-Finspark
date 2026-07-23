@@ -75,6 +75,10 @@ export const sessionRepository = {
     return data || null;
   },
 
+  async getSessionById(sessionId) {
+    return this.findSessionById(sessionId);
+  },
+
   /**
    * Terminates an active session row and updates logout_time and session_duration_seconds
    * (Idempotent: preserves original logout_time and session_duration_seconds if already terminated)

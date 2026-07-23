@@ -144,6 +144,117 @@ router.get('/', sessionModule.requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * Initiate ATO Controlled Transaction Simulation API (from Hacker Section)
+ * POST /api/transactions/initiate-ato-transaction
+ */
+router.post('/initiate-ato-transaction', async (req, res) => {
+  try {
+    const { sessionId, receiverIdentifier, amount, description } = req.body;
+    const { atoVerificationService } = await import('../services/atoVerificationService.js');
+    const result = await atoVerificationService.initiateAtoTransaction({
+      sessionId,
+      receiverIdentifier,
+      amount,
+      description
+    });
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * Initiator (Hacker Side) Confirms Intent (OK, CONFIRM INTENT or CANCEL TRANSACTION)
+ * POST /api/transactions/confirm-initiator-intent
+ */
+router.post('/confirm-initiator-intent', async (req, res) => {
+  try {
+    const { requestId, intentAction } = req.body;
+    const { atoVerificationService } = await import('../services/atoVerificationService.js');
+    const result = await atoVerificationService.confirmInitiatorIntent({
+      requestId,
+      intentAction
+    });
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * Check Pending ATO Approvals for User Dashboard
+ * GET /api/transactions/pending-ato-approvals
+ */
+router.get('/pending-ato-approvals', async (req, res) => {
+  try {
+    const userId = req.session?.userId;
+    if (!userId) {
+      return res.status(200).json({ success: true, pendingRequests: [] });
+    }
+    const { atoVerificationService } = await import('../services/atoVerificationService.js');
+    await atoVerificationService.checkAndExpirePendingRequests();
+
+    const { atoRequestRepository } = await import('../db/atoRequestRepository.js');
+    const pending = await atoRequestRepository.getPendingRequestsForUser(userId);
+
+    return res.status(200).json({
+      success: true,
+      pendingRequests: pending
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * Legitimate User Responds to Approval Request (YES, APPROVE / NO, BLOCK)
+ * POST /api/transactions/respond-ato-approval
+ */
+router.post('/respond-ato-approval', sessionModule.requireAuth, async (req, res) => {
+  try {
+    const { requestId, approvalDecision } = req.body;
+    const userId = req.session.userId;
+    const { atoVerificationService } = await import('../services/atoVerificationService.js');
+
+    const result = await atoVerificationService.respondToAtoApproval({
+      requestId,
+      approvalDecision,
+      userId
+    });
+
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * Status of ATO Verification Request (for Hacker UI / Analyst UI polling)
+ * GET /api/transactions/ato-request-status/:requestId
+ */
+router.get('/ato-request-status/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { atoVerificationService } = await import('../services/atoVerificationService.js');
+    await atoVerificationService.checkAndExpirePendingRequests();
+
+    const { atoRequestRepository } = await import('../db/atoRequestRepository.js');
+    const atoReq = await atoRequestRepository.getAtoRequestById(requestId);
+
+    if (!atoReq) {
+      return res.status(404).json({ success: false, message: 'ATO Request not found.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      atoRequest: atoReq
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 export const bankingModule = {
   name: 'banking',
   router

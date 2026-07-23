@@ -230,6 +230,15 @@
       overflow-y: auto;
       flex: 1;
     }
+    @media print {
+      body { background: #ffffff !important; color: #000000 !important; }
+      .navbar, .sidebar, #ato-verification-card, .btn:not(#hr-print-btn), .graph-control-bar { display: none !important; }
+      .layout-wrapper { min-height: auto !important; display: block !important; }
+      .content-area { max-width: 100% !important; padding: 0 !important; }
+      .card { border: 1px solid #cbd5e1 !important; box-shadow: none !important; margin-bottom: 1.5rem !important; break-inside: avoid; }
+      .print-only-header { display: block !important; }
+      #hr-print-btn { display: none !important; }
+    }
   </style>
 </head>
 <body style="background-color: #ffffff;">
@@ -255,7 +264,10 @@
         <ul class="sidebar-menu">
           <li><a id="nav-dashboard" class="active">📊 Dashboard</a></li>
           <li><a id="nav-investigation">🔍 Investigation & Money Flow</a></li>
+          <li><a id="nav-ato-alerts">🛡️ ATO Verification Requests</a></li>
+          <li><a id="nav-high-risk">🚨 High Risk Sessions</a></li>
           <li><a id="nav-ato-investigation">🛡️ Account Takeover Investigation</a></li>
+          <li><a id="nav-hacker">💀 Hacker Console (ATO Simulator)</a></li>
           <li><a id="nav-settings">⚙️ Settings</a></li>
         </ul>
       </div>
@@ -412,14 +424,32 @@
           </div>
         </div>
 
-        <!-- SECTION 3: HIGH RISK INVESTIGATION QUEUE -->
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- VIEW: HIGH RISK SESSIONS WORKSPACE                        -->
+      <!-- ========================================================= -->
+      <div id="high-risk-sessions-workspace" style="display: none;">
+        
+        <!-- HIGH RISK INVESTIGATION QUEUE CARD -->
         <div class="card" style="border-top: 4px solid #dc2626; margin-bottom: 1.5rem;">
           <div class="section-title">
             <div>
-              <span style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">Section 3: High Risk Investigation Queue</span>
-              <div style="font-size: 0.8rem; color: #64748b; font-weight: normal;">Automatically collected suspicious sessions (STEP-UP, BLOCK, MONITOR, or Risk Score &ge; 30)</div>
+              <span style="font-size: 1.25rem; font-weight: 700; color: #0f172a;">🚨 HIGH RISK SESSIONS INVESTIGATION QUEUE</span>
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: normal;">Automatically collected suspicious sessions evaluated by real-time risk decision engine (STEP-UP, BLOCK, MONITOR, or Risk Score &ge; 30)</div>
             </div>
-            <span id="queue-count-badge" class="badge badge-high">0 QUEUED</span>
+            <span id="queue-count-badge" class="badge badge-high" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">0 QUEUED</span>
+          </div>
+
+          <!-- Filter & Search Toolbar -->
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center;">
+            <input type="text" id="hr-search-input" class="form-input" placeholder="Search high risk sessions by User Name, Account ID, Session ID..." style="flex: 2; min-width: 260px;">
+            <select id="hr-priority-filter" class="form-input" style="flex: 1; min-width: 150px;">
+              <option value="ALL">All Priorities</option>
+              <option value="CRITICAL">Critical Priority Only</option>
+              <option value="HIGH">High Priority Only</option>
+              <option value="MEDIUM">Medium Priority Only</option>
+            </select>
           </div>
 
           <div style="overflow-x: auto;">
@@ -438,12 +468,209 @@
                 </tr>
               </thead>
               <tbody id="queue-table-body">
-                <tr><td colspan="9" style="text-align:center; color:#64748b; padding: 1.5rem;">No suspicious sessions requiring investigation in queue</td></tr>
+                <tr><td colspan="9" style="text-align:center; color:#64748b; padding: 1.5rem;">Loading high risk sessions from database...</td></tr>
               </tbody>
             </table>
           </div>
         </div>
 
+        <!-- DETAILED RISK EXPLANATION & EVIDENCE REPORT CARD (INSPECT VIEW) -->
+        <div id="high-risk-report-card" class="card" style="border-top: 4px solid #dc2626; display: none; margin-bottom: 1.5rem; background: #ffffff;">
+          
+          <!-- PRINT HEADER (ONLY VISIBLE IN PRINT PDF MODE) -->
+          <div class="print-only-header" style="display: none; padding-bottom: 1rem; border-bottom: 2px solid #0f172a; margin-bottom: 1.5rem;">
+            <h1 style="margin:0; font-size: 1.6rem; color: #0f172a;">FINSPARK CYBER RISK FORENSIC AUDIT REPORT</h1>
+            <p style="margin: 0.25rem 0 0 0; color: #475569; font-size: 0.85rem;">Confidential Security Analysis & Risk Prediction Documentation</p>
+          </div>
+
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.2rem; font-weight: 700; color: #0f172a;">🔍 DETAILED RISK SCORE PREDICTION & FORENSIC RATIONALE</span>
+              <div style="font-size: 0.8rem; color: #64748b;">Target Session: <code id="hr-rep-session-id" style="color: #2563eb; font-weight: 700;">-</code></div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <button type="button" id="hr-print-btn" class="btn btn-primary" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; font-weight: 700; background: #2563eb;">
+                🖨️ Print / Export PDF Report
+              </button>
+              <span id="hr-rep-decision-badge" class="badge badge-critical" style="font-weight: 800; font-size: 0.85rem;">BLOCK</span>
+            </div>
+          </div>
+
+          <!-- SESSION & IDENTITY SUMMARY GRID -->
+          <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 1.5rem;">
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">User Name</span>
+              <div id="hr-rep-user-name" class="summary-val" style="color: #0f172a;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Account ID</span>
+              <div id="hr-rep-account-id" class="summary-val" style="color: #2563eb;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Predicted Risk Score</span>
+              <div id="hr-rep-risk-score" class="summary-val" style="color: #dc2626;">0/100</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Login Time</span>
+              <div id="hr-rep-login-time" class="summary-val" style="font-size: 0.85rem; color: #475569;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">IP Address / Location</span>
+              <div id="hr-rep-location" class="summary-val" style="font-size: 0.85rem; color: #334155;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Device Environment</span>
+              <div id="hr-rep-device" class="summary-val" style="font-size: 0.85rem; color: #334155;">-</div>
+            </div>
+          </div>
+
+          <!-- WHY THE RISK SCORE WAS PREDICTED HIGH (DYNAMIC DATABASE RATIONALE) -->
+          <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 0.98rem; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+              <span>⚠️ RISK ENGINE PREDICTION ANALYSIS (WHY THE RISK SCORE IS HIGH)</span>
+            </h4>
+            <div id="hr-rep-reasons-list" style="font-size: 0.88rem; color: #7f1d1d; line-height: 1.7;">
+              Loading prediction rationale...
+            </div>
+          </div>
+
+          <!-- DATABASE TRANSACTIONS EXECUTED DURING THIS SESSION -->
+          <div style="margin-bottom: 1.5rem;">
+            <h4 style="font-size: 0.95rem; color: #0f172a; margin-bottom: 0.5rem; font-weight: 700;">
+              Transactions Executed During Session (Database Audit Proof)
+            </h4>
+            <div style="overflow-x: auto;">
+              <table class="data-table" style="font-size: 0.82rem;">
+                <thead>
+                  <tr>
+                    <th>Transaction ID</th>
+                    <th>Receiver Account</th>
+                    <th>Amount (₹)</th>
+                    <th>Timestamp</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="hr-rep-txns-body">
+                  <tr><td colspan="5" style="text-align:center; color:#64748b;">No transactions recorded during this session</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TELEMETRY & SECURITY EVENT AUDIT LOGS FROM DB -->
+          <div>
+            <h4 style="font-size: 0.95rem; color: #0f172a; margin-bottom: 0.5rem; font-weight: 700;">
+              Database Telemetry & Security Events
+            </h4>
+            <div style="overflow-x: auto;">
+              <table class="data-table" style="font-size: 0.8rem;">
+                <thead>
+                  <tr>
+                    <th>Event ID</th>
+                    <th>Event Type</th>
+                    <th>Category</th>
+                    <th>IP Address</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody id="hr-rep-telemetry-body">
+                  <tr><td colspan="5" style="text-align:center; color:#64748b;">No security events recorded</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- VIEW: ATO VERIFICATION REQUESTS WORKSPACE                 -->
+      <!-- ========================================================= -->
+      <div id="ato-alerts-workspace" style="display: none;">
+        <div class="card" style="border-top: 4px solid #2563eb; margin-bottom: 1.5rem;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.25rem; font-weight: 700; color: #0f172a;">🛡️ ATO VERIFICATION REQUESTS & APPROVAL MONITOR</span>
+              <div style="font-size: 0.8rem; color: #64748b;">Real-time database monitoring of all active and historical controlled Account Takeover verification requests</div>
+            </div>
+            <span id="ato-alerts-count-badge" class="badge badge-low" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; padding: 0.35rem 0.75rem;">0 REQUESTS</span>
+          </div>
+
+          <!-- ATO Alerts Table -->
+          <div style="overflow-x: auto; margin-top: 1rem;">
+            <table class="data-table" style="font-size: 0.82rem;">
+              <thead>
+                <tr>
+                  <th>Transaction ID</th>
+                  <th>Session ID</th>
+                  <th>User ID</th>
+                  <th>Amount</th>
+                  <th>Receiver</th>
+                  <th>Initiator Confirmation</th>
+                  <th>Trusted User Confirmation</th>
+                  <th>Risk Decision</th>
+                  <th>Final Decision</th>
+                  <th>Status</th>
+                  <th>Created At</th>
+                  <th>Expires At</th>
+                  <th>Inspect Matrix</th>
+                </tr>
+              </thead>
+              <tbody id="ato-alerts-table-body">
+                <tr><td colspan="13" style="text-align:center; color:#64748b; padding: 1.5rem;">Loading ATO verification requests from database...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- APPROVAL STATUS MATRIX CARD -->
+        <div id="ato-matrix-card" class="card" style="border-top: 4px solid #059669; display: none;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">APPROVAL STATUS MATRIX</span>
+              <div style="font-size: 0.8rem; color: #64748b;">Selected Request: <code id="matrix-req-id" style="color: #2563eb; font-weight: 700;">-</code></div>
+            </div>
+            <span id="matrix-final-status-badge" class="badge badge-low">PENDING</span>
+          </div>
+
+          <div style="overflow-x: auto; margin-bottom: 1.25rem;">
+            <table class="data-table" style="font-size: 0.88rem; max-width: 650px;">
+              <thead>
+                <tr>
+                  <th style="width: 60%;">Requirement</th>
+                  <th style="width: 40%;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Initiator Confirmation</strong></td>
+                  <td id="matrix-val-initiator"><span class="badge" style="background:#f1f5f9; color:#475569;">PENDING</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Trusted User Confirmation</strong></td>
+                  <td id="matrix-val-user"><span class="badge" style="background:#f1f5f9; color:#475569;">PENDING</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Risk Engine Decision</strong></td>
+                  <td id="matrix-val-risk"><span class="badge" style="background:#f1f5f9; color:#475569;">PENDING</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Transaction Integrity</strong></td>
+                  <td id="matrix-val-integrity"><span class="badge" style="background:#d1fae5; color:#065f46;">VALID</span></td>
+                </tr>
+                <tr style="background: #f8fafc; font-weight: 700;">
+                  <td><strong>Final Decision</strong></td>
+                  <td id="matrix-val-final"><span class="badge" style="background:#fef3c7; color:#92400e;">PENDING</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div id="matrix-outcome-banner" style="padding: 1rem; border-radius: 6px; font-weight: 700; font-size: 0.95rem; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;">
+            WAITING FOR APPROVAL
+          </div>
+        </div>
       </div>
 
       <!-- ========================================================= -->
@@ -964,6 +1191,83 @@
             <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.5rem;">Supabase Realtime Stream Engine</h4>
             <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.85rem; border-radius: 6px; color: #166534; font-size: 0.85rem;">
               <strong>Active Connection:</strong> Supabase PostgreSQL WebSockets Subscriptions enabled for <code>sessions</code>, <code>transactions</code>, <code>risk_decisions</code>, and <code>telemetry_events</code> tables.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- VIEW 5: HACKER CONSOLE & ATO THREAT SIMULATOR             -->
+      <!-- ========================================================= -->
+      <div id="hacker-workspace" style="display: none;">
+        <div class="card" style="border-top: 4px solid #4f46e5; background: #0f172a; color: #f8fafc; margin-bottom: 1.5rem;">
+          <div class="section-title" style="border-bottom: 1px solid #1e293b; color: #ffffff;">
+            <div>
+              <span style="font-size: 1.2rem; font-weight: 800; color: #ffffff;">💀 Hacker Console & Account Takeover (ATO) Threat Simulator</span>
+              <div style="font-size: 0.8rem; color: #a5b4fc;">Dedicated section for ATO method simulation, session hijacking verification, and threat vector testing</div>
+            </div>
+            <a href="hacker.html" target="_blank" class="badge" style="background: #3730a3; color: #c7d2fe; border: 1px solid #4338ca; text-decoration: none; padding: 0.35rem 0.75rem;">
+              ↗ Open Standalone Hacker Portal
+            </a>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+
+            <!-- ATO METHOD SESSION HIJACKING CARD -->
+            <div style="background: #030712; border: 1px solid #1f2937; border-radius: 8px; padding: 1.25rem;">
+              <h4 style="font-size: 1rem; color: #818cf8; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.4rem;">
+                <span>🔑 ATO Method: Session ID Hijack & Verify</span>
+              </h4>
+              <p style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 1rem;">
+                Test hijacked Session IDs against the baseline database to check if an account takeover attempt bypasses or gets blocked.
+              </p>
+              <div style="margin-bottom: 0.75rem;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 0.25rem;">Target Session ID</label>
+                <input type="text" id="anl-hacker-session-input" class="form-input" style="background: #0f172a; border-color: #334155; color: #ffffff; font-size: 0.82rem;" placeholder="e.g. SES-908C0B98">
+              </div>
+              <button type="button" id="anl-hacker-verify-btn" class="btn btn-primary btn-full" style="background: #4f46e5; border-color: #4338ca; font-weight: 700; padding: 0.6rem;">
+                ⚡ Execute Session ID Verification
+              </button>
+              <div id="anl-hacker-verify-result" style="display:none; margin-top: 0.85rem; padding: 0.75rem; border-radius: 6px; font-size: 0.82rem; background: #0b0f19; border: 1px solid #1e293b;"></div>
+            </div>
+
+            <!-- PRESET ATTACK VECTORS CARD -->
+            <div style="background: #030712; border: 1px solid #1f2937; border-radius: 8px; padding: 1.25rem;">
+              <h4 style="font-size: 1rem; color: #f87171; margin-bottom: 0.35rem;">🚀 ATO Attack Presets</h4>
+              <p style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.85rem;">
+                Inject threat vector payloads to evaluate the behavioral risk engine:
+              </p>
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <button type="button" class="btn btn-outline anl-preset-btn" data-preset="SESSION_HIJACKING" style="background: #0f172a; border-color: #334155; color: #e2e8f0; text-align: left; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                  <span>🍪 Stolen Session Token Replay</span>
+                  <span style="color: #818cf8; font-weight: 700;">REPLAY</span>
+                </button>
+                <button type="button" class="btn btn-outline anl-preset-btn" data-preset="CREDENTIAL_STUFFING" style="background: #0f172a; border-color: #334155; color: #e2e8f0; text-align: left; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                  <span>🤖 Credential Stuffing & Bot Spray</span>
+                  <span style="color: #f87171; font-weight: 700;">BOTNET</span>
+                </button>
+                <button type="button" class="btn btn-outline anl-preset-btn" data-preset="IMPOSSIBLE_TRAVEL" style="background: #0f172a; border-color: #334155; color: #e2e8f0; text-align: left; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                  <span>✈️ Impossible Travel / Proxy Hop</span>
+                  <span style="color: #fbbf24; font-weight: 700;">GEO ANOMALY</span>
+                </button>
+                <button type="button" class="btn btn-outline anl-preset-btn" data-preset="DEVICE_SPOOFING" style="background: #0f172a; border-color: #334155; color: #e2e8f0; text-align: left; font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center;">
+                  <span>💻 Device Fingerprint Mismatch</span>
+                  <span style="color: #c084fc; font-weight: 700;">SPOOF</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- TERMINAL CONSOLE -->
+          <div style="margin-top: 1.5rem; background: #030712; border: 1px solid #1f2937; border-radius: 8px; padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.88rem; font-weight: 700; color: #38bdf8;">💻 Hacker Terminal & Risk Engine Defense Log</span>
+              <button id="anl-clear-term-btn" class="btn btn-outline" style="padding: 0.15rem 0.5rem; font-size: 0.72rem; color: #94a3b8; border-color: #334155;">Clear Log</button>
+            </div>
+            <div id="anl-hacker-terminal" style="font-family: monospace; font-size: 0.8rem; color: #38bdf8; min-height: 180px; max-height: 280px; overflow-y: auto; line-height: 1.5;">
+              <div style="color: #64748b;">[HACKER CONSOLE READY] Select an attack preset or enter a Session ID to test ATO detection.</div>
             </div>
           </div>
 

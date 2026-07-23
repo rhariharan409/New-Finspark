@@ -469,6 +469,73 @@ router.post('/report/:userId', async (req, res) => {
   }
 });
 
+/**
+ * Retrieve All ATO Verification Requests / Alerts for Analyst Portal
+ * GET /api/analyst/ato-alerts
+ */
+router.get('/ato-alerts', async (req, res) => {
+  try {
+    const { atoVerificationService } = await import('../services/atoVerificationService.js');
+    await atoVerificationService.checkAndExpirePendingRequests();
+
+    const { atoRequestRepository } = await import('../db/atoRequestRepository.js');
+    const requests = await atoRequestRepository.getAllAtoRequests();
+
+    // Map each request with full fields and computed status label for analyst table
+    const mapped = requests.map(r => {
+      let liveStatus = 'WAITING FOR APPROVAL';
+      if (r.status === 'COMPLETED') {
+        liveStatus = 'TRANSACTION COMPLETED';
+      } else if (r.status === 'BLOCKED') {
+        if (r.trusted_user_confirmation === 'DENIED') {
+          liveStatus = 'ATO ATTEMPT PREVENTED (USER DENIED)';
+        } else if (r.risk_decision === 'BLOCK') {
+          liveStatus = 'TRANSACTION BLOCKED (RISK ENGINE)';
+        } else {
+          liveStatus = 'TRANSACTION BLOCKED';
+        }
+      } else if (r.status === 'EXPIRED') {
+        liveStatus = 'APPROVAL EXPIRED';
+      } else if (r.status === 'CANCELLED') {
+        liveStatus = 'INITIATOR CANCELLED';
+      }
+
+      return {
+        ato_request_id: r.ato_request_id,
+        alert_id: r.ato_request_id,
+        transaction_id: r.transaction_id,
+        session_id: r.session_id,
+        user_id: r.user_id,
+        amount: r.amount,
+        currency: r.currency || 'INR',
+        receiver: r.receiver_identifier || r.receiver_user_id,
+        receiver_user_id: r.receiver_user_id,
+        initiator_confirmation: r.initiator_confirmation || 'PENDING',
+        trusted_user_confirmation: r.trusted_user_confirmation || 'PENDING',
+        risk_decision: r.risk_decision || 'ALLOW',
+        risk_score: r.risk_score !== undefined ? r.risk_score : 85,
+        risk_level: r.risk_level || 'HIGH',
+        status: r.status,
+        live_status: liveStatus,
+        created_at: r.created_at,
+        expires_at: r.expires_at,
+        resolved_at: r.resolved_at,
+        resolution_reason: r.resolution_reason
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      alerts: mapped,
+      requests: mapped
+    });
+
+  } catch (err) {
+    console.error('ATO alerts API error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to load ATO alerts.' });
+  }
+});
+
 export const analystModule = {
   name: 'analyst',
   router
