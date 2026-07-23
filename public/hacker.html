@@ -48,8 +48,411 @@
 
   <main class="container" style="max-width: 800px; margin-top: 2.5rem; padding-bottom: 4rem;">
 
-    <!-- SECTION 1: ATO VERIFICATION CARD -->
-    <div id="ato-verification-card" class="card" style="padding: 2rem; border-top: 4px solid #2563eb; margin-bottom: 2rem; background: #ffffff;">
+    <!-- ATTACK LAB NAVIGATION TABS -->
+    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem;">
+      <button type="button" id="tab-cnp-attack" class="btn" style="background: #0f172a; color: #38bdf8; font-weight: 700; padding: 0.6rem 1.25rem; border-radius: 6px; font-size: 0.9rem; border: 1px solid #1e293b;">
+        💳 CNP Fraud Attack Lab
+      </button>
+      <button type="button" id="tab-ato-attack" class="btn" style="background: #f1f5f9; color: #475569; font-weight: 700; padding: 0.6rem 1.25rem; border-radius: 6px; font-size: 0.9rem; border: 1px solid #cbd5e1;">
+        🛡️ ATO Session Verification
+      </button>
+    </div>
+
+    <!-- SECTION 1: CARD-NOT-PRESENT (CNP) FRAUD ATTACK SIMULATION LAB -->
+    <div id="cnp-attack-lab" class="card" style="padding: 2rem; border-top: 4px solid #38bdf8; margin-bottom: 2rem; background: #0f172a; color: #f8fafc; border-radius: 12px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.4);">
+      
+      <!-- ATTACK SCENARIO HEADER -->
+      <div style="margin-bottom: 1.75rem; border-bottom: 1px solid #334155; padding-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h2 style="font-size: 1.4rem; color: #f8fafc; font-weight: 800; letter-spacing: -0.02em; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <span>⚡ ATTACK SIMULATION LAB: CNP FRAUD</span>
+          </h2>
+          <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.65rem; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3);">
+            SIMULATION DATA ONLY
+          </span>
+        </div>
+        <p style="color: #94a3b8; font-size: 0.88rem; margin-bottom: 1rem; line-height: 1.5;">
+          Controlled Card-Not-Present (CNP) Fraud Attack Simulation Console against the FINSPARK Risk Engine.
+        </p>
+
+        <!-- VISUAL ATTACK PIPELINE DIAGRAM -->
+        <div style="background: rgba(30, 41, 59, 0.8); border: 1px solid #334155; border-radius: 8px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; font-weight: 700; color: #cbd5e1; flex-wrap: wrap; gap: 0.5rem;">
+          <span style="color: #f43f5e;">STOLEN CARD DATA</span> ➔ 
+          <span style="color: #fbbf24;">ATTACKER ENVIRONMENT</span> ➔ 
+          <span style="color: #38bdf8;">TRANSACTION MANIPULATION</span> ➔ 
+          <span style="color: #a855f7;">CNP FRAUD ATTEMPT</span> ➔ 
+          <span style="color: #10b981;">FINSPARK DETECTION ENGINE</span>
+        </div>
+      </div>
+
+      <!-- ATTACK SCENARIO PRESET SELECTOR BAR -->
+      <div style="margin-bottom: 1.75rem;">
+        <label style="font-size: 0.82rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.5rem;">
+          Select Attack Scenario Preset:
+        </label>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="preset-selector-container">
+          <button type="button" class="btn cnp-preset-btn active" data-preset="PRESET_1" style="font-size: 0.78rem; font-weight: 700; padding: 0.45rem 0.85rem; background: #2563eb; color: #ffffff; border-radius: 6px; border: none;">
+            Preset 1: Stolen Card Details
+          </button>
+          <button type="button" class="btn cnp-preset-btn" data-preset="PRESET_2" style="font-size: 0.78rem; font-weight: 700; padding: 0.45rem 0.85rem; background: #1e293b; color: #cbd5e1; border-radius: 6px; border: 1px solid #334155;">
+            Preset 2: ATO + CNP Fraud
+          </button>
+          <button type="button" class="btn cnp-preset-btn" data-preset="PRESET_3" style="font-size: 0.78rem; font-weight: 700; padding: 0.45rem 0.85rem; background: #1e293b; color: #cbd5e1; border-radius: 6px; border: 1px solid #334155;">
+            Preset 3: Credential Stuffing
+          </button>
+          <button type="button" class="btn cnp-preset-btn" data-preset="PRESET_4" style="font-size: 0.78rem; font-weight: 700; padding: 0.45rem 0.85rem; background: #1e293b; color: #cbd5e1; border-radius: 6px; border: 1px solid #334155;">
+            Preset 4: Low-and-Slow
+          </button>
+          <button type="button" class="btn cnp-preset-btn" data-preset="PRESET_5" style="font-size: 0.78rem; font-weight: 700; padding: 0.45rem 0.85rem; background: #1e293b; color: #cbd5e1; border-radius: 6px; border: 1px solid #334155;">
+            Preset 5: Impossible Travel
+          </button>
+        </div>
+      </div>
+
+      <!-- PANEL 1: SYNTHETIC CARD CREDENTIALS -->
+      <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h4 style="margin: 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">
+            💳 SYNTHETIC CARD CREDENTIALS
+          </h4>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" id="card-toggle-trusted" class="btn" style="font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.6rem; background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px;">
+              [USE TRUSTED DEMO CARD]
+            </button>
+            <button type="button" id="card-toggle-stolen" class="btn" style="font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.6rem; background: #dc2626; color: #ffffff; border: none; border-radius: 4px;">
+              [USE SYNTHETIC STOLEN CARD]
+            </button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; font-size: 0.85rem;">
+          <div>
+            <span style="color: #64748b; font-size: 0.75rem; display: block; margin-bottom: 0.2rem;">Card Network:</span>
+            <strong id="cnp-card-network" style="color: #38bdf8;">VISA</strong>
+          </div>
+          <div>
+            <span style="color: #64748b; font-size: 0.75rem; display: block; margin-bottom: 0.2rem;">Card Number:</span>
+            <code id="cnp-card-number" style="color: #f8fafc; font-size: 0.9rem; font-weight: 700;">**** **** **** 4521</code>
+          </div>
+          <div>
+            <span style="color: #64748b; font-size: 0.75rem; display: block; margin-bottom: 0.2rem;">Expiry:</span>
+            <strong id="cnp-card-expiry" style="color: #f8fafc;">12/29</strong>
+          </div>
+          <div>
+            <span style="color: #64748b; font-size: 0.75rem; display: block; margin-bottom: 0.2rem;">CVV:</span>
+            <strong id="cnp-card-cvv" style="color: #f8fafc;">•••</strong>
+          </div>
+          <div>
+            <span style="color: #64748b; font-size: 0.75rem; display: block; margin-bottom: 0.2rem;">Cardholder:</span>
+            <strong id="cnp-cardholder" style="color: #f8fafc;">HARI DEMO</strong>
+          </div>
+          <div>
+            <span style="color: #64748b; font-size: 0.75rem; display: block; margin-bottom: 0.2rem;">Card Status:</span>
+            <span id="cnp-card-status" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-weight: 800; font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 4px;">ACTIVE / SIMULATED</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: ATTACKER ENVIRONMENT SIMULATION -->
+      <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h4 style="margin: 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">
+            🌐 ATTACKER ENVIRONMENT SIMULATION
+          </h4>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" id="env-mode-realistic" class="btn" style="font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.6rem; background: #2563eb; color: #ffffff; border: none; border-radius: 4px;">
+              MODE 1: REALISTIC ATTACK
+            </button>
+            <button type="button" id="env-mode-manual" class="btn" style="font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.6rem; background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px;">
+              MODE 2: MANUAL SIMULATION
+            </button>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table" style="font-size: 0.82rem; width: 100%; color: #cbd5e1;">
+            <thead>
+              <tr style="border-bottom: 1px solid #334155; color: #94a3b8;">
+                <th>Environment Attribute</th>
+                <th>Trusted Baseline</th>
+                <th>Attacker Environment</th>
+                <th>Match Status</th>
+              </tr>
+            </thead>
+            <tbody id="cnp-env-comparison-body">
+              <tr>
+                <td><strong>Device Fingerprint</strong></td>
+                <td><code style="color: #34d399;">FP-CANVAS-2A33BB9A</code></td>
+                <td><code style="color: #f43f5e; font-weight: 700;">FP-SIMULATED-ATTACKER</code></td>
+                <td><span style="background: rgba(244, 63, 94, 0.2); color: #f43f5e; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 4px;">✗ MISMATCH</span></td>
+              </tr>
+              <tr>
+                <td><strong>Browser Environment</strong></td>
+                <td><code style="color: #34d399;">Edge 125</code></td>
+                <td><code style="color: #f43f5e; font-weight: 700;">Chrome 126</code></td>
+                <td><span style="background: rgba(244, 63, 94, 0.2); color: #f43f5e; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 4px;">✗ MISMATCH</span></td>
+              </tr>
+              <tr>
+                <td><strong>Operating System</strong></td>
+                <td><code style="color: #34d399;">Windows 11</code></td>
+                <td><code style="color: #fbbf24;">Linux Ubuntu</code></td>
+                <td><span style="background: rgba(251, 191, 36, 0.2); color: #fbbf24; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 4px;">! ANOMALY</span></td>
+              </tr>
+              <tr>
+                <td><strong>IP Address</strong></td>
+                <td><code style="color: #34d399;">127.0.0.1 (Localhost)</code></td>
+                <td><code style="color: #f43f5e; font-weight: 700;">192.168.1.50 (Remote IP / VPN)</code></td>
+                <td><span style="background: rgba(244, 63, 94, 0.2); color: #f43f5e; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 4px;">✗ MISMATCH</span></td>
+              </tr>
+              <tr>
+                <td><strong>Geographic Location</strong></td>
+                <td><code style="color: #34d399;">Chennai, IN</code></td>
+                <td><code style="color: #f43f5e; font-weight: 700;">Mumbai, IN (Distant IP)</code></td>
+                <td><span style="background: rgba(244, 63, 94, 0.2); color: #f43f5e; font-weight: 800; padding: 0.15rem 0.5rem; border-radius: 4px;">✗ MISMATCH</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PANEL 3: CNP TRANSACTION CONSTRUCTION -->
+      <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
+        <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">
+          🛒 CARD-NOT-PRESENT TRANSACTION CONSTRUCTION
+        </h4>
+
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 6px; padding: 0.65rem 0.85rem; margin-bottom: 1.25rem; font-size: 0.78rem; font-weight: 700; color: #38bdf8; display: flex; gap: 1rem; flex-wrap: wrap;">
+          <span>CARD PRESENT: NO</span>
+          <span>•</span>
+          <span>PHYSICAL CARD: NOT USED</span>
+          <span>•</span>
+          <span>TRANSACTION CHANNEL: ONLINE</span>
+        </div>
+
+        <form id="cnp-construct-form">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+            <div>
+              <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 0.35rem;">Transaction Amount (₹)</label>
+              <input type="number" id="cnp-input-amount" class="form-input" value="85000" min="1" style="background: #1e293b; border: 1px solid #475569; color: #f8fafc; font-weight: 700;">
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 0.35rem;">Merchant Name</label>
+              <input type="text" id="cnp-input-merchant" class="form-input" value="Unknown Electronics Marketplace" style="background: #1e293b; border: 1px solid #475569; color: #f8fafc;">
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 0.35rem;">Merchant Category</label>
+              <select id="cnp-input-category" class="form-input" style="background: #1e293b; border: 1px solid #475569; color: #f8fafc;">
+                <option value="ELECTRONICS" selected>Electronics & Gadgets (High Risk)</option>
+                <option value="DIGITAL_GOODS">Digital Goods / Gaming Cards</option>
+                <option value="TRAVEL">Travel / Flight Booking</option>
+                <option value="SUBSCRIPTION">Recurring Subscription</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 0.35rem;">Transaction Channel</label>
+              <select id="cnp-input-channel" class="form-input" style="background: #1e293b; border: 1px solid #475569; color: #f8fafc;">
+                <option value="ONLINE" selected>ONLINE (Web Store)</option>
+                <option value="IN_APP">IN-APP Checkout</option>
+                <option value="WEB_CHECKOUT">WEB CHECKOUT</option>
+                <option value="PHONE_ORDER">PHONE ORDER (MOTO)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 0.35rem;">Shipping / Billing Relation</label>
+              <select id="cnp-input-shipping" class="form-input" style="background: #1e293b; border: 1px solid #475569; color: #f8fafc;">
+                <option value="HIGH_RISK_MISMATCH" selected>HIGH-RISK MISMATCH (Different State)</option>
+                <option value="DIFFERENT">DIFFERENT ADDRESS</option>
+                <option value="MATCHED">MATCHED ADDRESS</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: #94a3b8; font-weight: 600; display: block; margin-bottom: 0.35rem;">Attempt Velocity (Last 10m)</label>
+              <input type="text" id="cnp-input-velocity" class="form-input" value="3 attempts in 10 mins" style="background: #1e293b; border: 1px solid #475569; color: #f8fafc;">
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- PANEL 4: TARGET USER TRANSACTION PROFILE DNA -->
+      <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
+        <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">
+          🧬 TARGET USER TRANSACTION DNA vs ATTACK TRANSACTION DNA
+        </h4>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+          <!-- NORMAL DNA -->
+          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 1rem; font-size: 0.82rem;">
+            <div style="font-weight: 800; color: #34d399; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">
+              ✓ NORMAL USER TRANSACTION DNA
+            </div>
+            <div style="margin-bottom: 0.4rem;"><strong>Typical Amount:</strong> ₹2,500</div>
+            <div style="margin-bottom: 0.4rem;"><strong>Typical Time:</strong> 6:00 PM – 11:00 PM</div>
+            <div style="margin-bottom: 0.4rem;"><strong>Typical Location:</strong> Chennai</div>
+            <div style="margin-bottom: 0.4rem;"><strong>Typical Device:</strong> Trusted Laptop (Edge)</div>
+            <div style="margin-bottom: 0.4rem;"><strong>Typical Categories:</strong> Food, Shopping, Subscriptions</div>
+            <div><strong>Frequency:</strong> 3 transfers per week</div>
+          </div>
+
+          <!-- ATTACK DNA -->
+          <div style="background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 8px; padding: 1rem; font-size: 0.82rem;">
+            <div style="font-weight: 800; color: #f43f5e; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">
+              💥 ATTACK TRANSACTION DNA
+            </div>
+            <div style="margin-bottom: 0.4rem;"><strong>Amount:</strong> <span id="dna-attack-amount" style="color: #f43f5e; font-weight: 700;">₹85,000</span></div>
+            <div style="margin-bottom: 0.4rem;"><strong>Time:</strong> <span id="dna-attack-time" style="color: #fbbf24;">3:15 AM</span></div>
+            <div style="margin-bottom: 0.4rem;"><strong>Location:</strong> <span id="dna-attack-location" style="color: #f43f5e;">Mumbai (New Location)</span></div>
+            <div style="margin-bottom: 0.4rem;"><strong>Device:</strong> <span id="dna-attack-device" style="color: #f43f5e;">Chrome on Linux (Unknown)</span></div>
+            <div style="margin-bottom: 0.4rem;"><strong>Merchant:</strong> <span id="dna-attack-merchant" style="color: #f43f5e;">Electronics Marketplace</span></div>
+            <div><strong>Channel:</strong> <span style="color: #38bdf8; font-weight: 700;">Card-Not-Present (Online)</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 5: Visual Attack Chain Timeline -->
+      <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid #334155; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem;">
+        <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">
+          ⏳ ATTACK CHAIN TIMELINE
+        </h4>
+
+        <div id="attack-timeline-stepper" style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: space-between; font-size: 0.75rem; text-align: center;">
+          <div class="timeline-step active" style="flex: 1; min-width: 90px; background: #1e293b; padding: 0.5rem; border-radius: 6px; border: 1px solid #38bdf8;">
+            <div style="font-size: 0.7rem; color: #38bdf8; font-weight: 800;">PHASE 1</div>
+            <div style="color: #f8fafc; font-weight: 600;">Credentials</div>
+          </div>
+          <div class="timeline-step" style="flex: 1; min-width: 90px; background: #1e293b; padding: 0.5rem; border-radius: 6px; border: 1px solid #334155;">
+            <div style="font-size: 0.7rem; color: #64748b; font-weight: 800;">PHASE 2</div>
+            <div style="color: #94a3b8; font-weight: 600;">Environment</div>
+          </div>
+          <div class="timeline-step" style="flex: 1; min-width: 90px; background: #1e293b; padding: 0.5rem; border-radius: 6px; border: 1px solid #334155;">
+            <div style="font-size: 0.7rem; color: #64748b; font-weight: 800;">PHASE 3</div>
+            <div style="color: #94a3b8; font-weight: 600;">CNP Payload</div>
+          </div>
+          <div class="timeline-step" style="flex: 1; min-width: 90px; background: #1e293b; padding: 0.5rem; border-radius: 6px; border: 1px solid #334155;">
+            <div style="font-size: 0.7rem; color: #64748b; font-weight: 800;">PHASE 4</div>
+            <div style="color: #94a3b8; font-weight: 600;">Sent Backend</div>
+          </div>
+          <div class="timeline-step" style="flex: 1; min-width: 90px; background: #1e293b; padding: 0.5rem; border-radius: 6px; border: 1px solid #334155;">
+            <div style="font-size: 0.7rem; color: #64748b; font-weight: 800;">PHASE 5</div>
+            <div style="color: #94a3b8; font-weight: 600;">Session Check</div>
+          </div>
+          <div class="timeline-step" style="flex: 1; min-width: 90px; background: #1e293b; padding: 0.5rem; border-radius: 6px; border: 1px solid #334155;">
+            <div style="font-size: 0.7rem; color: #64748b; font-weight: 800;">PHASE 6</div>
+            <div style="color: #94a3b8; font-weight: 600;">Multi-Factor</div>
+          </div>
+          <div class="timeline-step" style="flex: 1; min-width: 90px; background: #1e293b; padding: 0.5rem; border-radius: 6px; border: 1px solid #334155;">
+            <div style="font-size: 0.7rem; color: #64748b; font-weight: 800;">PHASE 7</div>
+            <div style="color: #64748b; font-weight: 800;">CNP Risk</div>
+          </div>
+          <div class="timeline-step" style="flex: 1; min-width: 90px; background: #1e293b; padding: 0.5rem; border-radius: 6px; border: 1px solid #334155;">
+            <div style="font-size: 0.7rem; color: #64748b; font-weight: 800;">PHASE 8</div>
+            <div style="color: #94a3b8; font-weight: 600;">Decision</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRIMARY ACTION BUTTON -->
+      <button type="button" id="cnp-launch-btn" class="btn btn-full" style="padding: 1rem; font-size: 1.05rem; font-weight: 800; background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); color: #ffffff; border: none; border-radius: 8px; box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3); text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer;">
+        🚀 LAUNCH CNP ATTACK SIMULATION
+      </button>
+
+      <!-- REAL-TIME ATTACK STATUS & RISK PREVIEW -->
+      <div id="cnp-results-container" style="display: none; margin-top: 2rem;">
+        
+        <!-- LIVE ATTACK STATUS CHECKLIST -->
+        <div style="background: rgba(30, 41, 59, 0.8); border: 1px solid #334155; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
+          <h4 style="margin: 0 0 0.85rem 0; font-size: 0.95rem; color: #f8fafc; font-weight: 700;">
+            📊 REAL-TIME ATTACK STATUS & RISK BREAKDOWN
+          </h4>
+
+          <div id="cnp-status-checklist" style="font-size: 0.82rem; line-height: 1.8; color: #cbd5e1; margin-bottom: 1.25rem;">
+            <!-- Populated dynamically -->
+          </div>
+
+          <!-- RISK SCORE BREAKDOWN GRID -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; font-size: 0.78rem;">
+            <div style="background: #1e293b; padding: 0.6rem; border-radius: 6px; border: 1px solid #334155;">
+              <span style="color: #94a3b8; display: block;">Device Risk</span>
+              <strong id="score-device" style="color: #f43f5e;">+40</strong>
+            </div>
+            <div style="background: #1e293b; padding: 0.6rem; border-radius: 6px; border: 1px solid #334155;">
+              <span style="color: #94a3b8; display: block;">Browser Risk</span>
+              <strong id="score-browser" style="color: #f43f5e;">+20</strong>
+            </div>
+            <div style="background: #1e293b; padding: 0.6rem; border-radius: 6px; border: 1px solid #334155;">
+              <span style="color: #94a3b8; display: block;">Network Risk</span>
+              <strong id="score-network" style="color: #fbbf24;">+15</strong>
+            </div>
+            <div style="background: #1e293b; padding: 0.6rem; border-radius: 6px; border: 1px solid #334155;">
+              <span style="color: #94a3b8; display: block;">Location Risk</span>
+              <strong id="score-location" style="color: #f43f5e;">+20</strong>
+            </div>
+            <div style="background: #1e293b; padding: 0.6rem; border-radius: 6px; border: 1px solid #334155;">
+              <span style="color: #94a3b8; display: block;">Amount Risk</span>
+              <strong id="score-amount" style="color: #f43f5e;">+25</strong>
+            </div>
+            <div style="background: #1e293b; padding: 0.6rem; border-radius: 6px; border: 1px solid #334155;">
+              <span style="color: #94a3b8; display: block;">Merchant Risk</span>
+              <strong id="score-merchant" style="color: #fbbf24;">+10</strong>
+            </div>
+            <div style="background: #1e293b; padding: 0.6rem; border-radius: 6px; border: 1px solid #334155;">
+              <span style="color: #94a3b8; display: block;">DNA Risk</span>
+              <strong id="score-dna" style="color: #f43f5e;">+25</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- FINAL DETECTION RESULT CARD -->
+        <div id="cnp-final-result-card" style="background: rgba(225, 29, 72, 0.1); border: 2px solid #f43f5e; border-radius: 12px; padding: 1.5rem; color: #f8fafc;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="margin: 0; font-size: 1.25rem; color: #f43f5e; font-weight: 800; display: flex; align-items: center; gap: 0.5rem;">
+              <span>🚨 CARD-NOT-PRESENT FRAUD DETECTED</span>
+            </h3>
+            <span id="cnp-total-risk-badge" class="badge" style="background: #dc2626; color: #ffffff; font-weight: 800; font-size: 0.85rem; padding: 0.35rem 0.75rem;">
+              TOTAL RISK: 95/100 (CRITICAL)
+            </span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; font-size: 0.88rem; margin-bottom: 1.25rem;">
+            <div><strong>TRANSACTION STATUS:</strong> <span style="color: #f43f5e; font-weight: 800;">BLOCKED</span></div>
+            <div><strong>DECISION:</strong> <span style="color: #f43f5e; font-weight: 800;">BLOCK TRANSACTION</span></div>
+            <div><strong>SMS NOTIFICATION:</strong> <span style="color: #34d399; font-weight: 700;">SENT (+91 9025521474)</span></div>
+          </div>
+
+          <!-- PRIMARY DETECTION REASONS -->
+          <div style="margin-bottom: 1.25rem;">
+            <h5 style="margin: 0 0 0.5rem 0; color: #fbbf24; font-size: 0.85rem; font-weight: 700; text-transform: uppercase;">
+              PRIMARY DETECTION REASONS:
+            </h5>
+            <ul id="cnp-reasons-list" style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: #cbd5e1; line-height: 1.7;">
+              <!-- Populated dynamically -->
+            </ul>
+          </div>
+
+          <!-- RECOMMENDED ACTIONS -->
+          <div style="margin-bottom: 1.5rem;">
+            <h5 style="margin: 0 0 0.5rem 0; color: #38bdf8; font-size: 0.85rem; font-weight: 700; text-transform: uppercase;">
+              SYSTEM RECOMMENDED ACTIONS TAKEN:
+            </h5>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.78rem; font-weight: 700;">
+              <span style="background: #1e293b; color: #f43f5e; padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid #f43f5e;">🔒 BLOCK TRANSACTION</span>
+              <span style="background: #1e293b; color: #fbbf24; padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid #fbbf24;">📊 CREATE RISK DECISION</span>
+              <span style="background: #1e293b; color: #38bdf8; padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid #38bdf8;">🚨 CREATE SECURITY EVENT</span>
+              <span style="background: #1e293b; color: #34d399; padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid #34d399;">💬 TRIGGER USER SMS ALERT</span>
+              <span style="background: #1e293b; color: #cbd5e1; padding: 0.3rem 0.6rem; border-radius: 4px; border: 1px solid #475569;">🧾 STORE AUDIT EVENT</span>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end;">
+            <a href="analyst.html" class="btn btn-primary" style="background: #2563eb; border: none; padding: 0.65rem 1.25rem; font-weight: 700; font-size: 0.88rem;">
+              📊 View Event in Analyst Portal ➔
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: ATO VERIFICATION CARD (Preserved) -->
+    <div id="ato-verification-card" class="card" style="display: none; padding: 2rem; border-top: 4px solid #2563eb; margin-bottom: 2rem; background: #ffffff;">
       <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem; font-weight: 700;">
         ATO Verification
       </h2>

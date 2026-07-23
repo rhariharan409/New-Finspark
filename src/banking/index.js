@@ -255,6 +255,24 @@ router.get('/ato-request-status/:requestId', async (req, res) => {
   }
 });
 
+/**
+ * Card-Not-Present (CNP) Fraud Attack Simulation Endpoint
+ * POST /api/transactions/simulate-cnp-attack
+ */
+router.post('/simulate-cnp-attack', async (req, res) => {
+  try {
+    const { cnpSimulationService } = await import('../services/cnpSimulationService.js');
+    const result = await cnpSimulationService.processCnpAttackSimulation(req.body);
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error('CNP simulation error:', err.message);
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Server error processing CNP attack simulation.'
+    });
+  }
+});
+
 export const bankingModule = {
   name: 'banking',
   router

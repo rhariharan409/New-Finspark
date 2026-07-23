@@ -459,4 +459,295 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }).join('');
   }
+
+  // =========================================================================
+  // CARD-NOT-PRESENT (CNP) FRAUD ATTACK SIMULATION LAB CONTROLLER
+  // =========================================================================
+
+  const tabCnp = document.getElementById('tab-cnp-attack');
+  const tabAto = document.getElementById('tab-ato-attack');
+  const cnpLabSection = document.getElementById('cnp-attack-lab');
+
+  if (tabCnp && tabAto) {
+    tabCnp.addEventListener('click', () => {
+      if (cnpLabSection) cnpLabSection.style.display = 'block';
+      if (verificationCard) verificationCard.style.display = 'none';
+      if (simulationCard) simulationCard.style.display = 'none';
+      tabCnp.style.background = '#0f172a';
+      tabCnp.style.color = '#38bdf8';
+      tabAto.style.background = '#f1f5f9';
+      tabAto.style.color = '#475569';
+    });
+
+    tabAto.addEventListener('click', () => {
+      if (cnpLabSection) cnpLabSection.style.display = 'none';
+      if (verificationCard && !activeVerifiedSessionId) verificationCard.style.display = 'block';
+      if (simulationCard && activeVerifiedSessionId) simulationCard.style.display = 'block';
+      tabAto.style.background = '#0f172a';
+      tabAto.style.color = '#38bdf8';
+      tabCnp.style.background = '#f1f5f9';
+      tabCnp.style.color = '#475569';
+    });
+  }
+
+  // Preset Configurations
+  const cnpPresets = {
+    PRESET_1: {
+      cardProfileType: 'SYNTHETIC_STOLEN',
+      amount: 85000,
+      merchant: 'Unknown Electronics Marketplace',
+      category: 'ELECTRONICS',
+      channel: 'ONLINE',
+      shipping: 'HIGH_RISK_MISMATCH',
+      velocity: '3 attempts in 10 mins',
+      envMode: 'REALISTIC',
+      attackerEnv: {
+        deviceFingerprint: 'FP-SIMULATED-ATTACKER',
+        browserName: 'Chrome 126',
+        operatingSystem: 'Linux Ubuntu',
+        ipAddress: '192.168.1.50 (VPN)',
+        location: 'Mumbai, IN'
+      }
+    },
+    PRESET_2: {
+      cardProfileType: 'SYNTHETIC_STOLEN',
+      amount: 145000,
+      merchant: 'Luxury Global Travel & Aviation',
+      category: 'TRAVEL',
+      channel: 'WEB_CHECKOUT',
+      shipping: 'HIGH_RISK_MISMATCH',
+      velocity: '5 attempts in 5 mins',
+      envMode: 'REALISTIC',
+      attackerEnv: {
+        deviceFingerprint: 'FP-ATO-CRITICAL',
+        browserName: 'Firefox 125',
+        operatingSystem: 'Android 14',
+        ipAddress: '185.220.101.5 (Tor Exit)',
+        location: 'London, UK'
+      }
+    },
+    PRESET_3: {
+      cardProfileType: 'SYNTHETIC_STOLEN',
+      amount: 25000,
+      merchant: 'Digital Gaming Gift Voucher Code Store',
+      category: 'DIGITAL_GOODS',
+      channel: 'ONLINE',
+      shipping: 'DIFFERENT',
+      velocity: '12 attempts in 2 mins',
+      envMode: 'REALISTIC',
+      attackerEnv: {
+        deviceFingerprint: 'FP-BOT-STUFFING-01',
+        browserName: 'HeadlessChrome',
+        operatingSystem: 'Linux',
+        ipAddress: '103.21.244.0 (Proxy)',
+        location: 'Delhi, IN'
+      }
+    },
+    PRESET_4: {
+      cardProfileType: 'SYNTHETIC_STOLEN',
+      amount: 4900,
+      merchant: 'Micro Subscription Streaming Service',
+      category: 'SUBSCRIPTION',
+      channel: 'IN_APP',
+      shipping: 'MATCHED',
+      velocity: '1 attempt every 2 hours',
+      envMode: 'REALISTIC',
+      attackerEnv: {
+        deviceFingerprint: 'FP-SLOW-LOW-88',
+        browserName: 'Safari 17',
+        operatingSystem: 'macOS Sonoma',
+        ipAddress: '45.12.18.99',
+        location: 'Singapore'
+      }
+    },
+    PRESET_5: {
+      cardProfileType: 'SYNTHETIC_STOLEN',
+      amount: 98000,
+      merchant: 'High Value Crypto Tech Hardware Store',
+      category: 'ELECTRONICS',
+      channel: 'ONLINE',
+      shipping: 'HIGH_RISK_MISMATCH',
+      velocity: '2 attempts in 1 min',
+      envMode: 'REALISTIC',
+      attackerEnv: {
+        deviceFingerprint: 'FP-IMPOSSIBLE-TRAVEL',
+        browserName: 'Chrome Mobile',
+        operatingSystem: 'iOS 17',
+        ipAddress: '198.51.100.44',
+        location: 'Frankfurt, DE'
+      }
+    }
+  };
+
+  // Preset Selector Listener
+  const presetButtons = document.querySelectorAll('.cnp-preset-btn');
+  presetButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      presetButtons.forEach(b => {
+        b.style.background = '#1e293b';
+        b.style.color = '#cbd5e1';
+        b.style.border = '1px solid #334155';
+      });
+      btn.style.background = '#2563eb';
+      btn.style.color = '#ffffff';
+      btn.style.border = 'none';
+
+      const key = btn.getAttribute('data-preset');
+      const data = cnpPresets[key];
+      if (!data) return;
+
+      const amtInput = document.getElementById('cnp-input-amount');
+      const merchInput = document.getElementById('cnp-input-merchant');
+      const catInput = document.getElementById('cnp-input-category');
+      const chanInput = document.getElementById('cnp-input-channel');
+      const shipInput = document.getElementById('cnp-input-shipping');
+      const velInput = document.getElementById('cnp-input-velocity');
+
+      if (amtInput) amtInput.value = data.amount;
+      if (merchInput) merchInput.value = data.merchant;
+      if (catInput) catInput.value = data.category;
+      if (chanInput) chanInput.value = data.channel;
+      if (shipInput) shipInput.value = data.shipping;
+      if (velInput) velInput.value = data.velocity;
+
+      // Update DNA profile preview
+      const dnaAmt = document.getElementById('dna-attack-amount');
+      const dnaMerch = document.getElementById('dna-attack-merchant');
+      const dnaLoc = document.getElementById('dna-attack-location');
+      const dnaDev = document.getElementById('dna-attack-device');
+
+      if (dnaAmt) dnaAmt.textContent = `₹${data.amount.toLocaleString()}`;
+      if (dnaMerch) dnaMerch.textContent = data.merchant;
+      if (dnaLoc) dnaLoc.textContent = data.attackerEnv.location;
+      if (dnaDev) dnaDev.textContent = `${data.attackerEnv.browserName} on ${data.attackerEnv.operatingSystem}`;
+    });
+  });
+
+  // Launch CNP Attack Simulation Handler
+  const cnpLaunchBtn = document.getElementById('cnp-launch-btn');
+  const cnpResultsContainer = document.getElementById('cnp-results-container');
+  const cnpStatusChecklist = document.getElementById('cnp-status-checklist');
+  const cnpReasonsList = document.getElementById('cnp-reasons-list');
+
+  if (cnpLaunchBtn) {
+    cnpLaunchBtn.addEventListener('click', async () => {
+      cnpLaunchBtn.disabled = true;
+      cnpLaunchBtn.textContent = '⏳ EXECUTING ATTACK CHAIN SIMULATION...';
+
+      // Reset Timeline Stepper
+      const steps = document.querySelectorAll('#attack-timeline-stepper .timeline-step');
+      steps.forEach((s, idx) => {
+        if (idx === 0) {
+          s.style.borderColor = '#38bdf8';
+          s.querySelector('div:first-child').style.color = '#38bdf8';
+        } else {
+          s.style.borderColor = '#334155';
+          s.querySelector('div:first-child').style.color = '#64748b';
+        }
+      });
+
+      // Animate Timeline Steps
+      for (let i = 1; i < steps.length; i++) {
+        await new Promise(r => setTimeout(r, 200));
+        steps[i].style.borderColor = '#38bdf8';
+        steps[i].querySelector('div:first-child').style.color = '#38bdf8';
+      }
+
+      // Collect Payload
+      const amtVal = parseFloat(document.getElementById('cnp-input-amount')?.value) || 85000;
+      const merchVal = document.getElementById('cnp-input-merchant')?.value || 'Unknown Electronics Marketplace';
+      const catVal = document.getElementById('cnp-input-category')?.value || 'ELECTRONICS';
+      const chanVal = document.getElementById('cnp-input-channel')?.value || 'ONLINE';
+      const shipVal = document.getElementById('cnp-input-shipping')?.value || 'HIGH_RISK_MISMATCH';
+      const velVal = document.getElementById('cnp-input-velocity')?.value || '3 attempts in 10 mins';
+
+      const payload = {
+        simulationMode: 'CNP_ATTACK',
+        scenario: 'ACCOUNT_TAKEOVER_CNP',
+        sessionId: activeVerifiedSessionId || 'SES-9C213624',
+        cardToken: 'DEMO-TOKEN-4521',
+        cardNetwork: 'VISA',
+        lastFourDigits: '4521',
+        cardholderName: 'HARI DEMO',
+        cardProfileType: 'SYNTHETIC_STOLEN',
+        transactionAmount: amtVal,
+        merchantName: merchVal,
+        merchantCategory: catVal,
+        channel: chanVal,
+        shippingBillingRelation: shipVal,
+        velocity: velVal,
+        failedAttempts: 2,
+        clientEnv: {
+          deviceFingerprint: 'FP-SIMULATED-ATTACKER',
+          browserName: 'Chrome 126',
+          operatingSystem: 'Linux Ubuntu',
+          ipAddress: '192.168.1.50',
+          location: 'Mumbai, IN'
+        }
+      };
+
+      try {
+        const res = await fetch('/api/transactions/simulate-cnp-attack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        cnpLaunchBtn.disabled = false;
+        cnpLaunchBtn.textContent = '🚀 LAUNCH CNP ATTACK SIMULATION';
+
+        if (!res.ok || !data.success) {
+          alert(data.message || 'Error executing CNP simulation.');
+          return;
+        }
+
+        // Render Status Checklist & Breakdown
+        if (cnpResultsContainer) cnpResultsContainer.style.display = 'block';
+
+        if (cnpStatusChecklist) {
+          cnpStatusChecklist.innerHTML = `
+            <div>[<span style="color:#34d399;">✓</span>] Synthetic card profile loaded (VISA **** 4521)</div>
+            <div>[<span style="color:#34d399;">✓</span>] CNP Channel identified (${data.cnpDetails?.channel || 'ONLINE'})</div>
+            <div>[<span style="color:#34d399;">✓</span>] Target session verified (${data.sessionId})</div>
+            <div>[<span style="color:#f43f5e;">!</span>] Device fingerprint mismatch (+40 Risk)</div>
+            <div>[<span style="color:#f43f5e;">!</span>] Browser environment mismatch (+20 Risk)</div>
+            <div>[<span style="color:#fbbf24;">!</span>] Suspicious network IP anomaly (+15 Risk)</div>
+            <div>[<span style="color:#f43f5e;">!</span>] Location deviation detected (+20 Risk)</div>
+            <div>[<span style="color:#f43f5e;">!</span>] Transaction amount anomaly (+25 Risk)</div>
+            <div>[<span style="color:#f43f5e;">!</span>] Behavioral Transaction DNA mismatch (+25 Risk)</div>
+            <div>[<span style="color:#f43f5e; font-weight:800;">BLOCKED</span>] Transaction blocked by FINSPARK Risk Engine</div>
+          `;
+        }
+
+        // Update Breakdown Scores
+        const b = data.riskBreakdown || {};
+        if (document.getElementById('score-device')) document.getElementById('score-device').textContent = `+${b.deviceRisk || 40}`;
+        if (document.getElementById('score-browser')) document.getElementById('score-browser').textContent = `+${b.browserRisk || 20}`;
+        if (document.getElementById('score-network')) document.getElementById('score-network').textContent = `+${b.networkRisk || 15}`;
+        if (document.getElementById('score-location')) document.getElementById('score-location').textContent = `+${b.locationRisk || 20}`;
+        if (document.getElementById('score-amount')) document.getElementById('score-amount').textContent = `+${b.transactionAmountRisk || 25}`;
+        if (document.getElementById('score-merchant')) document.getElementById('score-merchant').textContent = `+${b.merchantRisk || 10}`;
+        if (document.getElementById('score-dna')) document.getElementById('score-dna').textContent = `+${b.behavioralDnaRisk || 25}`;
+
+        // Update Final Result Badge & Reasons
+        const totalBadge = document.getElementById('cnp-total-risk-badge');
+        if (totalBadge) {
+          totalBadge.textContent = `TOTAL RISK: ${b.totalRiskScore || 95}/100 (${b.riskLevel || 'CRITICAL'})`;
+        }
+
+        if (cnpReasonsList && data.detectionReasons) {
+          cnpReasonsList.innerHTML = data.detectionReasons.map(r => `<li>${r}</li>`).join('');
+        }
+
+        // Smooth scroll to results
+        cnpResultsContainer.scrollIntoView({ behavior: 'smooth' });
+
+      } catch (err) {
+        cnpLaunchBtn.disabled = false;
+        cnpLaunchBtn.textContent = '🚀 LAUNCH CNP ATTACK SIMULATION';
+        alert('Network error launching CNP simulation.');
+      }
+    });
+  }
 });
