@@ -282,12 +282,16 @@ function switchAnalystView(viewName) {
   const muleView = document.getElementById('mule-intelligence-workspace');
   const highRiskView = document.getElementById('high-risk-sessions-workspace');
   const atoView = document.getElementById('ato-investigation-workspace');
+  const insiderView = document.getElementById('insider-threat-workspace');
+  const setView = document.getElementById('settings-workspace');
 
   const navDash = document.getElementById('nav-dashboard');
   const navInv = document.getElementById('nav-investigation');
   const navMule = document.getElementById('nav-mule-intelligence');
   const navHighRisk = document.getElementById('nav-high-risk');
   const navATO = document.getElementById('nav-ato-investigation');
+  const navInsider = document.getElementById('nav-insider-threat');
+  const navSet = document.getElementById('nav-settings');
 
   [navDash, navInv, navMule, navHighRisk, navATO, navInsider, navSet].forEach(el => el?.classList.remove('active'));
 
