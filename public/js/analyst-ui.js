@@ -216,17 +216,6 @@ function setupViewNavigation() {
     switchAnalystView('ato-investigation');
   });
 
-  const navInsider = document.getElementById('nav-insider-threat');
-  navInsider?.addEventListener('click', (e) => {
-    e.preventDefault();
-    switchAnalystView('insider-threat');
-  });
-
-  navSet?.addEventListener('click', (e) => {
-    e.preventDefault();
-    switchAnalystView('settings');
-  });
-
   // Filter & Search bindings for High Risk Sessions
   document.getElementById('hr-search-input')?.addEventListener('input', (e) => {
     highRiskSearchQuery = e.target.value.trim();
@@ -246,17 +235,13 @@ function switchAnalystView(viewName) {
   const invView = document.getElementById('investigation-workspace');
   const highRiskView = document.getElementById('high-risk-sessions-workspace');
   const atoView = document.getElementById('ato-investigation-workspace');
-  const insiderView = document.getElementById('insider-threat-workspace');
-  const setView = document.getElementById('settings-workspace');
 
   const navDash = document.getElementById('nav-dashboard');
   const navInv = document.getElementById('nav-investigation');
   const navHighRisk = document.getElementById('nav-high-risk');
   const navATO = document.getElementById('nav-ato-investigation');
-  const navInsider = document.getElementById('nav-insider-threat');
-  const navSet = document.getElementById('nav-settings');
 
-  [navDash, navInv, navHighRisk, navATO, navInsider, navSet].forEach(el => el?.classList.remove('active'));
+  [navDash, navInv, navHighRisk, navATO].forEach(el => el?.classList.remove('active'));
 
   if (atoAlertsPollInterval) {
     clearInterval(atoAlertsPollInterval);

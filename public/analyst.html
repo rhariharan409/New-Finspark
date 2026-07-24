@@ -272,7 +272,6 @@
           <li><a id="nav-investigation">🔍 Investigation & Money Flow</a></li>
           <li><a id="nav-high-risk">🚨 High Risk Sessions</a></li>
           <li><a id="nav-ato-investigation">🛡️ Account Takeover Investigation</a></li>
-          <li><a id="nav-settings">⚙️ Settings</a></li>
         </ul>
       </div>
     </aside>
@@ -1345,61 +1344,6 @@
         </div>
       </div>
 
-      <!-- ========================================================= -->
-      <!-- VIEW 4: SETTINGS WORKSPACE                                -->
-      <!-- ========================================================= -->
-      <div id="settings-workspace" style="display: none;">
-        <div class="card" style="border-top: 4px solid #2563eb;">
-          <div class="section-title">
-            <span>⚙️ Analyst Console Settings & Environment</span>
-          </div>
-
-          <div style="margin-bottom: 1.5rem;">
-            <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.5rem;">Analyst Profile & RBAC Security</h4>
-            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Active clearance privileges and security role configuration.</p>
-            <div style="background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem;">
-              <div style="margin-bottom: 0.35rem;"><strong>Active Analyst ID:</strong> <span id="settings-analyst-id" style="color: #2563eb;">ANL-001001</span></div>
-              <div style="margin-bottom: 0.35rem;"><strong>Email:</strong> <span id="settings-analyst-email">analyst@finspark.com</span></div>
-              <div style="margin-bottom: 0.35rem;"><strong>Role:</strong> Senior Fraud Investigator</div>
-              <div><strong>Clearance Level:</strong> Level 3 - Full Database Telemetry Access</div>
-            </div>
-          </div>
-
-          <div style="margin-bottom: 1.5rem;">
-            <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.5rem;">System Risk Engine Thresholds</h4>
-            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Configured threshold boundaries for automated session routing.</p>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-              <div class="summary-box">
-                <span style="font-size: 0.75rem; color: #059669; font-weight: 700;">ALLOW THRESHOLD</span>
-                <div class="summary-val" style="font-size: 1rem; color: #059669;">Risk Score &lt; 30</div>
-              </div>
-              <div class="summary-box">
-                <span style="font-size: 0.75rem; color: #d97706; font-weight: 700;">MEDIUM RISK / STEP-UP THRESHOLD</span>
-                <div class="summary-val" style="font-size: 1rem; color: #d97706;">Risk Score 30 - 74</div>
-              </div>
-              <div class="summary-box">
-                <span style="font-size: 0.75rem; color: #dc2626; font-weight: 700;">BLOCK THRESHOLD</span>
-                <div class="summary-val" style="font-size: 1rem; color: #dc2626;">Risk Score &ge; 75</div>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.5rem;">Supabase Realtime Stream Engine</h4>
-            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.85rem; border-radius: 6px; color: #166534; font-size: 0.85rem;">
-              <strong>Active Connection:</strong> Supabase PostgreSQL WebSockets Subscriptions enabled for <code>sessions</code>, <code>transactions</code>, <code>risk_decisions</code>, and <code>telemetry_events</code> tables.
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ========================================================= -->
-      <!-- VIEW: INSIDER THREAT BEHAVIORAL MONITORING WORKSPACE      -->
-      <!-- ========================================================= -->
-      <!-- ========================================================= -->
-      <!-- ANALYST ACTIVITY DOCUMENTATION REPORT MODAL (PRINTABLE PDF)-->
-      <!-- ========================================================= -->
       <!-- ========================================================= -->
       <!-- ANALYST ACTIVITY DOCUMENTATION REPORT MODAL (PRINTABLE PDF)-->
       <!-- ========================================================= -->
