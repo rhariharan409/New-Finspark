@@ -545,6 +545,101 @@
 
         </div>
 
+        <!-- COMPLETED REVIEW CYCLE TELEMETRY & BEHAVIORAL BASELINE DETAILS PANEL -->
+        <div id="review-cycle-telemetry-result" style="display: none; margin-bottom: 1.5rem;">
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+            <div>
+              <span class="badge badge-low" style="font-weight: 800; background: #059669; color: #ffffff;">✓ REVIEW CYCLE AUTHORIZED & COMPLETED</span>
+              <h4 style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #064e3b; font-weight: 800;">Analyst Behavioral Baseline & Operational Activity Telemetry</h4>
+            </div>
+            <button type="button" id="btn-reopen-pdf-report" class="btn btn-primary" style="background: #2563eb; border-color: #2563eb; padding: 0.6rem 1.25rem; font-weight: 800; border-radius: 6px; cursor: pointer;">
+              📄 VIEW OFFICIAL PRINTABLE PDF REPORT
+            </button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+            
+            <!-- CARD 1: HISTORICAL NORMAL BEHAVIORAL BASELINE -->
+            <div style="background: #ffffff; border: 1px solid #a7f3d0; border-top: 4px solid #10b981; border-radius: 8px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+              <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: #065f46; font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
+                🌱 HISTORICAL NORMAL BEHAVIORAL BASELINE
+              </h4>
+
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Average Daily Review Volume:</span>
+                  <strong style="color: #0f172a;" id="base-avg-reviews">10 reviews / day</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Normal Working Hours:</span>
+                  <strong style="color: #0f172a;" id="base-normal-hours">09:00 AM – 06:00 PM EST</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Normal Working Days:</span>
+                  <strong style="color: #0f172a;" id="base-normal-days">Monday – Friday</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Normal Location:</span>
+                  <strong style="color: #0f172a;" id="base-normal-location">New York, US</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Authorized IP Address:</span>
+                  <strong style="color: #0f172a;" id="base-normal-ip">192.168.1.101</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Authorized Workstation Device:</span>
+                  <strong style="color: #0f172a;" id="base-normal-device">Chrome 122 on Windows 11 Workstation</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #475569;">Normal Max Transaction Reviewed:</span>
+                  <strong style="color: #0f172a;" id="base-max-amount">₹50,000</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 2: CURRENT OPERATIONAL ACTIVITY TELEMETRY -->
+            <div style="background: #ffffff; border: 1px solid #fed7aa; border-top: 4px solid #f97316; border-radius: 8px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+              <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: #c2410c; font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
+                ⚡ CURRENT OPERATIONAL ACTIVITY TELEMETRY
+              </h4>
+
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Total Reviews Handled Today:</span>
+                  <strong style="color: #c2410c; font-weight: 800;" id="telemetry-curr-reviews">60 review(s) handled today</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Last Action Time:</span>
+                  <strong style="color: #0f172a;" id="telemetry-curr-time">11:45 PM</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Current Operational Location:</span>
+                  <strong style="color: #c2410c; font-weight: 800;" id="telemetry-curr-loc">Frankfurt, Germany (Tor Proxy Node)</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Current Originating IP Address:</span>
+                  <strong style="color: #0f172a; font-weight: 800;" id="telemetry-curr-ip">192.168.1.101</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Current Environment Device:</span>
+                  <strong style="color: #c2410c; font-weight: 800;" id="telemetry-curr-dev">Firefox 120 on Kali Linux (Unrecognized Device)</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Current Reviewed Amount:</span>
+                  <strong style="color: #0f172a; font-weight: 800;" id="telemetry-curr-amt">₹25,000</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #475569;">Total Accepted / Rejected Counters:</span>
+                  <strong style="color: #0f172a; font-weight: 800;" id="telemetry-curr-counters">Accepted: 0 | Rejected: 0</strong>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
         <!-- DETAILED RISK EXPLANATION & EVIDENCE REPORT CARD (INSPECT VIEW) -->
         <div id="high-risk-report-card" class="card" style="border-top: 4px solid #dc2626; display: none; margin-bottom: 1.5rem; background: #ffffff;">
           

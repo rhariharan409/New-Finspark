@@ -89,7 +89,10 @@ async function initAnalystPortal() {
   // 4. Load Main Dashboard Data
   await loadDashboardData();
 
-  // 5. Setup Supabase Realtime Subscriptions
+  // 5. Setup Authorization Form & Review Completion Button
+  setupAuthorizationForm();
+
+  // 6. Setup Supabase Realtime Subscriptions
   setupSupabaseRealtime();
 
   // Logout Button
@@ -1976,6 +1979,7 @@ async function renderInsiderThreatWorkspace() {
     });
   }
 
+function setupAuthorizationForm() {
   // Bind Show Password toggle
   const togglePwd = document.getElementById('toggle-official-password');
   const pwdInput = document.getElementById('official-password-input');
@@ -1989,6 +1993,7 @@ async function renderInsiderThreatWorkspace() {
   const authBtn = document.getElementById('btn-authorize-complete-review');
   const authErrorEl = document.getElementById('official-auth-error');
   const progressOverlay = document.getElementById('official-progress-overlay');
+  const telemetryResultContainer = document.getElementById('review-cycle-telemetry-result');
 
   if (authBtn && !authBtn.dataset.bound) {
     authBtn.dataset.bound = 'true';
@@ -2072,6 +2077,12 @@ async function renderInsiderThreatWorkspace() {
         if (progressOverlay) progressOverlay.style.display = 'none';
 
         if (completeData.success && completeData.reportData) {
+          // Display the 2 Telemetry & Behavioral Baseline Panels (Image 2)
+          if (telemetryResultContainer) {
+            telemetryResultContainer.style.display = 'block';
+          }
+
+          // Open the Printable PDF Report Modal
           renderFullAnalystActivityReport(completeData.reportData, email, completeData.reviewCycleId, completeData.reportId);
         } else {
           alert(completeData.message || 'Failed to complete review cycle.');
@@ -2088,6 +2099,12 @@ async function renderInsiderThreatWorkspace() {
       }
     });
   }
+
+  // Reopen PDF Report Button
+  document.getElementById('btn-reopen-pdf-report')?.addEventListener('click', () => {
+    const modal = document.getElementById('analyst-activity-report-modal');
+    if (modal) modal.style.display = 'block';
+  });
 
   // Modal Action Buttons
   document.getElementById('btn-close-analyst-report')?.addEventListener('click', () => {
