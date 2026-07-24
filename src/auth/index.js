@@ -4,6 +4,7 @@
  */
 
 import express from 'express';
+import crypto from 'crypto';
 import { userService } from '../services/userService.js';
 import { passwordService } from '../security/passwordService.js';
 import { sessionModule } from '../session/index.js';
@@ -13,6 +14,8 @@ import { sessionIntegrityEngine } from '../services/sessionIntegrityEngine.js';
 import { supabase } from '../db/supabaseClient.js';
 import { riskRepository } from '../db/riskRepository.js';
 import { atoVerificationService } from '../services/atoVerificationService.js';
+import { credentialStuffingDetector } from '../security/credential_stuffing/credentialStuffingDetector.js';
+import { userRepository } from '../db/userRepository.js';
 
 const router = express.Router();
 
@@ -109,14 +112,124 @@ router.post('/login', async (req, res) => {
     }
 
     const trimmedIdentifier = identifier.trim();
+    const clientDetails = telemetryService.extractClientDetails(req);
+    const ipAddress = req.body.ipAddress || clientDetails.ipAddress || '';
+    const userAgent = req.headers['user-agent'] || req.body.deviceType || clientDetails.deviceType || '';
+    const passwordHash = crypto.createHash('sha256').update(password || '').digest('hex');
+
+    // 1. Fetch user to map to user_id if possible
     const rawUser = (await userService.findUserByEmail(trimmedIdentifier, true)) ||
                     (await userService.findUserByAccountId(trimmedIdentifier, true)) ||
                     (await userService.findUserById(trimmedIdentifier, true));
 
+    const entityId = rawUser ? rawUser.user_id : trimmedIdentifier;
+
+    // 2. Perform threat analysis dry-run (evaluate current accumulated risk score)
+    const threatCheck = credentialStuffingDetector.detect({
+      event_id: `EVT_CHECK_${Date.now()}`,
+      event_type: 'login',
+      entity_id: entityId,
+      ip_address: ipAddress,
+      timestamp: new Date(),
+      payload: {
+        login_success: false, // Dry run: evaluate risk under worst-case assumption (i.e. failure)
+        password_hash: passwordHash,
+        user_agent: userAgent
+      }
+    }, null, true); // dryRun = true
+
+    // Check if risk score meets or exceeds the action block threshold (70+)
+    if (threatCheck.score >= 70.0) {
+      console.warn(`[THREAT BLOCKED] IP: ${ipAddress}, User: ${entityId}, Score: ${threatCheck.score}, Reasons:`, threatCheck.reasons);
+      
+      // Record a failed login event to telemetry with 'blocked' metadata
+      try {
+        await telemetryService.recordTelemetryEvent({
+          userId: rawUser ? rawUser.user_id : 'usr_unknown',
+          eventType: 'login_failed',
+          ipAddress,
+          deviceType: userAgent,
+          metadata: {
+            blocked: true,
+            score: threatCheck.score,
+            reasons: threatCheck.reasons,
+            password_hash: passwordHash
+          }
+        });
+      } catch (tErr) {}
+
+      // Formally persist the failure event in the detector stores
+      credentialStuffingDetector.detect({
+        event_id: `EVT_BLOCKED_FAIL_${Date.now()}`,
+        event_type: 'login_failed',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: {
+          login_success: false,
+          password_hash: passwordHash,
+          user_agent: userAgent
+        }
+      }, null, false); // dryRun = false
+
+      const postFailThreat = credentialStuffingDetector.detect({
+        event_id: `EVT_CHECK_POST_${Date.now()}`,
+        event_type: 'login',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: { login_success: false, password_hash: passwordHash, user_agent: userAgent }
+      }, null, true);
+
+      return res.status(403).json({
+        success: false,
+        message: 'Access blocked due to suspicious activity.',
+        riskScore: threatCheck.score,
+        riskLevel: threatCheck.score >= 70 ? 'CRITICAL (BLOCK)' : 'HIGH',
+        reasons: threatCheck.reasons
+      });
+    }
+
+    // 3. User Lookup check
     if (!rawUser || !rawUser.password_hash) {
+      try {
+        await telemetryService.recordTelemetryEvent({
+          userId: 'usr_unknown',
+          eventType: 'login_failed',
+          ipAddress,
+          deviceType: userAgent,
+          metadata: { password_hash: passwordHash }
+        });
+      } catch (tErr) {}
+
+      credentialStuffingDetector.detect({
+        event_id: `EVT_FAIL_${Date.now()}`,
+        event_type: 'login_failed',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: {
+          login_success: false,
+          password_hash: passwordHash,
+          user_agent: userAgent
+        }
+      }, null, false); // dryRun = false
+
+      const postFailThreat = credentialStuffingDetector.detect({
+        event_id: `EVT_CHECK_POST_${Date.now()}`,
+        event_type: 'login',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: { login_success: false, password_hash: passwordHash, user_agent: userAgent }
+      }, null, true);
+
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password.'
+        message: 'Invalid email or password.',
+        riskScore: postFailThreat.score,
+        riskLevel: postFailThreat.score >= 70 ? 'CRITICAL (BLOCK)' : (postFailThreat.score >= 45 ? 'HIGH (REVIEW)' : (postFailThreat.score > 0 ? 'MEDIUM (MONITOR)' : 'LOW (ALLOW)')),
+        reasons: postFailThreat.reasons
       });
     }
 
@@ -127,19 +240,75 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // 4. Verify password
     const isMatch = await passwordService.verifyPassword(password, rawUser.password_hash);
     if (!isMatch) {
+      try {
+        await telemetryService.recordTelemetryEvent({
+          userId: rawUser.user_id,
+          eventType: 'login_failed',
+          ipAddress,
+          deviceType: userAgent,
+          metadata: { password_hash: passwordHash }
+        });
+      } catch (tErr) {}
+
+      credentialStuffingDetector.detect({
+        event_id: `EVT_FAIL_${Date.now()}`,
+        event_type: 'login_failed',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: {
+          login_success: false,
+          password_hash: passwordHash,
+          user_agent: userAgent
+        }
+      }, null, false); // dryRun = false
+
+      const postFailThreat = credentialStuffingDetector.detect({
+        event_id: `EVT_CHECK_POST_${Date.now()}`,
+        event_type: 'login',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: { login_success: false, password_hash: passwordHash, user_agent: userAgent }
+      }, null, true);
+
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password.'
+        message: 'Invalid email or password.',
+        riskScore: postFailThreat.score,
+        riskLevel: postFailThreat.score >= 70 ? 'CRITICAL (BLOCK)' : (postFailThreat.score >= 45 ? 'HIGH (REVIEW)' : (postFailThreat.score > 0 ? 'MEDIUM (MONITOR)' : 'LOW (ALLOW)')),
+        reasons: postFailThreat.reasons
       });
     }
 
+    // 5. Successful Login
     const safeUser = toSafeUser(rawUser);
     const activeSession = await sessionService.createSessionForUser(rawUser.user_id);
 
     sessionModule.setSessionUser(req, safeUser);
     req.session.sessionId = activeSession.session_id;
+
+    // CORRELATION: Capture pre-auth risk context from credential stuffing detector
+    const preAuthScore = threatCheck.score || 0;
+    const ipState = credentialStuffingDetector.ipStore.getIPState(ipAddress, new Date());
+    const failedAttempts = ipState ? ipState.failed_count : 0;
+    
+    const sessionRiskContext = {
+      preAuth: {
+        credentialStuffingScore: preAuthScore,
+        failedAttemptsBeforeSuccess: failedAttempts,
+        rulesTriggered: threatCheck.reasons || [],
+        ipFlagged: preAuthScore > 30,
+        suspiciousLogin: failedAttempts >= 3,
+        timestamp: new Date().toISOString()
+      },
+      // If it's a suspicious login (success after 3+ failures), add 15 points
+      combinedScore: preAuthScore + (failedAttempts >= 3 ? 15 : 0), 
+      timeline: []
+    };
 
     // Create Trusted Session Profile in Session Integrity Engine for ATO Detection
     try {
@@ -147,26 +316,40 @@ router.post('/login', async (req, res) => {
         sessionId: activeSession.session_id,
         userId: rawUser.user_id,
         accountId: rawUser.account_id,
-        req
+        req,
+        preAuthRiskContext: sessionRiskContext
       });
     } catch (eErr) {
       console.error('Session Integrity Profile Error:', eErr.message);
     }
 
-    const clientDetails = telemetryService.extractClientDetails(req);
     try {
       await telemetryService.recordTelemetryEvent({
         userId: rawUser.user_id,
         sessionId: activeSession.session_id,
         eventType: 'login',
-        ipAddress: req.body.ipAddress || clientDetails.ipAddress,
-        deviceType: req.body.deviceType || clientDetails.deviceType,
+        ipAddress,
+        deviceType: userAgent,
         location: req.body.location || null,
         metadata: { login_time: activeSession.login_time, email: rawUser.email }
       });
     } catch (telemetryError) {
       console.error('Telemetry Login Event Error:', telemetryError.message);
     }
+
+    // Record success in detector stores to maintain correct ratio
+    credentialStuffingDetector.detect({
+      event_id: `EVT_SUCCESS_${Date.now()}`,
+      event_type: 'login',
+      entity_id: entityId,
+      ip_address: ipAddress,
+      timestamp: new Date(),
+      payload: {
+        login_success: true,
+        password_hash: passwordHash,
+        user_agent: userAgent
+      }
+    }, null, false); // dryRun = false
 
     req.session.save((err) => {
       if (err) console.error('Session save error:', err.message);
@@ -384,19 +567,24 @@ router.post('/verify-session-id-login', async (req, res) => {
  * Session Verification API
  * GET /api/auth/me
  */
-router.get('/me', async (req, res) => {
+router.get('/me', sessionModule.requireAuth, async (req, res) => {
   if (req.session && req.session.userId) {
     const safeUser = await userService.findUserById(req.session.userId);
     if (safeUser) {
+      const balance = userRepository.getUserBalance(safeUser.user_id);
       return res.status(200).json({
         success: true,
         authenticated: true,
         user: {
+          user_id: safeUser.user_id,
           full_name: safeUser.full_name,
           email: safeUser.email,
-          account_id: safeUser.account_id,
-          created_at: safeUser.created_at
-        }
+          created_at: safeUser.created_at,
+          total_amount: balance,
+          account_balance: balance
+        },
+        sessionRiskContext: req.sessionRiskContext,
+        sessionIntegrity: req.sessionIntegrity
       });
     }
   }
@@ -450,6 +638,88 @@ router.post('/logout', async (req, res) => {
       success: false,
       message: 'An error occurred during logout.'
     });
+  }
+});
+
+/**
+ * Get Current Threat Status API (For Live UI Meter Polling)
+ * GET /api/auth/current-threat-status
+ */
+router.get('/current-threat-status', (req, res) => {
+  try {
+    const ipAddress = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket?.remoteAddress || req.ip || '127.0.0.1';
+    
+    let identifier = req.query.identifier;
+    if (!identifier && req.session && req.session.userId) {
+      identifier = req.session.userId;
+    }
+    if (!identifier) {
+      const ipState = credentialStuffingDetector.ipStore ? credentialStuffingDetector.ipStore.getIPState(ipAddress) : null;
+      const targetUsers = ipState?.target_users_set ? Array.from(ipState.target_users_set) : [];
+      identifier = targetUsers.length > 0 ? targetUsers[targetUsers.length - 1] : 'unknown';
+    }
+
+    const threatCheck = credentialStuffingDetector.detect({
+      event_id: `EVT_POLL_${Date.now()}`,
+      event_type: 'login',
+      entity_id: identifier,
+      ip_address: ipAddress,
+      timestamp: new Date(),
+      payload: {}
+    }, null, true);
+
+    const score = threatCheck.score || 0;
+    const level = score >= 70 ? 'CRITICAL (BLOCK)' : (score >= 45 ? 'HIGH (REVIEW)' : (score > 0 ? 'MEDIUM (MONITOR)' : 'LOW (ALLOW)'));
+
+    return res.status(200).json({
+      success: true,
+      riskScore: score,
+      riskLevel: level,
+      reasons: threatCheck.reasons || [],
+      isBlocked: score >= 70
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * Reset Threat Stores API (Demo Reset)
+ * POST /api/auth/reset-threat-stores
+ */
+router.post('/reset-threat-stores', (req, res) => {
+  try {
+    if (credentialStuffingDetector.ipStore) credentialStuffingDetector.ipStore.clear();
+    if (credentialStuffingDetector.userStore) credentialStuffingDetector.userStore.clear();
+    if (credentialStuffingDetector.hashStore) credentialStuffingDetector.hashStore.clear();
+    return res.status(200).json({
+      success: true,
+      message: '🧹 Threat stores cleared successfully. All accumulated risk scores reset to 0.',
+      riskScore: 0,
+      riskLevel: 'LOW (ALLOW)'
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * Unblock IP / Account API
+ * POST /api/auth/unblock-entity
+ */
+router.post('/unblock-entity', (req, res) => {
+  try {
+    if (credentialStuffingDetector.ipStore) credentialStuffingDetector.ipStore.clear();
+    if (credentialStuffingDetector.userStore) credentialStuffingDetector.userStore.clear();
+    if (credentialStuffingDetector.hashStore) credentialStuffingDetector.hashStore.clear();
+    return res.status(200).json({
+      success: true,
+      message: '🟢 Account and IP have been successfully unblocked! You may now sign in.',
+      riskScore: 0,
+      riskLevel: 'LOW (ALLOW)'
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 

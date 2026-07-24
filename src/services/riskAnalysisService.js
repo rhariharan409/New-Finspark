@@ -44,7 +44,7 @@ export const riskAnalysisService = {
   /**
    * Analyzes a transaction against the user's historical behavioral baseline and telemetry context to compute risk score, advanced behavioral signals, and decisions.
    */
-  async analyzeTransactionRisk({ transactionId, userId }) {
+  async analyzeTransactionRisk({ transactionId, userId, sessionRiskContext }) {
     if (!transactionId || !userId) {
       throw new Error('Risk Analysis Error: Both transaction_id and user_id are required.');
     }
@@ -86,6 +86,18 @@ export const riskAnalysisService = {
 
     const risk_factors = {};
     let totalScore = 0;
+
+    // CORRELATION: Factor in session-level accumulated risk
+    if (sessionRiskContext && sessionRiskContext.combinedScore > 0) {
+      const sessionCarryover = Math.min(sessionRiskContext.combinedScore * 0.5, 30);
+      totalScore += sessionCarryover;
+      risk_factors.session_risk_carryover = {
+        score: sessionCarryover,
+        severity: sessionCarryover >= 20 ? 'HIGH' : 'MEDIUM',
+        explanation: `Session accumulated ${sessionRiskContext.combinedScore} risk points from pre-auth and session integrity checks.`,
+        reason: `Inherited session risk.`
+      };
+    }
 
     // ==========================================
     // SIGNAL 1: AMOUNT DEVIATION

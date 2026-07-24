@@ -13,6 +13,7 @@ if (window.supabase && window.supabase.createClient) {
 }
 
 // Global Dashboard & Investigation State
+let activeAnalystProfile = null;
 let rawUsers = [];
 let rawSessions = [];
 let rawTxns = [];
@@ -54,6 +55,10 @@ async function initAnalystPortal() {
     if (!authRes.ok || !authData.authenticated) {
       window.location.href = 'analyst-login.html';
       return;
+    }
+
+    if (authData.analyst) {
+      activeAnalystProfile = authData.analyst;
     }
 
     const infoEl = document.getElementById('analyst-info');
@@ -257,7 +262,6 @@ function setupViewNavigation() {
       }
     }
   });
-
   // Filter & Search bindings for High Risk Sessions
   document.getElementById('hr-search-input')?.addEventListener('input', (e) => {
     highRiskSearchQuery = e.target.value.trim();
@@ -278,16 +282,12 @@ function switchAnalystView(viewName) {
   const muleView = document.getElementById('mule-intelligence-workspace');
   const highRiskView = document.getElementById('high-risk-sessions-workspace');
   const atoView = document.getElementById('ato-investigation-workspace');
-  const insiderView = document.getElementById('insider-threat-workspace');
-  const setView = document.getElementById('settings-workspace');
 
   const navDash = document.getElementById('nav-dashboard');
   const navInv = document.getElementById('nav-investigation');
   const navMule = document.getElementById('nav-mule-intelligence');
   const navHighRisk = document.getElementById('nav-high-risk');
   const navATO = document.getElementById('nav-ato-investigation');
-  const navInsider = document.getElementById('nav-insider-threat');
-  const navSet = document.getElementById('nav-settings');
 
   [navDash, navInv, navMule, navHighRisk, navATO, navInsider, navSet].forEach(el => el?.classList.remove('active'));
 
@@ -2049,6 +2049,42 @@ async function renderInsiderThreatWorkspace() {
 }
 
 function setupAuthorizationForm() {
+  // Populate Active Analyst Dropdown in Top Nav if present
+  const activeDropdown = document.getElementById('active-analyst-dropdown');
+  if (activeDropdown && !activeDropdown.dataset.initialized) {
+    activeDropdown.dataset.initialized = 'true';
+    activeDropdown.innerHTML = `
+      <option value="analyzer1@gmail.com">Analyzer 01 (analyzer1@gmail.com)</option>
+      <option value="analyzer2@gmail.com">Analyzer 02 (analyzer2@gmail.com)</option>
+      <option value="analyzer3@gmail.com">Analyzer 03 (analyzer3@gmail.com)</option>
+      <option value="analyzer4@gmail.com">Analyzer 04 (analyzer4@gmail.com)</option>
+      <option value="analyzer5@gmail.com">Analyzer 05 (analyzer5@gmail.com)</option>
+      <option value="analyzer6@gmail.com">Analyzer 06 (analyzer6@gmail.com)</option>
+      <option value="analyzer7@gmail.com">Analyzer 07 (analyzer7@gmail.com)</option>
+      <option value="analyzer8@gmail.com">Analyzer 08 (analyzer8@gmail.com)</option>
+      <option value="analyzer9@gmail.com">Analyzer 09 (analyzer9@gmail.com)</option>
+      <option value="analyzer10@gmail.com">Analyzer 10 (analyzer10@gmail.com)</option>
+    `;
+    const savedEmail = sessionStorage.getItem('activeAnalystEmail') || 'analyzer3@gmail.com';
+    activeDropdown.value = savedEmail;
+    selectedInsiderAnalystEmail = savedEmail;
+
+    activeDropdown.addEventListener('change', (e) => {
+      selectedInsiderAnalystEmail = e.target.value;
+      sessionStorage.setItem('activeAnalystEmail', e.target.value);
+    });
+  }
+
+  // Bind COMPLETE REVIEW CYCLE button to reveal Higher Official Form
+  const hrCompleteBtn = document.getElementById('hr-complete-review-btn');
+  const hrFormContainer = document.getElementById('hr-complete-review-container');
+  if (hrCompleteBtn && hrFormContainer) {
+    hrCompleteBtn.addEventListener('click', () => {
+      hrFormContainer.style.display = 'block';
+      hrFormContainer.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+
   // Bind Show Password toggle
   const togglePwd = document.getElementById('toggle-official-password');
   const pwdInput = document.getElementById('official-password-input');
@@ -2135,13 +2171,16 @@ function setupAuthorizationForm() {
         updateStep('prog-step-4', 'Generating Documentation Report', '⟳', '#2563eb');
 
         // Step 3: Complete Review Cycle & Retrieve Report Payload (with path fallback)
+        const targetAnalystEmail = selectedInsiderAnalystEmail || sessionStorage.getItem('activeAnalystEmail') || 'analyzer3@gmail.com';
+        
         let completeRes = await fetch('/api/review/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email,
             password,
-            analystId: activeAnalystProfile?.analyst_id || 'ANL-001001',
+            analystId: activeAnalystProfile?.analyst_id || 'ANL-001003',
+            analystEmail: targetAnalystEmail,
             activityLogs: getTrackedAnalystActivities()
           })
         });
@@ -2153,7 +2192,8 @@ function setupAuthorizationForm() {
             body: JSON.stringify({
               email,
               password,
-              analystId: activeAnalystProfile?.analyst_id || 'ANL-001001',
+              analystId: activeAnalystProfile?.analyst_id || 'ANL-001003',
+              analystEmail: targetAnalystEmail,
               activityLogs: getTrackedAnalystActivities()
             })
           });
@@ -2168,7 +2208,7 @@ function setupAuthorizationForm() {
         authBtn.textContent = 'AUTHORIZE & COMPLETE REVIEW';
         if (progressOverlay) progressOverlay.style.display = 'none';
 
-        if (completeData.success && completeData.reportData) {
+        if (completeRes.ok && completeData.success && completeData.reportData) {
           // Render full Insider Threat Behavioral & Telemetry details
           try {
             await renderInsiderThreatWorkspace();
@@ -2177,12 +2217,16 @@ function setupAuthorizationForm() {
           // Display the Telemetry & Behavioral Baseline Panels (Image 2)
           if (telemetryResultContainer) {
             telemetryResultContainer.style.display = 'block';
+            telemetryResultContainer.scrollIntoView({ behavior: 'smooth' });
           }
 
           // Open the Printable PDF Report Modal
           renderFullAnalystActivityReport(completeData.reportData, email, completeData.reviewCycleId, completeData.reportId);
         } else {
-          alert(completeData.message || 'Failed to complete review cycle.');
+          if (authErrorEl) {
+            authErrorEl.textContent = completeData.message || 'Failed to complete review cycle.';
+            authErrorEl.style.display = 'block';
+          }
         }
 
       } catch (err) {
@@ -2190,7 +2234,7 @@ function setupAuthorizationForm() {
         authBtn.textContent = 'AUTHORIZE & COMPLETE REVIEW';
         if (progressOverlay) progressOverlay.style.display = 'none';
         if (authErrorEl) {
-          authErrorEl.textContent = 'Server error during authorization.';
+          authErrorEl.textContent = (err && err.message) ? err.message : 'Server error during authorization.';
           authErrorEl.style.display = 'block';
         }
       }

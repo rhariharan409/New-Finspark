@@ -61,7 +61,8 @@ router.post('/', sessionModule.requireAuth, async (req, res) => {
     // 3. Automatically trigger Internal Risk Engine & store risk decision in Supabase for Cyber Analysts
     const riskDecision = await riskAnalysisService.analyzeTransactionRisk({
       transactionId: transaction.transaction_id,
-      userId: senderUserId
+      userId: senderUserId,
+      sessionRiskContext: req.sessionRiskContext
     });
 
     // 4. CUSTOMER-SAFE RESPONSE MAPPING (Zero internal risk metrics exposed)
@@ -73,7 +74,10 @@ router.post('/', sessionModule.requireAuth, async (req, res) => {
     if (decisionType === 'BLOCK' || riskLevel === 'CRITICAL') {
       return res.status(400).json({
         success: false,
-        message: "Transaction could not be completed at this time. Please verify your information or contact support."
+        message: "Transaction could not be completed at this time. Please verify your information or contact support.",
+        riskScore: riskDecision?.risk_score || 95,
+        riskLevel: 'CRITICAL (BLOCK)',
+        reasons: riskDecision?.risk_factors?.contributing_signals || ['Transaction blocked by Risk Decision Engine']
       });
     } else if (decisionType === 'REVIEW' || riskLevel === 'HIGH') {
       userMessage = "Transaction Under Review. Additional verification may be required for your security.";
@@ -95,7 +99,11 @@ router.post('/', sessionModule.requireAuth, async (req, res) => {
     return res.status(201).json({
       success: true,
       message: userMessage,
-      transaction: safeTransaction
+      transaction: safeTransaction,
+      sender_balance: transaction.sender_balance,
+      riskScore: riskDecision?.risk_score || 0,
+      riskLevel: `${riskLevel} (${decisionType})`,
+      reasons: riskDecision?.risk_factors?.contributing_signals || []
     });
 
   } catch (error) {

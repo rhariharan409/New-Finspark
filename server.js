@@ -18,6 +18,7 @@ import { riskModule } from './src/risk/index.js';
 import { analystModule } from './src/analyst/index.js';
 import { muleRouter } from './src/features/mule-intelligence/muleRoutes.js';
 import { startPostureJob } from './src/features/mule-intelligence/postureJob.js';
+import { cardNotPresentModule } from './src/features/card-not-present/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,6 +47,7 @@ app.use(session({
 
 // Static files middleware
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/src', express.static(path.join(__dirname, 'src')));
 
 // Mount API routes
 app.use('/api/auth', authModule.router);
@@ -55,6 +57,7 @@ app.use('/api/baseline', baselineModule.router);
 app.use('/api/risk', riskModule.router);
 app.use('/api/analyst', analystModule.router);
 app.use('/api/mule', muleRouter);
+app.use('/api/card-not-present', cardNotPresentModule.router);
 
 // Direct root aliases for official authorization and review completion
 app.use('/api/official', analystModule.router);

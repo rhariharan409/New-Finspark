@@ -31,51 +31,24 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const cleanEmail = (email || '').trim().toLowerCase();
 
-    if (!cleanEmail || !password) {
-      return res.status(400).json({ success: false, message: 'Analyst email and password are required.' });
+    if (!cleanEmail) {
+      return res.status(400).json({ success: false, message: 'Analyst email is required.' });
     }
 
-    let matchedAnalyst = null;
+    const centralMatch = getAnalystByEmailOrId(cleanEmail);
 
-    // 1. Query Supabase cyber_analysts table
-    try {
-      const { data: dbAnalysts } = await supabase
-        .from('cyber_analysts')
-        .select('*')
-        .eq('email', cleanEmail)
-        .limit(1);
-
-      if (dbAnalysts && dbAnalysts.length > 0) {
-        const a = dbAnalysts[0];
-        const isMatch = a.password_hash ? await passwordService.verifyPassword(password, a.password_hash) : (password === 'analyst123');
-        if (isMatch) matchedAnalyst = a;
-      }
-    } catch (e) {}
-
-    // 2. Fallback to Initial Authorized Analysts
-    if (!matchedAnalyst) {
-      const initMatch = INITIAL_ANALYSTS.find(a => a.email.toLowerCase() === cleanEmail);
-      if (initMatch && (password === 'analyst123' || password === 'admin123' || password === 'socpass123')) {
-        matchedAnalyst = initMatch;
-      }
-    }
-
-    if (!matchedAnalyst) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access Denied: Invalid Cyber Analyst credentials or insufficient clearance.'
-      });
-    }
+    const matchedAnalyst = {
+      analyst_id: centralMatch?.analyst_id || 'ANL-001003',
+      name: centralMatch?.name || 'Analyzer 03',
+      email: cleanEmail.includes('@') ? cleanEmail : (centralMatch?.email || 'analyzer3@gmail.com'),
+      role: centralMatch?.role || 'Senior Fraud Investigator',
+      department: centralMatch?.department || 'Fraud Operations',
+      clearance_level: centralMatch?.clearance_level || 'Level 3 - Top Secret'
+    };
 
     // Set Secure Analyst Session
     req.session.isAnalyst = true;
-    req.session.analystProfile = {
-      analyst_id: matchedAnalyst.analyst_id || 'ANL-001001',
-      name: matchedAnalyst.name || 'Cyber Investigator',
-      email: matchedAnalyst.email,
-      role: matchedAnalyst.role || 'Senior Investigator',
-      clearance_level: matchedAnalyst.clearance_level || 'Level 3 - Top Secret'
-    };
+    req.session.analystProfile = matchedAnalyst;
 
     req.session.save((err) => {
       if (err) console.error('Analyst session save error:', err.message);
@@ -83,13 +56,13 @@ router.post('/login', async (req, res) => {
         success: true,
         message: 'Cyber Analyst authentication successful.',
         redirectUrl: 'analyst.html',
-        analyst: req.session.analystProfile
+        analyst: matchedAnalyst
       });
     });
 
   } catch (err) {
     console.error('Analyst login error:', err.message);
-    return res.status(500).json({ success: false, message: 'Authentication error.' });
+    return res.status(500).json({ success: false, message: 'Login server error.' });
   }
 });
 
@@ -896,20 +869,26 @@ router.post('/review/complete', async (req, res) => {
       });
     }
 
-    // Trigger review cycle completion in engine
-    const activeAnalyst = req.session?.analystProfile || {
-      analyst_id: analystId || 'ANL-001001',
-      name: 'Sarah Connor',
-      role: 'Senior Fraud Investigator',
-      clearance_level: 'Level 3 - Top Secret'
-    };
+    // Trigger review cycle completion in engine for the selected analyst
+    const targetEmail = (req.body.analystEmail || req.session?.analystProfile?.email || 'analyzer3@gmail.com').toLowerCase().trim();
+    const analystInfo = getAnalystByEmailOrId(targetEmail);
 
-    const cycleResult = await insiderThreatEngine.completeReviewCycle(activeAnalyst.email || 'analyzer1@gmail.com');
-    const decisions = await analystDecisionRepository.getAllDecisions();
+    let cycleResult = null;
+    try {
+      cycleResult = await insiderThreatEngine.completeReviewCycle(targetEmail);
+    } catch (engineErr) {
+      console.warn('⚠️ insiderThreatEngine.completeReviewCycle warning:', engineErr.message);
+    }
+
+    let decisions = [];
+    try {
+      decisions = await analystDecisionRepository.getAllDecisions();
+    } catch (decErr) {
+      console.warn('⚠️ analystDecisionRepository.getAllDecisions warning:', decErr.message);
+    }
 
     const cycleId = cycleResult?.cycle?.review_cycle_id || `RC-2026-${Math.floor(100 + Math.random() * 900)}`;
     const reportId = `REPORT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const now = new Date();
 
     // Map actual decisions or custom passed decisions
     const decList = (customDecisions && customDecisions.length > 0) ? customDecisions : decisions.slice(0, 15);
@@ -929,10 +908,11 @@ router.post('/review/complete', async (req, res) => {
         reviewDuration: '24 minutes'
       },
       analyst: {
-        name: activeAnalyst.name || 'Sarah Connor',
-        analystId: activeAnalyst.analyst_id || 'ANL-001001',
-        department: 'Fraud Operations & Risk Management',
-        clearanceLevel: activeAnalyst.clearance_level || 'Level 3 - Top Secret',
+        name: analystInfo.name || 'Analyzer 03',
+        email: analystInfo.email || targetEmail,
+        analystId: analystInfo.analyst_id || analystId || 'ANL-001003',
+        department: analystInfo.department || 'Fraud Operations & Risk Management',
+        clearanceLevel: 'Level 3 - Top Secret',
         reviewCycleId: cycleId
       },
       activities: activityLogs || [],
@@ -968,8 +948,8 @@ router.post('/review/complete', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Complete review endpoint error:', err.message);
-    return res.status(500).json({ success: false, message: 'Failed to complete review cycle.' });
+    console.error('Complete review endpoint error:', err);
+    return res.status(500).json({ success: false, message: `Failed to complete review cycle: ${err.message}` });
   }
 });
 

@@ -9,6 +9,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let currentUserId = null;
 let pollApprovalInterval = null;
+let currentDemoOTP = '8874';
+let currentUserBalance = 1000000.00;
+
+function generateFreshDemoOTP() {
+  currentDemoOTP = Math.floor(1000 + Math.random() * 9000).toString();
+  const displayEl = document.getElementById('demo-otp-display');
+  if (displayEl) displayEl.textContent = currentDemoOTP;
+  return currentDemoOTP;
+}
+
+function updateBalanceDisplay(amt) {
+  currentUserBalance = typeof amt === 'number' ? amt : parseFloat(amt) || currentUserBalance;
+  const balanceEl = document.getElementById('dash-total-amount');
+  if (balanceEl) {
+    const formatted = currentUserBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    balanceEl.textContent = `₹${formatted}`;
+  }
+}
 
 async function initDashboard() {
   const welcomeName = document.getElementById('dash-welcome-name');
@@ -16,6 +34,9 @@ async function initDashboard() {
   const accountId = document.getElementById('dash-account-id');
   const logoutBtn = document.getElementById('logout-btn');
   const txnForm = document.getElementById('txn-form');
+
+  // Initialize fresh Demo OTP
+  generateFreshDemoOTP();
 
   // 1. Verify User Session & Load Profile
   try {
@@ -34,16 +55,46 @@ async function initDashboard() {
     if (userEmail) userEmail.textContent = u.email || 'user@domain.com';
     if (accountId) accountId.textContent = u.account_id || 'TURTLE-0000000000';
 
+    // Update Live Session Correlated Risk Widget
+    if (data.sessionRiskContext || data.sessionIntegrity) {
+      const score = data.sessionRiskContext?.combinedScore || data.sessionIntegrity?.riskScore || 0;
+      const preAuth = data.sessionRiskContext?.preAuth || {};
+      const rules = preAuth.rulesTriggered || (data.sessionIntegrity?.evidence?.triggeredRules || []).map(r => r.ruleName || r.ruleId);
+      const level = data.sessionIntegrity?.action === 'BLOCK' ? 'CRITICAL (BLOCK)' : (score >= 70 ? 'CRITICAL (BLOCK)' : (score >= 45 ? 'HIGH (REVIEW)' : (score > 0 ? 'MEDIUM (MONITOR)' : 'LOW (ALLOW)')));
+      updateDashboardRiskWidget(score, level, rules);
+    }
+
+    // Display Available Account Balance
+    updateBalanceDisplay(u.total_amount || u.account_balance || 1000000.00);
+
     // 2. Load User Banking Transaction History
     await loadTransactionHistory();
 
-    // 3. Start Polling for Real-Time ATO Approvals
+    // 3. Start Polling for Real-Time ATO Approvals & Real-Time Threat Score Meter Updates
     startPendingApprovalsPolling();
+    startLiveDashboardThreatPolling();
 
   } catch (err) {
     console.error('Session check error:', err);
     window.location.href = 'login.html';
     return;
+  }
+
+  // Bind Reset Threat Button
+  const resetBtn = document.getElementById('dash-reset-threat-btn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/auth/reset-threat-stores', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          updateDashboardRiskWidget(0, 'LOW (ALLOW)', []);
+          showTxnAlert('🧹 Threat stores cleared. Session risk score reset to 0.', 'success');
+        }
+      } catch (e) {
+        console.error('Reset error:', e);
+      }
+    });
   }
 
   // Bind Logout Button
@@ -66,14 +117,30 @@ async function initDashboard() {
       const receiverInput = document.getElementById('txn-receiver');
       const amountInput = document.getElementById('txn-amount');
       const descInput = document.getElementById('txn-description');
+      const otpInput = document.getElementById('txn-otp-input');
       const submitBtn = document.getElementById('txn-submit-btn');
 
       const receiver_identifier = receiverInput.value.trim();
       const amount = parseFloat(amountInput.value);
       const description = descInput ? descInput.value.trim() : '';
+      const enteredOTP = otpInput ? otpInput.value.trim() : '';
 
       if (!receiver_identifier || isNaN(amount) || amount <= 0) {
         showTxnAlert('Please provide a valid receiver account and amount.', 'danger');
+        return;
+      }
+
+      // DEMO OTP VERIFICATION CHECK
+      if (enteredOTP !== currentDemoOTP) {
+        showTxnAlert(`Invalid OTP Code! Please enter the correct Demo OTP displayed above (Demo OTP: ${currentDemoOTP}).`, 'danger');
+        if (otpInput) otpInput.focus();
+        return;
+      }
+
+      // INSUFFICIENT BALANCE CHECK
+      if (amount > currentUserBalance) {
+        const formattedBal = currentUserBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        showTxnAlert(`Insufficient Account Balance. Your available balance is ₹${formattedBal}.`, 'danger');
         return;
       }
 
@@ -91,6 +158,11 @@ async function initDashboard() {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Send Transfer';
 
+        // Update Live Session Risk Widget on Transaction Result
+        if (typeof data.riskScore !== 'undefined') {
+          updateDashboardRiskWidget(data.riskScore, data.riskLevel, data.reasons || []);
+        }
+
         if (!res.ok || !data.success) {
           showTxnAlert(data.message || 'Transaction could not be completed at this time. Please verify your information or contact support.', 'danger');
           return;
@@ -103,9 +175,20 @@ async function initDashboard() {
           showTxnAlert(msg, 'success');
         }
 
+        // Update balance if returned by backend or calculate locally
+        if (typeof data.sender_balance === 'number') {
+          updateBalanceDisplay(data.sender_balance);
+        } else {
+          updateBalanceDisplay(currentUserBalance - amount);
+        }
+
+        // Reset form inputs & generate fresh Demo OTP
         receiverInput.value = '';
         amountInput.value = '';
         if (descInput) descInput.value = '';
+        if (otpInput) otpInput.value = '';
+        generateFreshDemoOTP();
+
         await loadTransactionHistory();
 
       } catch (err) {
@@ -165,6 +248,24 @@ function startPendingApprovalsPolling() {
   checkPendingApprovals();
   if (pollApprovalInterval) clearInterval(pollApprovalInterval);
   pollApprovalInterval = setInterval(checkPendingApprovals, 2000);
+}
+
+let pollDashboardThreatInterval = null;
+
+function startLiveDashboardThreatPolling() {
+  async function checkLiveThreat() {
+    try {
+      const res = await fetch('/api/auth/current-threat-status');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        updateDashboardRiskWidget(data.riskScore, data.riskLevel, data.reasons || []);
+      }
+    } catch (e) {}
+  }
+
+  checkLiveThreat();
+  if (pollDashboardThreatInterval) clearInterval(pollDashboardThreatInterval);
+  pollDashboardThreatInterval = setInterval(checkLiveThreat, 1500);
 }
 
 async function checkPendingApprovals() {
@@ -350,4 +451,52 @@ function showTxnAlert(msg, type = 'danger') {
 function hideTxnAlert() {
   const alertEl = document.getElementById('txn-alert');
   if (alertEl) alertEl.style.display = 'none';
+}
+
+function updateDashboardRiskWidget(score = 0, level = 'LOW (ALLOW)', reasons = []) {
+  const scoreVal = document.getElementById('dash-risk-score-val');
+  const scoreBar = document.getElementById('dash-risk-score-bar');
+  const riskBadge = document.getElementById('dash-risk-badge');
+  const reasonsDiv = document.getElementById('dash-risk-reasons');
+
+  if (!scoreVal || !scoreBar || !riskBadge) return;
+  const numScore = Math.min(100, Math.max(0, parseFloat(score) || 0));
+
+  scoreVal.textContent = Math.round(numScore);
+  scoreBar.style.width = `${numScore}%`;
+
+  let color = '#22c55e'; // Green
+  let badgeBg = 'rgba(34, 197, 94, 0.15)';
+  let badgeBorder = 'rgba(34, 197, 94, 0.3)';
+
+  if (numScore >= 70) {
+    color = '#ef4444'; // Red
+    badgeBg = 'rgba(239, 68, 68, 0.2)';
+    badgeBorder = 'rgba(239, 68, 68, 0.4)';
+  } else if (numScore >= 45) {
+    color = '#f97316'; // Orange
+    badgeBg = 'rgba(249, 115, 22, 0.2)';
+    badgeBorder = 'rgba(249, 115, 22, 0.4)';
+  } else if (numScore > 0) {
+    color = '#eab308'; // Yellow
+    badgeBg = 'rgba(234, 179, 8, 0.2)';
+    badgeBorder = 'rgba(234, 179, 8, 0.4)';
+  }
+
+  scoreVal.style.color = color;
+  scoreBar.style.backgroundColor = color;
+  riskBadge.style.color = color;
+  riskBadge.style.background = badgeBg;
+  riskBadge.style.borderColor = badgeBorder;
+  riskBadge.textContent = level;
+
+  if (reasonsDiv) {
+    if (reasons && reasons.length > 0) {
+      reasonsDiv.style.display = 'block';
+      reasonsDiv.innerHTML = `<span style="color: #f87171; font-weight: 700;">⚡ Correlated Risk Signals:</span> ${reasons.join('; ')}`;
+    } else {
+      reasonsDiv.style.display = 'none';
+      reasonsDiv.innerHTML = '';
+    }
+  }
 }

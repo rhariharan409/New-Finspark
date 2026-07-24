@@ -96,15 +96,115 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordInput = document.getElementById('login-password');
   const submitBtn = document.getElementById('login-submit-btn');
 
-  function showAlert(msg, isSuccess = false) {
+  function showAlert(msg, isSuccess = false, showUnblockBtn = false) {
     if (!alertEl) return;
-    alertEl.textContent = msg;
+    alertEl.innerHTML = `
+      <div>${msg}</div>
+      ${showUnblockBtn ? `
+        <button id="alert-unblock-btn" style="margin-top: 0.75rem; background: #dc2626; color: #ffffff; border: none; padding: 0.4rem 0.85rem; border-radius: 6px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;">
+          🔓 Click Here to Unblock Account / IP Now
+        </button>
+      ` : ''}
+    `;
     alertEl.className = isSuccess ? 'alert alert-success' : 'alert alert-danger';
     alertEl.style.display = 'block';
+
+    const alertUnblock = document.getElementById('alert-unblock-btn');
+    if (alertUnblock) {
+      alertUnblock.addEventListener('click', unblockEntity);
+    }
   }
 
   function hideAlert() {
     if (alertEl) alertEl.style.display = 'none';
+  }
+
+  const scoreVal = document.getElementById('widget-score-val');
+  const scoreBar = document.getElementById('widget-score-bar');
+  const riskBadge = document.getElementById('widget-risk-badge');
+  const reasonsDiv = document.getElementById('widget-reasons');
+  const resetBtn = document.getElementById('reset-threat-btn');
+
+  function updateRiskWidget(score = 0, level = 'LOW (ALLOW)', reasons = []) {
+    if (!scoreVal || !scoreBar || !riskBadge) return;
+    const numScore = Math.min(100, Math.max(0, parseFloat(score) || 0));
+
+    scoreVal.textContent = Math.round(numScore);
+    scoreBar.style.width = `${numScore}%`;
+
+    let color = '#22c55e'; // Green
+    let badgeBg = 'rgba(34, 197, 94, 0.15)';
+    let badgeBorder = 'rgba(34, 197, 94, 0.3)';
+
+    if (numScore >= 70) {
+      color = '#ef4444'; // Red
+      badgeBg = 'rgba(239, 68, 68, 0.2)';
+      badgeBorder = 'rgba(239, 68, 68, 0.4)';
+    } else if (numScore >= 45) {
+      color = '#f97316'; // Orange
+      badgeBg = 'rgba(249, 115, 22, 0.2)';
+      badgeBorder = 'rgba(249, 115, 22, 0.4)';
+    } else if (numScore > 0) {
+      color = '#eab308'; // Yellow
+      badgeBg = 'rgba(234, 179, 8, 0.2)';
+      badgeBorder = 'rgba(234, 179, 8, 0.4)';
+    }
+
+    scoreVal.style.color = color;
+    scoreBar.style.backgroundColor = color;
+    riskBadge.style.color = color;
+    riskBadge.style.background = badgeBg;
+    riskBadge.style.borderColor = badgeBorder;
+    riskBadge.textContent = level;
+
+    if (reasonsDiv) {
+      if (reasons && reasons.length > 0) {
+        reasonsDiv.style.display = 'block';
+        reasonsDiv.innerHTML = `<span style="color: #f87171; font-weight: 700;">⚠️ Triggered Rules:</span> ${reasons.join('; ')}`;
+      } else {
+        reasonsDiv.style.display = 'none';
+        reasonsDiv.innerHTML = '';
+      }
+    }
+  }
+
+  async function unblockEntity() {
+    try {
+      const res = await fetch('/api/auth/unblock-entity', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        updateRiskWidget(0, 'LOW (ALLOW)', []);
+        showAlert('🟢 Account and IP have been successfully unblocked! You may now sign in.', true);
+      }
+    } catch (e) {
+      console.error('Unblock error:', e);
+    }
+  }
+
+  async function fetchLiveThreatStatus() {
+    try {
+      const id = emailInput ? emailInput.value.trim() : '';
+      const res = await fetch(`/api/auth/current-threat-status?identifier=${encodeURIComponent(id || 'unknown')}`);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        updateRiskWidget(data.riskScore, data.riskLevel, data.reasons || []);
+        if (data.isBlocked) {
+          showAlert('Access blocked due to suspicious activity.', false, true);
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Poll live threat status every 1.5 seconds for real-time risk meter updates
+  fetchLiveThreatStatus();
+  setInterval(fetchLiveThreatStatus, 1500);
+
+  if (emailInput) {
+    emailInput.addEventListener('input', fetchLiveThreatStatus);
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', unblockEntity);
   }
 
   if (form) {
@@ -141,8 +241,14 @@ document.addEventListener('DOMContentLoaded', () => {
           submitBtn.textContent = 'Sign In to Banking';
         }
 
+        // Live Risk Score Update
+        if (typeof data.riskScore !== 'undefined') {
+          updateRiskWidget(data.riskScore, data.riskLevel, data.reasons || []);
+        }
+
         if (!response.ok || !data.success) {
-          return showAlert(data.message || 'Login failed. Invalid credentials.');
+          const isBlocked = data.riskScore >= 70 || (data.message && data.message.toLowerCase().includes('blocked'));
+          return showAlert(data.message || 'Login failed. Invalid credentials.', false, isBlocked);
         }
 
         showAlert('Sign in successful! Establishing trusted session environment...', true);

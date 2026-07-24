@@ -46,7 +46,14 @@ export const transactionService = {
       throw new Error('Self-transactions are not permitted. Sender and receiver cannot be the same user.');
     }
 
-    // 6. Derive Active Session from Authenticated User if not provided
+    // 6. Validate Sender Available Balance
+    const senderBalance = userRepository.getUserBalance(senderUserId);
+    if (senderBalance < parsedAmount) {
+      const formattedBalance = senderBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+      throw new Error(`Insufficient Account Balance. Your available balance is ₹${formattedBalance}.`);
+    }
+
+    // 7. Derive Active Session from Authenticated User if not provided
     let activeSessionId = sessionId || null;
     if (!activeSessionId) {
       const activeSession = await sessionService.getActiveSession(senderUserId);
@@ -55,7 +62,7 @@ export const transactionService = {
       }
     }
 
-    // 7. Generate Transaction ID & Entity
+    // 8. Generate Transaction ID & Entity
     const transactionId = identityService.generateTransactionId();
 
     const transactionData = {
@@ -71,8 +78,17 @@ export const transactionService = {
       description: description || ''
     };
 
-    // 8. Persist to Supabase transactions table
-    return await transactionRepository.createTransaction(transactionData);
+    // 9. Debit Sender & Credit Receiver Account Balances
+    const newSenderBalance = userRepository.updateUserBalance(senderUserId, senderBalance - parsedAmount);
+    const receiverBalance = userRepository.getUserBalance(receiverUser.user_id);
+    userRepository.updateUserBalance(receiverUser.user_id, receiverBalance + parsedAmount);
+
+    // 10. Persist to Supabase transactions table
+    const createdTxn = await transactionRepository.createTransaction(transactionData);
+    return {
+      ...createdTxn,
+      sender_balance: newSenderBalance
+    };
   },
 
   /**

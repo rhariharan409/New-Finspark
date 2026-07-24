@@ -7,6 +7,7 @@ import { supabase } from '../db/supabaseClient.js';
 import { baselineService } from './baselineService.js';
 import { atoService } from './atoService.js';
 import { correlationEngine } from './correlationEngine.js';
+import { credentialStuffingDetector } from '../security/credential_stuffing/credentialStuffingDetector.js';
 
 export const unifiedThreatService = {
   /**
@@ -208,13 +209,43 @@ export const unifiedThreatService = {
     };
 
     // 3. Credential Stuffing Module
+    let maxDetectorScore = 0;
+    let detectorReasons = [];
+    let detectorEvidence = {};
+
+    for (const telEvent of rawTelemetry) {
+      if (telEvent.event_type === 'login' || telEvent.event_type === 'login_failed') {
+        const res = credentialStuffingDetector.detect({
+          event_id: telEvent.event_id,
+          event_type: 'login',
+          entity_id: targetUserId,
+          ip_address: telEvent.ip_address,
+          timestamp: telEvent.created_at ? new Date(telEvent.created_at) : new Date(),
+          payload: {
+            login_success: telEvent.event_type !== 'login_failed',
+            password_hash: telEvent.metadata?.password_hash || null,
+            user_agent: telEvent.device_type || telEvent.metadata?.user_agent || null
+          }
+        });
+        if (res.score > maxDetectorScore) {
+          maxDetectorScore = res.score;
+          detectorReasons = res.reasons;
+          detectorEvidence = res.evidence_metadata;
+        }
+      }
+    }
+
+    const credentialRiskScore = maxDetectorScore > 0 ? maxDetectorScore : (failedLogins >= 5 ? 85 : (failedLogins >= 3 ? 50 : 10));
+
     const credentialStuffingModule = {
       failed_login_attempts_count: failedLogins,
       repeated_username_attempts: failedLogins >= 3 ? failedLogins : 0,
-      password_spray_detected: failedLogins >= 5,
+      password_spray_detected: failedLogins >= 5 || (detectorReasons.some(r => r.toLowerCase().includes('spray'))),
       source_ips: Array.from(uniqueIPsSet),
       rate_limited_attempts: failedLogins >= 3 ? 2 : 0,
-      credential_risk_score: failedLogins >= 5 ? 85 : (failedLogins >= 3 ? 50 : 10),
+      credential_risk_score: credentialRiskScore,
+      detector_reasons: detectorReasons,
+      detector_evidence: detectorEvidence,
       attack_timeline: rawTelemetry.filter(e => e.event_type === 'login_failed').slice(0, 10)
     };
 
