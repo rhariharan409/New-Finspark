@@ -204,6 +204,12 @@ async function loadTransactionHistory() {
   const historyContainer = document.getElementById('txn-history-list');
   if (!historyContainer) return;
 
+  historyContainer.innerHTML = `
+    <div class="skeleton skeleton-row" style="margin-bottom: 0.5rem;"></div>
+    <div class="skeleton skeleton-row" style="margin-bottom: 0.5rem;"></div>
+    <div class="skeleton skeleton-row"></div>
+  `;
+
   try {
     const res = await fetch('/api/transactions');
     const data = await res.json();

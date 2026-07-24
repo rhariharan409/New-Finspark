@@ -9,7 +9,7 @@
 <body style="background-color: #f8f9ff; font-family: 'IBM Plex Sans', sans-serif;">
 
   <!-- Navigation Bar -->
-  <nav class="navbar" style="background-color: #005994; border-bottom: 1px solid #00497b; padding: 0.85rem 2rem;">
+  <nav class="navbar glass-navbar" style="padding: 0.85rem 2rem;">
     <a href="index.html" class="brand" style="color: #ffffff; display: flex; align-items: center; gap: 0.65rem;">
       <span style="font-weight: 700; letter-spacing: 0.02em;">FINSPARK</span>
       <span style="font-size: 0.72rem; background: rgba(255,255,255,0.15); color: #d0e4ff; padding: 0.2rem 0.6rem; border-radius: 9999px; font-weight: 600; text-transform: uppercase;">
@@ -25,7 +25,7 @@
   <!-- Authenticated User Banking Dashboard -->
   <main id="dashboard-view" class="container" style="max-width: 920px; margin-top: 2.5rem;">
     <!-- LIVE CORRELATED SESSION RISK SCORE WIDGET -->
-    <div id="session-risk-widget" class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; background: #001d35; color: #f8fafc; border-radius: 8px; border: 1px solid #00497b; box-shadow: 0 4px 14px rgba(0, 29, 53, 0.2);">
+    <div id="session-risk-widget" class="card glass-card" style="padding: 1.25rem; margin-bottom: 1.5rem; background: #001d35 !important; color: #f8fafc; border-radius: 8px; border: 1px solid #00497b; box-shadow: 0 4px 14px rgba(0, 29, 53, 0.2);">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.75rem;">
         <div>
           <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ccaff; font-weight: 700;">Live Correlated Session Risk Score (Pre-Auth + Session + Transaction)</span>
@@ -54,7 +54,7 @@
     </div>
 
     <!-- User Profile & Account Overview Card -->
-    <div class="account-card" style="margin-bottom: 1.5rem; border-top: 4px solid #005994; background: #ffffff; border-radius: 8px; border: 1px solid #c0c7d2;">
+    <div class="account-card glass-card" style="margin-bottom: 1.5rem; border-top: 4px solid #005994; border-radius: 8px;">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
         <div>
           <h2 id="dash-welcome-name" style="margin: 0; font-size: 1.5rem; color: #0b1c30; font-weight: 700;">Welcome, User</h2>
@@ -81,7 +81,7 @@
     <div id="ato-approval-container" style="display: none; margin-bottom: 1.5rem;"></div>
 
     <!-- Send Money Form -->
-    <div class="account-card" style="margin-bottom: 1.5rem; background: #ffffff; border: 1px solid #c0c7d2; border-radius: 8px;">
+    <div class="account-card glass-card" style="margin-bottom: 1.5rem; border-radius: 8px;">
       <h3 style="margin-bottom: 1rem; font-size: 1.15rem; color: #0b1c30; font-weight: 700;">Send Money Transfer</h3>
       
       <!-- Customer Security Alert Container -->
@@ -106,7 +106,7 @@
         <!-- DEMO OTP VERIFICATION CONTAINER -->
         <div style="background: #eff6ff; border: 1px solid #d0e4ff; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
-            <span style="font-size: 0.85rem; color: #00497b; font-weight: 800;">🔐 TRANSACTION SECURITY DEMO OTP:</span>
+            <span style="font-size: 0.85rem; color: #00497b; font-weight: 800;">TRANSACTION SECURITY DEMO OTP:</span>
             <code id="demo-otp-display" style="font-size: 1.2rem; color: #005994; font-weight: 900; background: #ffffff; padding: 0.25rem 0.75rem; border-radius: 6px; border: 1px solid #9ccaff; font-family: 'JetBrains Mono', monospace; letter-spacing: 2px;">8874</code>
           </div>
 
@@ -123,10 +123,11 @@
     </div>
 
     <!-- Transaction History List -->
-    <div class="account-card" style="background: #ffffff; border: 1px solid #c0c7d2; border-radius: 8px;">
+    <div class="account-card glass-card" style="border-radius: 8px;">
       <h3 style="margin-bottom: 1rem; font-size: 1.15rem; color: #0b1c30; font-weight: 700;">Transaction History</h3>
       <div id="txn-history-list">
-        <p style="color: #404751; font-size: 0.85rem;">Loading transaction history...</p>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
       </div>
     </div>
   </main>
