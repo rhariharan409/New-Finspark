@@ -2109,13 +2109,16 @@ function setupAuthorizationForm() {
         updateStep('prog-step-4', 'Generating Documentation Report', '⟳', '#2563eb');
 
         // Step 3: Complete Review Cycle & Retrieve Report Payload (with path fallback)
+        const targetAnalystEmail = selectedInsiderAnalystEmail || sessionStorage.getItem('activeAnalystEmail') || 'analyzer3@gmail.com';
+        
         let completeRes = await fetch('/api/review/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email,
             password,
-            analystId: activeAnalystProfile?.analyst_id || 'ANL-001001',
+            analystId: activeAnalystProfile?.analyst_id || 'ANL-001003',
+            analystEmail: targetAnalystEmail,
             activityLogs: getTrackedAnalystActivities()
           })
         });
@@ -2127,7 +2130,8 @@ function setupAuthorizationForm() {
             body: JSON.stringify({
               email,
               password,
-              analystId: activeAnalystProfile?.analyst_id || 'ANL-001001',
+              analystId: activeAnalystProfile?.analyst_id || 'ANL-001003',
+              analystEmail: targetAnalystEmail,
               activityLogs: getTrackedAnalystActivities()
             })
           });
@@ -2142,7 +2146,7 @@ function setupAuthorizationForm() {
         authBtn.textContent = 'AUTHORIZE & COMPLETE REVIEW';
         if (progressOverlay) progressOverlay.style.display = 'none';
 
-        if (completeData.success && completeData.reportData) {
+        if (completeRes.ok && completeData.success && completeData.reportData) {
           // Render full Insider Threat Behavioral & Telemetry details
           try {
             await renderInsiderThreatWorkspace();
@@ -2151,12 +2155,16 @@ function setupAuthorizationForm() {
           // Display the Telemetry & Behavioral Baseline Panels (Image 2)
           if (telemetryResultContainer) {
             telemetryResultContainer.style.display = 'block';
+            telemetryResultContainer.scrollIntoView({ behavior: 'smooth' });
           }
 
           // Open the Printable PDF Report Modal
           renderFullAnalystActivityReport(completeData.reportData, email, completeData.reviewCycleId, completeData.reportId);
         } else {
-          alert(completeData.message || 'Failed to complete review cycle.');
+          if (authErrorEl) {
+            authErrorEl.textContent = completeData.message || 'Failed to complete review cycle.';
+            authErrorEl.style.display = 'block';
+          }
         }
 
       } catch (err) {
@@ -2164,7 +2172,7 @@ function setupAuthorizationForm() {
         authBtn.textContent = 'AUTHORIZE & COMPLETE REVIEW';
         if (progressOverlay) progressOverlay.style.display = 'none';
         if (authErrorEl) {
-          authErrorEl.textContent = 'Server error during authorization.';
+          authErrorEl.textContent = (err && err.message) ? err.message : 'Server error during authorization.';
           authErrorEl.style.display = 'block';
         }
       }

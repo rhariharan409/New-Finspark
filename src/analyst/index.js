@@ -896,20 +896,26 @@ router.post('/review/complete', async (req, res) => {
       });
     }
 
-    // Trigger review cycle completion in engine
-    const activeAnalyst = req.session?.analystProfile || {
-      analyst_id: analystId || 'ANL-001001',
-      name: 'Sarah Connor',
-      role: 'Senior Fraud Investigator',
-      clearance_level: 'Level 3 - Top Secret'
-    };
+    // Trigger review cycle completion in engine for the selected analyst
+    const targetEmail = (req.body.analystEmail || req.session?.analystProfile?.email || 'analyzer3@gmail.com').toLowerCase().trim();
+    const analystInfo = getAnalystByEmailOrId(targetEmail);
 
-    const cycleResult = await insiderThreatEngine.completeReviewCycle(activeAnalyst.email || 'analyzer1@gmail.com');
-    const decisions = await analystDecisionRepository.getAllDecisions();
+    let cycleResult = null;
+    try {
+      cycleResult = await insiderThreatEngine.completeReviewCycle(targetEmail);
+    } catch (engineErr) {
+      console.warn('⚠️ insiderThreatEngine.completeReviewCycle warning:', engineErr.message);
+    }
+
+    let decisions = [];
+    try {
+      decisions = await analystDecisionRepository.getAllDecisions();
+    } catch (decErr) {
+      console.warn('⚠️ analystDecisionRepository.getAllDecisions warning:', decErr.message);
+    }
 
     const cycleId = cycleResult?.cycle?.review_cycle_id || `RC-2026-${Math.floor(100 + Math.random() * 900)}`;
     const reportId = `REPORT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const now = new Date();
 
     // Map actual decisions or custom passed decisions
     const decList = (customDecisions && customDecisions.length > 0) ? customDecisions : decisions.slice(0, 15);
@@ -929,10 +935,11 @@ router.post('/review/complete', async (req, res) => {
         reviewDuration: '24 minutes'
       },
       analyst: {
-        name: activeAnalyst.name || 'Sarah Connor',
-        analystId: activeAnalyst.analyst_id || 'ANL-001001',
-        department: 'Fraud Operations & Risk Management',
-        clearanceLevel: activeAnalyst.clearance_level || 'Level 3 - Top Secret',
+        name: analystInfo.name || 'Analyzer 03',
+        email: analystInfo.email || targetEmail,
+        analystId: analystInfo.analyst_id || analystId || 'ANL-001003',
+        department: analystInfo.department || 'Fraud Operations & Risk Management',
+        clearanceLevel: 'Level 3 - Top Secret',
         reviewCycleId: cycleId
       },
       activities: activityLogs || [],
@@ -968,8 +975,8 @@ router.post('/review/complete', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('Complete review endpoint error:', err.message);
-    return res.status(500).json({ success: false, message: 'Failed to complete review cycle.' });
+    console.error('Complete review endpoint error:', err);
+    return res.status(500).json({ success: false, message: `Failed to complete review cycle: ${err.message}` });
   }
 });
 
