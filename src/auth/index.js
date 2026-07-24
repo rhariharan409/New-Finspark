@@ -254,13 +254,33 @@ router.post('/login', async (req, res) => {
     sessionModule.setSessionUser(req, safeUser);
     req.session.sessionId = activeSession.session_id;
 
+    // CORRELATION: Capture pre-auth risk context from credential stuffing detector
+    const preAuthScore = threatCheck.score || 0;
+    const ipState = credentialStuffingDetector.ipStore.getIPState(ipAddress, new Date());
+    const failedAttempts = ipState ? ipState.failed_count : 0;
+    
+    const sessionRiskContext = {
+      preAuth: {
+        credentialStuffingScore: preAuthScore,
+        failedAttemptsBeforeSuccess: failedAttempts,
+        rulesTriggered: threatCheck.reasons || [],
+        ipFlagged: preAuthScore > 30,
+        suspiciousLogin: failedAttempts >= 3,
+        timestamp: new Date().toISOString()
+      },
+      // If it's a suspicious login (success after 3+ failures), add 15 points
+      combinedScore: preAuthScore + (failedAttempts >= 3 ? 15 : 0), 
+      timeline: []
+    };
+
     // Create Trusted Session Profile in Session Integrity Engine for ATO Detection
     try {
       await sessionIntegrityEngine.createTrustedSessionProfile({
         sessionId: activeSession.session_id,
         userId: rawUser.user_id,
         accountId: rawUser.account_id,
-        req
+        req,
+        preAuthRiskContext: sessionRiskContext
       });
     } catch (eErr) {
       console.error('Session Integrity Profile Error:', eErr.message);

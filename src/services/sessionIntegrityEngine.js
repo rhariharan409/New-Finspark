@@ -143,9 +143,9 @@ function extractRequestGeoDetails(req) {
   const language = clientEnv.language || req.headers['accept-language']?.split(',')[0] || 'en-US';
   const timezone = clientEnv.timezone || req.headers['x-timezone'] || 'Asia/Kolkata';
 
-  const country = req.headers['x-country'] || 'India';
-  const region = req.headers['x-region'] || 'Tamil Nadu';
-  const city = req.headers['x-city'] || 'Chennai';
+  const country = req.headers['x-country'] || clientEnv.country || 'Unknown';
+  const region = req.headers['x-region'] || clientEnv.region || 'Unknown';
+  const city = req.headers['x-city'] || clientEnv.city || 'Unknown';
   const deviceFingerprint = clientEnv.deviceFingerprint || req.headers['x-device-fingerprint'] || `FP-DEV-${Buffer.from(userAgent + ip).toString('base64').substring(0, 12)}`;
   const screenResolution = clientEnv.screenResolution || req.headers['x-screen-res'] || '1920x1080';
 
@@ -175,7 +175,7 @@ export const sessionIntegrityEngine = {
   /**
    * 1. CREATE TRUSTED SESSION PROFILE UPON LOGIN & PERSIST TO DB
    */
-  async createTrustedSessionProfile({ sessionId, userId, accountId, req }) {
+  async createTrustedSessionProfile({ sessionId, userId, accountId, req, preAuthRiskContext }) {
     if (!sessionId || !userId) return null;
 
     const details = extractRequestGeoDetails(req);
@@ -202,7 +202,8 @@ export const sessionIntegrityEngine = {
       loginTimestamp: now.toISOString(),
       sessionExpiry: expiry.toISOString(),
       requestCount: 1,
-      lastSeenTimestamp: now.toISOString()
+      lastSeenTimestamp: now.toISOString(),
+      preAuthRiskContext: preAuthRiskContext || { preAuth: { credentialStuffingScore: 0 }, combinedScore: 0 }
     };
 
     trustedSessionProfiles.set(sessionId, trustedProfile);
@@ -329,7 +330,21 @@ export const sessionIntegrityEngine = {
    */
   async evaluateProfilesComparison(trusted, current) {
     const triggeredRules = [];
-    let totalRiskScore = 0;
+    
+    // CORRELATION: Start from the pre-auth score, not zero
+    const preAuthCarryover = trusted.preAuthRiskContext?.combinedScore || 0;
+    let totalRiskScore = preAuthCarryover;
+
+    if (preAuthCarryover > 0) {
+      triggeredRules.push({
+        ruleId: 'PRE_AUTH_RISK_CARRYOVER',
+        ruleName: 'Pre-Authentication Risk Carryover',
+        weight: preAuthCarryover,
+        severity: preAuthCarryover >= 50 ? 'HIGH' : 'MEDIUM',
+        description: `Session inherited ${preAuthCarryover} risk points from pre-auth credential stuffing analysis.`,
+        evidence: `${trusted.preAuthRiskContext?.preAuth?.failedAttemptsBeforeSuccess || 0} failed login attempts preceded this session.`
+      });
+    }
 
     // Check Expired Session
     if (new Date() > new Date(trusted.sessionExpiry)) {
@@ -347,7 +362,8 @@ export const sessionIntegrityEngine = {
     }
 
     // Compare Country (+35)
-    const isCountryMatched = (current.country || '').toLowerCase() === (trusted.country || '').toLowerCase();
+    const isUnknownCountry = (current.country || 'unknown').toLowerCase() === 'unknown' || (trusted.country || 'unknown').toLowerCase() === 'unknown';
+    const isCountryMatched = isUnknownCountry || (current.country || '').toLowerCase() === (trusted.country || '').toLowerCase();
     if (!isCountryMatched) {
       const rule = SESSION_INTEGRITY_RULES.find(r => r.ruleId === 'COUNTRY_CHANGED');
       totalRiskScore += rule.weight;
@@ -371,7 +387,8 @@ export const sessionIntegrityEngine = {
     }
 
     // Compare City / Location (+15)
-    const isLocationMatched = (current.city || '').toLowerCase() === (trusted.city || '').toLowerCase();
+    const isUnknownCity = (current.city || 'unknown').toLowerCase() === 'unknown' || (trusted.city || 'unknown').toLowerCase() === 'unknown';
+    const isLocationMatched = isUnknownCity || (current.city || '').toLowerCase() === (trusted.city || '').toLowerCase();
     if (!isLocationMatched && isCountryMatched) {
       const rule = SESSION_INTEGRITY_RULES.find(r => r.ruleId === 'LOCATION_CHANGED');
       totalRiskScore += rule.weight;

@@ -17,6 +17,11 @@ export const sessionModule = {
       try {
         const validation = await sessionIntegrityEngine.validateRequestSession(req);
         req.sessionIntegrity = validation;
+        req.sessionRiskContext = {
+          combinedScore: validation?.riskScore || 0,
+          preAuthScore: validation?.evidence?.preAuthCarryover || 0,
+          integrityScore: validation?.riskScore || 0
+        };
 
         // Automated Enforcement: Block & Invalidate Session if Risk Score >= 90
         if (validation && validation.action === 'BLOCK') {

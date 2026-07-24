@@ -61,7 +61,8 @@ router.post('/', sessionModule.requireAuth, async (req, res) => {
     // 3. Automatically trigger Internal Risk Engine & store risk decision in Supabase for Cyber Analysts
     const riskDecision = await riskAnalysisService.analyzeTransactionRisk({
       transactionId: transaction.transaction_id,
-      userId: senderUserId
+      userId: senderUserId,
+      sessionRiskContext: req.sessionRiskContext
     });
 
     // 4. CUSTOMER-SAFE RESPONSE MAPPING (Zero internal risk metrics exposed)

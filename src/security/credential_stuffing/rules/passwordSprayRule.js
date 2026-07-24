@@ -15,7 +15,7 @@ export function checkPasswordSpray(passwordHashState = {}, passwordHash = null) 
   const distinctUsersSet = passwordHashState.distinct_users_set || new Set();
   const distinctUserCount = distinctUsersSet.size;
 
-  if (distinctUserCount >= 2) {
+  if (distinctUserCount >= 5) {
     const prefix = passwordHash.length >= 8 ? passwordHash.substring(0, 8) : passwordHash;
     const reason = `Password spraying: same password hash attempted across ${distinctUserCount} distinct accounts in the last 10 minutes`;
     const evidence = {

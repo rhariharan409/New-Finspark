@@ -27,7 +27,8 @@ router.post('/analyze', sessionModule.requireAuth, async (req, res) => {
 
     const riskDecision = await riskAnalysisService.analyzeTransactionRisk({
       transactionId: transaction_id,
-      userId
+      userId,
+      sessionRiskContext: req.sessionRiskContext
     });
 
     return res.status(200).json({
