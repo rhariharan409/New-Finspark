@@ -187,6 +187,7 @@ async function initAnalystPortal() {
 function setupViewNavigation() {
   const navDash = document.getElementById('nav-dashboard');
   const navInv = document.getElementById('nav-investigation');
+  const navMule = document.getElementById('nav-mule-intelligence');
   const navHighRisk = document.getElementById('nav-high-risk');
   const navATO = document.getElementById('nav-ato-investigation');
   const navSet = document.getElementById('nav-settings');
@@ -199,6 +200,11 @@ function setupViewNavigation() {
   navInv?.addEventListener('click', (e) => {
     e.preventDefault();
     switchAnalystView('investigation');
+  });
+
+  navMule?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchAnalystView('mule-intelligence');
   });
 
   navHighRisk?.addEventListener('click', (e) => {
@@ -222,6 +228,36 @@ function setupViewNavigation() {
     switchAnalystView('settings');
   });
 
+  // Mule Search Form submission handler
+  const muleForm = document.getElementById('mule-search-form');
+  muleForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const query = document.getElementById('mule-query-input').value.trim();
+    if (query) {
+      const alertEl = document.getElementById('mule-search-alert');
+      if (alertEl) alertEl.style.display = 'none';
+      try {
+        const res = await fetch(`/api/analyst/investigate?accountNumber=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        
+        if (!res.ok || !data.found || !data.identity || !data.identity.account_id) {
+          if (alertEl) {
+            alertEl.textContent = `No database record found for target '${query}'.`;
+            alertEl.style.display = 'block';
+          }
+          return;
+        }
+
+        await loadMuleIntelligence(data.identity.account_id);
+      } catch (err) {
+        if (alertEl) {
+          alertEl.textContent = 'Failed to execute Money Mule Intelligence query.';
+          alertEl.style.display = 'block';
+        }
+      }
+    }
+  });
+
   // Filter & Search bindings for High Risk Sessions
   document.getElementById('hr-search-input')?.addEventListener('input', (e) => {
     highRiskSearchQuery = e.target.value.trim();
@@ -239,6 +275,7 @@ let atoAlertsPollInterval = null;
 function switchAnalystView(viewName) {
   const dashView = document.getElementById('dashboard-view-wrapper');
   const invView = document.getElementById('investigation-workspace');
+  const muleView = document.getElementById('mule-intelligence-workspace');
   const highRiskView = document.getElementById('high-risk-sessions-workspace');
   const atoView = document.getElementById('ato-investigation-workspace');
   const insiderView = document.getElementById('insider-threat-workspace');
@@ -246,12 +283,13 @@ function switchAnalystView(viewName) {
 
   const navDash = document.getElementById('nav-dashboard');
   const navInv = document.getElementById('nav-investigation');
+  const navMule = document.getElementById('nav-mule-intelligence');
   const navHighRisk = document.getElementById('nav-high-risk');
   const navATO = document.getElementById('nav-ato-investigation');
   const navInsider = document.getElementById('nav-insider-threat');
   const navSet = document.getElementById('nav-settings');
 
-  [navDash, navInv, navHighRisk, navATO, navInsider, navSet].forEach(el => el?.classList.remove('active'));
+  [navDash, navInv, navMule, navHighRisk, navATO, navInsider, navSet].forEach(el => el?.classList.remove('active'));
 
   if (atoAlertsPollInterval) {
     clearInterval(atoAlertsPollInterval);
@@ -261,6 +299,7 @@ function switchAnalystView(viewName) {
   if (viewName === 'dashboard') {
     if (dashView) dashView.style.display = 'block';
     if (invView) invView.style.display = 'none';
+    if (muleView) muleView.style.display = 'none';
     if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'none';
     if (insiderView) insiderView.style.display = 'none';
@@ -269,14 +308,31 @@ function switchAnalystView(viewName) {
   } else if (viewName === 'investigation') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'block';
+    if (muleView) muleView.style.display = 'none';
     if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'none';
     if (insiderView) insiderView.style.display = 'none';
     if (setView) setView.style.display = 'none';
     navInv?.classList.add('active');
+  } else if (viewName === 'mule-intelligence') {
+    if (dashView) dashView.style.display = 'none';
+    if (invView) invView.style.display = 'none';
+    if (muleView) muleView.style.display = 'block';
+    if (highRiskView) highRiskView.style.display = 'none';
+    if (atoView) atoView.style.display = 'none';
+    if (insiderView) insiderView.style.display = 'none';
+    if (setView) setView.style.display = 'none';
+    navMule?.classList.add('active');
+    if (muleCy) {
+      setTimeout(() => {
+        muleCy.resize();
+        muleCy.fit();
+      }, 50);
+    }
   } else if (viewName === 'high-risk') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'none';
+    if (muleView) muleView.style.display = 'none';
     if (highRiskView) highRiskView.style.display = 'block';
     if (atoView) atoView.style.display = 'none';
     if (insiderView) insiderView.style.display = 'none';
@@ -286,6 +342,7 @@ function switchAnalystView(viewName) {
   } else if (viewName === 'ato-investigation') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'none';
+    if (muleView) muleView.style.display = 'none';
     if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'block';
     if (insiderView) insiderView.style.display = 'none';
@@ -294,6 +351,7 @@ function switchAnalystView(viewName) {
   } else if (viewName === 'insider-threat') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'none';
+    if (muleView) muleView.style.display = 'none';
     if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'none';
     if (insiderView) insiderView.style.display = 'block';
@@ -303,6 +361,7 @@ function switchAnalystView(viewName) {
   } else if (viewName === 'settings') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'none';
+    if (muleView) muleView.style.display = 'none';
     if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'none';
     if (insiderView) insiderView.style.display = 'none';
@@ -1266,6 +1325,9 @@ async function executeFullInvestigation(query, isManualSearch = false) {
 
     renderInvestigationSummary(data);
     await loadMoneyFlowGraph(query, currentHops, currentTimeRange, isManualSearch);
+    if (data.identity && data.identity.account_id) {
+      await loadMuleIntelligence(data.identity.account_id);
+    }
 
     const workspace = document.getElementById('investigation-workspace');
     if (isManualSearch && workspace) {
@@ -2319,6 +2381,880 @@ function renderFullAnalystActivityReport(reportData, higherOfficialEmail, cycleI
 
   // Display Modal
   modal.style.display = 'block';
+}
+
+/**
+ * ====================================================================
+ * MONEY MULE INTELLIGENCE ENGINE (MMIE) FRONTEND MODULE
+ * ====================================================================
+ */
+let muleCy = null;
+let controlsInitialized = false;
+let globalNodesData = [];
+let globalEdgesData = [];
+let targetAccountIdGlobal = null;
+let expandedNodes = new Set();
+let expandedClusterTypes = new Set();
+
+function setupCyControls() {
+  if (controlsInitialized) return;
+  controlsInitialized = true;
+
+  document.getElementById('mule-cy-zoom-in')?.addEventListener('click', () => {
+    if (muleCy) muleCy.zoom(muleCy.zoom() * 1.2);
+  });
+  document.getElementById('mule-cy-zoom-out')?.addEventListener('click', () => {
+    if (muleCy) muleCy.zoom(muleCy.zoom() * 0.8);
+  });
+  document.getElementById('mule-cy-fit')?.addEventListener('click', () => {
+    if (muleCy) muleCy.fit();
+  });
+  document.getElementById('mule-cy-cose')?.addEventListener('click', () => {
+    // Reset preset layout and clusters
+    expandedNodes.clear();
+    expandedClusterTypes.clear();
+    resetDetailsSidebar();
+    rebuildGraph();
+  });
+  document.getElementById('mule-cy-close-details')?.addEventListener('click', () => {
+    resetDetailsSidebar();
+  });
+
+  // Wire up Left Filters
+  const filterIds = [
+    'filter-mule-devices', 'filter-mule-ips', 'filter-mule-phones',
+    'filter-mule-beneficiaries', 'filter-mule-emails', 'filter-mule-cards',
+    'filter-mule-transactions', 'filter-mule-only', 'filter-mule-highrisk'
+  ];
+  filterIds.forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      rebuildGraph();
+    });
+  });
+}
+
+function rebuildGraph() {
+  if (!globalNodesData || globalNodesData.length === 0) return;
+  renderMuleRingGraph(globalNodesData, globalEdgesData, targetAccountIdGlobal);
+}
+
+function calculateStrength(typesSet) {
+  let strength = 0;
+  if (typesSet.has('device')) strength += 40;
+  if (typesSet.has('ip')) strength += 30;
+  if (typesSet.has('phone')) strength += 20;
+  if (typesSet.has('beneficiary')) strength += 10;
+  return Math.min(100, strength);
+}
+
+function resetDetailsSidebar() {
+  const contentEl = document.getElementById('mule-cy-sidebar-content');
+  const badgeEl = document.getElementById('mule-cy-sidebar-badge');
+  if (badgeEl) badgeEl.style.display = 'none';
+  if (contentEl) {
+    contentEl.innerHTML = `
+      <div style="text-align: center; color: #64748b; padding: 4rem 0; font-style: italic; line-height: 1.4;">
+        Select an account node inside the sharing ring canvas to investigate threat characteristics and transaction links.
+      </div>
+    `;
+  }
+}
+
+function updateDetailsSidebar(nodeId, nodesData, edgesData) {
+  const contentEl = document.getElementById('mule-cy-sidebar-content');
+  const badgeEl = document.getElementById('mule-cy-sidebar-badge');
+  if (!contentEl) return;
+
+  const p = nodesData.find(n => n.account_id === nodeId) || { account_id: nodeId };
+  const score = p.mule_score !== undefined ? p.mule_score : (p.posture_score || 0);
+  
+  // Set badge
+  badgeEl.style.display = 'inline-block';
+  badgeEl.textContent = score >= 80 ? 'CRITICAL' : score >= 50 ? 'HIGH RISK' : score >= 30 ? 'MEDIUM' : 'SAFE';
+  badgeEl.className = 'badge';
+  if (score >= 80) badgeEl.classList.add('badge-critical');
+  else if (score >= 50) badgeEl.classList.add('badge-high');
+  else if (score >= 30) badgeEl.classList.add('badge-medium');
+  else badgeEl.classList.add('badge-low');
+
+  // Count sharing attributes
+  const nodeEdges = edgesData.filter(e => e.account_a === nodeId || e.account_b === nodeId);
+  const devices = new Set(nodeEdges.filter(e => e.edge_type === 'device').map(e => e.token_hash)).size;
+  const ips = new Set(nodeEdges.filter(e => e.edge_type === 'ip').map(e => e.token_hash)).size;
+  const phones = new Set(nodeEdges.filter(e => e.edge_type === 'phone').map(e => e.token_hash)).size;
+  const beneficiaries = new Set(nodeEdges.filter(e => e.edge_type === 'beneficiary').map(e => e.token_hash)).size;
+
+  contentEl.innerHTML = `
+    <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
+      
+      <!-- Identity card -->
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.75rem;">
+        <span style="font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Account Identifier</span>
+        <div style="font-size: 0.85rem; font-weight: 700; color: #0f172a; word-break: break-all;">${p.account_id}</div>
+        <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #64748b;">
+          First Seen: <strong>${p.last_updated ? new Date(p.last_updated).toLocaleDateString() : 'N/A'}</strong>
+        </div>
+      </div>
+
+      <!-- Risk metrics -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+        <div style="background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.5rem; text-align: center;">
+          <span style="font-size: 0.7rem; color: #64748b; display: block;">Mule Score</span>
+          <div style="font-size: 1.15rem; font-weight: bold; color: ${score >= 50 ? '#ef4444' : '#10b981'};">${score}%</div>
+        </div>
+        <div style="background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.5rem; text-align: center;">
+          <span style="font-size: 0.7rem; color: #64748b; display: block;">Trust Score</span>
+          <div style="font-size: 1.15rem; font-weight: bold; color: ${score >= 50 ? '#f97316' : '#22c55e'};">${100 - score}%</div>
+        </div>
+      </div>
+
+      <!-- Sharing attributes stats -->
+      <div style="background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.75rem;">
+        <strong style="color: #334155; font-size: 0.78rem; display: block; margin-bottom: 0.5rem; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.25rem;">Sharing Attributes</strong>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.75rem;">
+          <div>💻 Devices: <strong>${devices}</strong></div>
+          <div>🌐 IPs: <strong>${ips}</strong></div>
+          <div>📱 Phones: <strong>${phones}</strong></div>
+          <div>👤 Beneficiaries: <strong>${beneficiaries}</strong></div>
+        </div>
+      </div>
+
+      <!-- Graph metrics -->
+      <div style="background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.75rem;">
+        <strong style="color: #334155; font-size: 0.78rem; display: block; margin-bottom: 0.5rem; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.25rem;">MMIE Graph Analytics</strong>
+        <div style="font-size: 0.75rem; display: flex; flex-direction: column; gap: 0.35rem;">
+          <div>Personalized PageRank: <strong style="color: #7c3aed;">${(p.graph_reputation || 0).toFixed(6)}</strong></div>
+          <div>Hawkes Intensity: <strong>${(p.hawkes_intensity || 0).toFixed(4)}</strong></div>
+          <div>Louvain Community ID: <strong style="background: #e0f2fe; color: #0369a1; padding: 0.05rem 0.25rem; border-radius: 4px;">${p.community_id || 'default'}</strong></div>
+        </div>
+      </div>
+
+      <!-- Attack Timeline / Recent activity -->
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.75rem;">
+        <strong style="color: #334155; font-size: 0.78rem; display: block; margin-bottom: 0.3rem;">Recent Activity Timeline</strong>
+        <div style="font-size: 0.72rem; color: #475569; display: flex; flex-direction: column; gap: 0.25rem;">
+          <div>• User telemetry logged from <strong>${devices} device(s)</strong></div>
+          <div>• High-velocity inflows check: <strong>${p.hawkes_intensity > 0.5 ? 'Suspicious' : 'Normal'}</strong></div>
+          <div>• Status: <strong>${(p.account_status || 'active').toUpperCase()}</strong></div>
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
+function renderMuleRingGraph(nodesData, edgesData, targetAccountId) {
+  const container = document.getElementById('mule-cy-canvas');
+  const placeholder = document.getElementById('mule-cy-placeholder');
+  
+  if (!container) return;
+  
+  if (!nodesData || nodesData.length === 0) {
+    if (placeholder) placeholder.style.display = 'flex';
+    container.style.display = 'none';
+    return;
+  }
+  
+  if (placeholder) placeholder.style.display = 'none';
+  container.style.display = 'block';
+
+  // Save parameters to global scope
+  globalNodesData = nodesData;
+  globalEdgesData = edgesData;
+  targetAccountIdGlobal = targetAccountId;
+
+  // Make sure controls work
+  setupCyControls();
+
+  // Read checkbox filters
+  const fDevices = document.getElementById('filter-mule-devices')?.checked ?? true;
+  const fIPs = document.getElementById('filter-mule-ips')?.checked ?? true;
+  const fPhones = document.getElementById('filter-mule-phones')?.checked ?? true;
+  const fBeneficiaries = document.getElementById('filter-mule-beneficiaries')?.checked ?? true;
+  const fMuleOnly = document.getElementById('filter-mule-only')?.checked ?? false;
+  const fHighRisk = document.getElementById('filter-mule-highrisk')?.checked ?? false;
+
+  // Filter raw edges based on checkbox categories
+  const filteredEdges = edgesData.filter(edge => {
+    if (edge.edge_type === 'device' && !fDevices) return false;
+    if (edge.edge_type === 'ip' && !fIPs) return false;
+    if (edge.edge_type === 'phone' && !fPhones) return false;
+    if (edge.edge_type === 'beneficiary' && !fBeneficiaries) return false;
+    return true;
+  });
+
+  // Bundle edges between account pairs
+  const bundledPeersMap = {};
+  filteredEdges.forEach(edge => {
+    const a = edge.account_a;
+    const b = edge.account_b;
+    if (a !== targetAccountId && b !== targetAccountId) return;
+    const peerId = a === targetAccountId ? b : a;
+
+    // Filter peer nodes based on threat filters
+    const peerNode = nodesData.find(n => n.account_id === peerId) || { account_id: peerId, posture_score: 0 };
+    const peerScore = peerNode.mule_score !== undefined ? peerNode.mule_score : (peerNode.posture_score || 0);
+    if (fHighRisk && peerScore < 50) return;
+    if (fMuleOnly && peerScore < 40) return;
+
+    if (!bundledPeersMap[peerId]) {
+      bundledPeersMap[peerId] = {
+        account_id: peerId,
+        types: new Set(),
+        score: peerScore,
+        posture: peerNode
+      };
+    }
+    bundledPeersMap[peerId].types.add(edge.edge_type);
+  });
+
+  // Separate direct peers into target quadrants
+  const ipPeers = [];
+  const devicePeers = [];
+  const phonePeers = [];
+  const beneficiaryPeers = [];
+
+  Object.values(bundledPeersMap).forEach(peer => {
+    if (peer.types.has('device')) devicePeers.push(peer);
+    else if (peer.types.has('ip')) ipPeers.push(peer);
+    else if (peer.types.has('phone')) phonePeers.push(peer);
+    else if (peer.types.has('beneficiary')) beneficiaryPeers.push(peer);
+  });
+
+  // Sort peers deterministically to prevent position shifts on click/re-render
+  ipPeers.sort((a, b) => a.account_id.localeCompare(b.account_id));
+  devicePeers.sort((a, b) => a.account_id.localeCompare(b.account_id));
+  phonePeers.sort((a, b) => a.account_id.localeCompare(b.account_id));
+  beneficiaryPeers.sort((a, b) => a.account_id.localeCompare(b.account_id));
+
+  // Apply community collapse (clustering groups exceeding 5 nodes)
+  function applyCollapse(list, type) {
+    if (list.length <= 5 || expandedClusterTypes.has(type)) {
+      return { rendered: list, collapsedCount: 0 };
+    }
+    return { rendered: list.slice(0, 4), collapsedCount: list.length - 4 };
+  }
+
+  const deviceGroup = applyCollapse(devicePeers, 'device');
+  const ipGroup = applyCollapse(ipPeers, 'ip');
+  const phoneGroup = applyCollapse(phonePeers, 'phone');
+  const beneficiaryGroup = applyCollapse(beneficiaryPeers, 'beneficiary');
+
+  // Build Elements & Preset Coordinates
+  const elements = [];
+  const positions = {};
+
+  // Find target node details
+  const targetNodeDetails = nodesData.find(n => n.account_id === targetAccountId) || { account_id: targetAccountId, posture_score: 0 };
+  const targetScore = targetNodeDetails.mule_score !== undefined ? targetNodeDetails.mule_score : (targetNodeDetails.posture_score || 0);
+
+  // Center node position (Target investigated account)
+  elements.push({
+    data: {
+      id: targetAccountId,
+      fullName: targetNodeDetails.full_name || 'Target Account',
+      label: `TARGET ACCOUNT\nRisk: ${targetScore}`,
+      score: targetScore,
+      isTarget: true,
+      totalSent: targetNodeDetails.total_sent || 0,
+      totalReceived: targetNodeDetails.total_received || 0
+    }
+  });
+  positions[targetAccountId] = { x: 0, y: 0 };
+
+  // Helper to append quadrant nodes
+  function renderQuadrant(groupResult, type, alignFn) {
+    groupResult.rendered.forEach((peer, i) => {
+      const pos = alignFn(i, groupResult.rendered.length);
+      elements.push({
+        data: {
+          id: peer.account_id,
+          fullName: peer.posture.full_name || peer.account_id,
+          label: peer.account_id.length > 14 ? peer.account_id.slice(0, 8) + '...' + peer.account_id.slice(-4) : peer.account_id,
+          score: peer.score,
+          isTarget: false,
+          totalSent: peer.posture.total_sent || 0,
+          totalReceived: peer.posture.total_received || 0
+        }
+      });
+      positions[peer.account_id] = pos;
+
+      // Add direct edge
+      elements.push({
+        data: {
+          id: `edge-${targetAccountId}-${peer.account_id}`,
+          source: targetAccountId,
+          target: peer.account_id,
+          strength: calculateStrength(peer.types),
+          types: peer.types
+        }
+      });
+
+      // Lazy expand child nodes (2nd degree connections)
+      if (expandedNodes.has(peer.account_id)) {
+        // Find secondary edges connected to this peer
+        const secondaryEdges = filteredEdges.filter(e => 
+          (e.account_a === peer.account_id || e.account_b === peer.account_id) && 
+          e.account_a !== targetAccountId && e.account_b !== targetAccountId
+        );
+
+        const childPeers = new Set();
+        secondaryEdges.forEach(e => {
+          childPeers.add(e.account_a === peer.account_id ? e.account_b : e.account_a);
+        });
+
+        // Position children on outer ring relative to parent angle
+        const parentAngle = Math.atan2(pos.y, pos.x);
+        const childrenArr = Array.from(childPeers);
+        childrenArr.forEach((childId, idx) => {
+          const childNode = nodesData.find(n => n.account_id === childId) || { account_id: childId, posture_score: 0 };
+          const spreadAngle = parentAngle + (idx - (childrenArr.length - 1) / 2) * 15 * (Math.PI / 180);
+          const childX = Math.round(230 * Math.cos(spreadAngle));
+          const childY = Math.round(230 * Math.sin(spreadAngle));
+
+          elements.push({
+            data: {
+              id: childId,
+              fullName: childNode.full_name || childId,
+              label: childId.length > 14 ? childId.slice(0, 8) + '...' + childId.slice(-4) : childId,
+              score: childNode.mule_score !== undefined ? childNode.mule_score : (childNode.posture_score || 0),
+              isTarget: false,
+              isSecondDegree: true,
+              totalSent: childNode.total_sent || 0,
+              totalReceived: childNode.total_received || 0
+            }
+          });
+          positions[childId] = { x: childX, y: childY };
+
+          elements.push({
+            data: {
+              id: `edge-${peer.account_id}-${childId}`,
+              source: peer.account_id,
+              target: childId,
+              strength: 30, // Default second-degree link strength
+              types: new Set([type])
+            }
+          });
+        });
+      }
+    });
+
+    // Render cluster node if collapsed
+    if (groupResult.collapsedCount > 0) {
+      const clusterId = `cluster-${type}`;
+      const pos = alignFn(groupResult.rendered.length, groupResult.rendered.length + 1);
+      elements.push({
+        data: {
+          id: clusterId,
+          label: `+${groupResult.collapsedCount} Accounts\n(Click to Expand)`,
+          isCluster: true,
+          clusterType: type
+        }
+      });
+      positions[clusterId] = pos;
+
+      elements.push({
+        data: {
+          id: `edge-${targetAccountId}-${clusterId}`,
+          source: targetAccountId,
+          target: clusterId,
+          isClusterEdge: true
+        }
+      });
+    }
+  }
+
+  // 1. TOP quadrant (Shared IPs)
+  renderQuadrant(ipGroup, 'ip', (i, len) => ({
+    x: Math.round((i - (len - 1) / 2) * 55),
+    y: -120
+  }));
+
+  // 2. LEFT quadrant (Shared Devices)
+  renderQuadrant(deviceGroup, 'device', (i, len) => ({
+    x: -140,
+    y: Math.round((i - (len - 1) / 2) * 50)
+  }));
+
+  // 3. RIGHT quadrant (Shared Beneficiaries)
+  renderQuadrant(beneficiaryGroup, 'beneficiary', (i, len) => ({
+    x: 140,
+    y: Math.round((i - (len - 1) / 2) * 50)
+  }));
+
+  // 4. BOTTOM quadrant (Shared Phones)
+  renderQuadrant(phoneGroup, 'phone', (i, len) => ({
+    x: Math.round((i - (len - 1) / 2) * 55),
+    y: 120
+  }));
+
+  // Destroy previous instance
+  if (muleCy) muleCy.destroy();
+
+  // Initialize Cytoscape
+  muleCy = cytoscape({
+    container: container,
+    elements: elements,
+    style: [
+      {
+        selector: 'node',
+        style: {
+          'text-wrap': 'wrap',
+          'label': function(ele) {
+            if (ele.data('isCluster')) {
+              return (typeof ele.cy().nodeHtmlLabel === 'function') ? '' : ele.data('label');
+            }
+            return (typeof ele.cy().nodeHtmlLabel === 'function') ? '' : (ele.data('fullName') || ele.data('id'));
+          },
+          'background-color': '#ffffff',
+          'width': function(ele) { return ele.data('isCluster') ? '90px' : '140px'; },
+          'height': function(ele) { return ele.data('isCluster') ? '35px' : '60px'; },
+          'shape': 'roundrectangle',
+          'border-width': function(ele) { return ele.data('isTarget') ? '3px' : '1.5px'; },
+          'border-color': function(ele) {
+            if (ele.data('isCluster')) return '#7c3aed';
+            if (ele.data('isTarget')) return '#2563eb';
+            const score = ele.data('score') || 0;
+            if (score >= 80) return '#ef4444';
+            if (score >= 50) return '#f97316';
+            if (score >= 30) return '#fbbf24';
+            return '#10b981';
+          },
+          'transition-property': 'background-color, width, height, border-color, border-width, opacity',
+          'transition-duration': '0.15s'
+        }
+      },
+      {
+        selector: 'node.highlighted',
+        style: {
+          'border-width': function(ele) { return ele.data('isTarget') ? '4px' : '2.5px'; },
+          'border-color': '#475569',
+          'z-index': 9999
+        }
+      },
+      {
+        selector: 'node.dimmed',
+        style: {
+          'opacity': 0.35
+        }
+      },
+      {
+        selector: 'edge',
+        style: {
+          'width': 1.5,
+          'line-color': function(ele) {
+            const types = ele.data('types');
+            if (!types) return '#cbd5e1';
+            if (types.has('device')) return '#c084fc';
+            if (types.has('ip')) return '#60a5fa';
+            if (types.has('phone')) return '#f472b6';
+            if (types.has('beneficiary')) return '#fbbf24';
+            return '#cbd5e1';
+          },
+          'target-arrow-shape': 'triangle',
+          'target-arrow-color': function(ele) {
+            const types = ele.data('types');
+            if (!types) return '#cbd5e1';
+            if (types.has('device')) return '#c084fc';
+            if (types.has('ip')) return '#60a5fa';
+            if (types.has('phone')) return '#f472b6';
+            if (types.has('beneficiary')) return '#fbbf24';
+            return '#cbd5e1';
+          },
+          'curve-style': 'bezier',
+          'arrow-scale': 0.7,
+          'transition-property': 'width, opacity',
+          'transition-duration': '0.15s',
+          'opacity': 0.85,
+          // Upgraded autorotated pill label styling
+          'label': function(ele) {
+            return ele.data('strength') ? ele.data('strength') + '%' : '';
+          },
+          'text-rotation': 'autorotate',
+          'font-size': '7px',
+          'font-weight': 'bold',
+          'color': '#0f172a',
+          'text-background-opacity': 1,
+          'text-background-color': '#ffffff',
+          'text-background-shape': 'roundrectangle',
+          'text-background-padding': '3px',
+          'text-border-width': '0.7px',
+          'text-border-color': '#cbd5e1'
+        }
+      },
+      {
+        selector: 'edge[isClusterEdge]',
+        style: {
+          'line-color': '#c084fc',
+          'line-style': 'dashed',
+          'target-arrow-shape': 'none',
+          'label': ''
+        }
+      },
+      {
+        selector: 'edge.highlighted',
+        style: {
+          'width': 3,
+          'opacity': 1.0
+        }
+      },
+      {
+        selector: 'edge.dimmed',
+        style: {
+          'opacity': 0.15
+        }
+      }
+    ],
+    layout: {
+      name: 'preset',
+      positions: positions,
+      animate: true,
+      fit: true,
+      padding: 60
+    }
+  });
+
+  // HTML label registration
+  if (typeof muleCy.nodeHtmlLabel === 'function') {
+    muleCy.nodeHtmlLabel([
+      {
+        query: 'node[!isCluster]',
+        valign: 'center',
+        halign: 'center',
+        valignBox: 'center',
+        halignBox: 'center',
+        tpl: function(data) {
+          const isTarget = data.isTarget;
+          const score = data.score || 0;
+          const badgeText = score >= 80 ? 'CRITICAL' : score >= 50 ? 'HIGH' : score >= 30 ? 'MEDIUM' : 'LOW';
+          const badgeBg = score >= 80 ? '#dc2626' : score >= 50 ? '#ea580c' : score >= 30 ? '#d97706' : '#059669';
+          
+          const borderColor = isTarget ? '#2563eb' : badgeBg;
+          const bgColor = isTarget ? '#eff6ff' : '#ffffff';
+          
+          const fullName = data.fullName || 'Unknown User';
+          const truncatedName = fullName.length > 16 ? fullName.slice(0, 14) + '...' : fullName;
+          const shortId = data.id.length > 14 ? data.id.slice(0, 8) + '...' + data.id.slice(-4) : data.id;
+          
+          const totalSent = data.totalSent || 0;
+          const totalReceived = data.totalReceived || 0;
+          
+          return `
+            <div style="
+              width: 140px; 
+              height: 60px; 
+              background: ${bgColor}; 
+              border: ${isTarget ? '3px' : '1.5px'} solid ${borderColor}; 
+              border-radius: 8px; 
+              padding: 5px 8px; 
+              box-sizing: border-box; 
+              font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              position: relative;
+              box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+              pointer-events: none;
+              text-align: left;
+            ">
+              <!-- Top row (Title and badge) -->
+              <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div style="font-size: 9px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;">
+                  ${truncatedName}
+                </div>
+                <div style="
+                  background: ${badgeBg}; 
+                  color: #ffffff; 
+                  font-size: 6.5px; 
+                  font-weight: 800; 
+                  padding: 1px 3px; 
+                  border-radius: 3px;
+                  text-transform: uppercase;
+                ">
+                  ${badgeText}
+                </div>
+              </div>
+              
+              <!-- Mid row (Account Id) -->
+              <div style="font-size: 8px; font-weight: 600; color: #2563eb; margin: 1px 0;">
+                ${shortId}
+              </div>
+              
+              <!-- Bottom row (Stats) -->
+              <div style="font-size: 7.5px; color: #475569; white-space: nowrap; border-top: 1px solid #f1f5f9; padding-top: 2px;">
+                Sent: ₹${Math.round(totalSent)} | Recv: ₹${Math.round(totalReceived)}
+              </div>
+            </div>
+          `;
+        }
+      },
+      {
+        query: 'node[isCluster]',
+        valign: 'center',
+        halign: 'center',
+        valignBox: 'center',
+        halignBox: 'center',
+        tpl: function(data) {
+          return `
+            <div style="
+              width: 90px;
+              height: 35px;
+              background: #faf8ff;
+              border: 1.5px dashed #7c3aed;
+              border-radius: 6px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+              font-size: 8px;
+              font-weight: 700;
+              color: #7c3aed;
+              text-align: center;
+              pointer-events: none;
+            ">
+              ${data.label}
+            </div>
+          `;
+        }
+      }
+    ]);
+  }
+
+  // Hover highlighting
+  muleCy.on('mouseover', 'node', function(e) {
+    const node = e.target;
+    if (node.data('isCluster')) return;
+    const neighborhood = node.neighborhood();
+    
+    muleCy.elements().addClass('dimmed');
+    
+    node.removeClass('dimmed').addClass('highlighted');
+    neighborhood.removeClass('dimmed');
+    neighborhood.edges().addClass('highlighted');
+  });
+
+  muleCy.on('mouseout', 'node', function(e) {
+    muleCy.elements().removeClass('dimmed').removeClass('highlighted');
+  });
+
+  // Edge Tooltip popper
+  muleCy.on('mouseover', 'edge', function(e) {
+    const edge = e.target;
+    if (edge.data('isClusterEdge')) return;
+    const types = edge.data('types');
+    const strength = edge.data('strength');
+    if (!types || !strength) return;
+
+    const tooltip = document.getElementById('mule-cy-tooltip');
+    if (!tooltip) return;
+
+    const renderedPosition = e.renderedPosition;
+    tooltip.style.left = (renderedPosition.x + 10) + 'px';
+    tooltip.style.top = (renderedPosition.y + 10) + 'px';
+    
+    let typesHtml = Array.from(types).map(t => `✓ ${t.toUpperCase()}`).join('<br>');
+    tooltip.innerHTML = `
+      <strong>Relationship Strength: ${strength}%</strong><br>
+      <span style="color: #94a3b8; font-weight: 500;">Shared Indicators:</span><br>
+      ${typesHtml}
+    `;
+    tooltip.style.display = 'block';
+  });
+
+  muleCy.on('mouseout', 'edge', function(e) {
+    const tooltip = document.getElementById('mule-cy-tooltip');
+    if (tooltip) tooltip.style.display = 'none';
+  });
+
+  // Click / Tap events
+  muleCy.on('tap', 'node', function(e) {
+    const node = e.target;
+    const nodeId = node.id();
+
+    // 1. Cluster Expansion click
+    if (node.data('isCluster')) {
+      const type = node.data('clusterType');
+      expandedClusterTypes.add(type);
+      rebuildGraph();
+      return;
+    }
+
+    // 2. Normal Node selection - Populate Details Sidebar
+    updateDetailsSidebar(nodeId, nodesData, edgesData);
+
+    // Toggle Progressive Second degree Expansion
+    if (nodeId !== targetAccountId) {
+      if (expandedNodes.has(nodeId)) {
+        expandedNodes.delete(nodeId);
+      } else {
+        expandedNodes.add(nodeId);
+      }
+      rebuildGraph();
+    }
+  });
+
+  // Generate dynamic textual insights list
+  generateRingInsights(nodesData, edgesData, targetAccountId);
+}
+
+function generateRingInsights(nodesData, edgesData, targetAccountId) {
+  const container = document.getElementById('mule-ring-insights');
+  if (!container) return;
+
+  const targetNode = nodesData.find(n => n.account_id === targetAccountId) || {};
+  const communityId = targetNode.community_id || 'default';
+  
+  const directEdges = edgesData.filter(e => e.account_a === targetAccountId || e.account_b === targetAccountId);
+  
+  if (directEdges.length === 0) {
+    container.innerHTML = `
+      <div style="font-weight: 600; color: #475569; display: flex; align-items: center; gap: 0.35rem;">
+        <span style="font-size: 1.1rem;">ℹ️</span> Graph Insights: No direct IP, device, or phone sharing collisions detected with other accounts.
+      </div>
+    `;
+    return;
+  }
+
+  const summaryList = [];
+  directEdges.forEach(edge => {
+    const peerId = edge.account_a === targetAccountId ? edge.account_b : edge.account_a;
+    const peerNode = nodesData.find(n => n.account_id === peerId) || {};
+    const peerScore = peerNode.posture_score || 0;
+    
+    let relationIcon = '🔌';
+    let relationText = 'unknown connection';
+    if (edge.edge_type === 'device') { relationIcon = '💻'; relationText = 'Shared Device'; }
+    if (edge.edge_type === 'ip') { relationIcon = '🌐'; relationText = 'Shared IP Address'; }
+    if (edge.edge_type === 'phone') { relationIcon = '📱'; relationText = 'Shared Phone Number'; }
+    if (edge.edge_type === 'beneficiary') { relationIcon = '👤'; relationText = 'Shared Beneficiary'; }
+
+    let riskBadgeColor = '#22c55e';
+    let riskBadgeText = 'Low Risk';
+    if (peerScore >= 80) { riskBadgeColor = '#ef4444'; riskBadgeText = 'Critical Risk'; }
+    else if (peerScore >= 50) { riskBadgeColor = '#f97316'; riskBadgeText = 'High Risk'; }
+    else if (peerScore >= 30) { riskBadgeColor = '#eab308'; riskBadgeText = 'Medium Risk'; }
+
+    summaryList.push(`
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding: 0.45rem 0;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.1rem;">${relationIcon}</span>
+          <div>
+            <strong style="color: #0f172a;">${relationText}</strong> with account <code style="background: #f1f5f9; padding: 0.1rem 0.25rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; color: #7c3aed;">${peerId}</code>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.35rem;">
+          <span style="background: ${riskBadgeColor}; color: white; font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 4px; font-weight: bold;">${riskBadgeText}</span>
+          <span style="color: #64748b; font-size: 0.75rem; font-weight: bold;">(${peerScore}/100)</span>
+        </div>
+      </div>
+    `);
+  });
+
+  const totalInCommunity = nodesData.length;
+
+  container.innerHTML = `
+    <div style="font-weight: 700; color: #1e293b; margin-bottom: 0.6rem; font-size: 0.85rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.35rem;">
+      🔍 Louvain Sharing Group Insights (Community #${communityId} | ${totalInCommunity} connected accounts)
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+      ${summaryList.join('')}
+    </div>
+    <div style="font-size: 0.72rem; color: #64748b; margin-top: 0.65rem; font-style: italic; line-height: 1.3;">
+      💡 <strong>Analyst Action Tip:</strong> Device collisions indicate multiple accounts logging in from the same hardware. IP collisions show shared physical networks. Cross-referencing these connections isolates coordinated mule networks.
+    </div>
+  `;
+}
+
+async function loadMuleIntelligence(accountId) {
+  try {
+    // 1. Fetch posture and latest assessment
+    const postureRes = await fetch(`/api/mule/posture/${encodeURIComponent(accountId)}`);
+    const postureData = await postureRes.json();
+
+    if (!postureRes.ok || !postureData.success) {
+      console.error('[MMIE] Failed to load posture:', postureData.message);
+      return;
+    }
+
+    const posture = postureData.posture;
+    const latestAssess = postureData.latestAssessment;
+
+    // Reset preset layout arrays
+    expandedNodes.clear();
+    expandedClusterTypes.clear();
+    resetDetailsSidebar();
+
+    // Update Posture cards/values
+    const effectivePostureScore = Math.max(posture.posture_score || 0, latestAssess ? latestAssess.mule_confidence : 0);
+    const postureScoreEl = document.getElementById('mule-posture-score');
+    if (postureScoreEl) {
+      postureScoreEl.textContent = `${effectivePostureScore}/100`;
+      postureScoreEl.style.color = effectivePostureScore >= 80 ? '#dc2626' : effectivePostureScore >= 50 ? '#ea580c' : '#059669';
+    }
+    document.getElementById('mule-hawkes').textContent = (posture.hawkes_intensity || 0).toFixed(4);
+    document.getElementById('mule-halflife').textContent = posture.retention_half_life_seconds 
+      ? `${posture.retention_half_life_seconds.toFixed(0)}s` 
+      : 'Infinite (No outflow)';
+    document.getElementById('mule-pagerank').textContent = (posture.graph_reputation || 0).toFixed(6);
+    document.getElementById('mule-community').textContent = posture.community_id || 'default';
+
+    // Update Assessment values
+    const scoreEl = document.getElementById('mule-score');
+    const decisionEl = document.getElementById('mule-decision-badge');
+
+    if (latestAssess) {
+      scoreEl.textContent = `${latestAssess.mule_confidence}%`;
+      decisionEl.textContent = latestAssess.decision.toUpperCase();
+
+      // Style badge
+      decisionEl.className = 'badge';
+      if (latestAssess.decision === 'block') decisionEl.classList.add('badge-critical');
+      else if (latestAssess.decision === 'hold') decisionEl.classList.add('badge-high');
+      else if (latestAssess.decision === 'step_up') decisionEl.classList.add('badge-medium');
+      else decisionEl.classList.add('badge-low');
+
+      // Style score color
+      if (latestAssess.mule_confidence >= 80) scoreEl.style.color = '#dc2626';
+      else if (latestAssess.mule_confidence >= 50) scoreEl.style.color = '#ea580c';
+      else scoreEl.style.color = '#7c3aed';
+
+      // Render Evidence timeline
+      const timelineContainer = document.getElementById('mule-evidence-timeline');
+      if (timelineContainer && latestAssess.evidence) {
+        timelineContainer.innerHTML = latestAssess.evidence.map((evt, idx) => `
+          <div class="timeline-node">
+            <div class="timeline-badge alert">${idx + 1}</div>
+            <div style="flex: 1; background: #f8fafc; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #64748b;">
+                <span>SIGNAL: ${evt.signal.toUpperCase().replace(/_/g, ' ')}</span>
+                <span style="color: #7c3aed;">Contribution: +${evt.contributionPct}%</span>
+              </div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: #0f172a; margin-top: 0.2rem;">${evt.description}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+    } else {
+      scoreEl.textContent = '0%';
+      scoreEl.style.color = '#7c3aed';
+      decisionEl.textContent = 'ALLOW';
+      decisionEl.className = 'badge badge-low';
+      document.getElementById('mule-evidence-timeline').innerHTML = `
+        <div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 2rem 0;">No active assessment available</div>
+      `;
+    }
+
+    // 2. Fetch sharing rings data
+    const ringsRes = await fetch(`/api/mule/rings?accountId=${encodeURIComponent(accountId)}`);
+    const ringsData = await ringsRes.json();
+
+    if (ringsRes.ok && ringsData.success) {
+      renderMuleRingGraph(ringsData.postures, ringsData.edges, accountId);
+    }
+
+  } catch (err) {
+    console.error('[MMIE] loadMuleIntelligence error:', err);
+  }
 }
 
 

@@ -53,7 +53,7 @@ export function createRiskDecisionEntity({
 
   return {
     risk_decision_id: risk_decision_id || '',
-    transaction_id: transaction_id || '',
+    transaction_id: transaction_id || null,
     user_id: user_id || '',
     risk_score: score,
     risk_level: risk_level || classification.risk_level,

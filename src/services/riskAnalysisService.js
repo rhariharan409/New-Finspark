@@ -581,7 +581,30 @@ export const riskAnalysisService = {
     };
 
     // 5. Persist to Supabase risk_decisions table
-    return await riskRepository.createRiskDecision(riskDecisionData);
+    const createdDecision = await riskRepository.createRiskDecision(riskDecisionData);
+
+    // 6. Trigger MMIE scoring synchronously
+    try {
+      const { muleService } = await import('../features/mule-intelligence/muleService.js');
+      const { userRepository } = await import('../db/userRepository.js');
+
+      const senderUser = await userRepository.findUserById(userId);
+      const receiverUser = await userRepository.findUserById(transaction.receiver_user_id);
+
+      if (senderUser && receiverUser) {
+        await muleService.assessTransaction({
+          transactionId,
+          senderAccountId: senderUser.account_id,
+          receiverAccountId: receiverUser.account_id
+        });
+      } else {
+        console.warn('[MMIE] Could not resolve sender or receiver user for mule scoring:', { userId, receiverId: transaction.receiver_user_id });
+      }
+    } catch (e) {
+      console.error('[MMIE] Assessment integration error:', e.message);
+    }
+
+    return createdDecision;
   },
 
   /**

@@ -16,12 +16,17 @@ import { telemetryModule } from './src/telemetry/index.js';
 import { baselineModule } from './src/baseline/index.js';
 import { riskModule } from './src/risk/index.js';
 import { analystModule } from './src/analyst/index.js';
+import { muleRouter } from './src/features/mule-intelligence/muleRoutes.js';
+import { startPostureJob } from './src/features/mule-intelligence/postureJob.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Start MMIE Background Posture update job
+startPostureJob();
 
 // Body parser middleware
 app.use(express.json());
@@ -49,6 +54,7 @@ app.use('/api/telemetry', telemetryModule.router);
 app.use('/api/baseline', baselineModule.router);
 app.use('/api/risk', riskModule.router);
 app.use('/api/analyst', analystModule.router);
+app.use('/api/mule', muleRouter);
 
 // Direct root aliases for official authorization and review completion
 app.use('/api/official', analystModule.router);

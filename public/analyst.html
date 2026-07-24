@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="css/style.css">
   <!-- Supabase JS Client for Realtime Subscriptions -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Cytoscape JS for MMIE Network Visualization -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape-node-html-label/dist/cytoscape-node-html-label.min.js"></script>
   <style>
     .layout-wrapper {
       display: flex;
@@ -270,6 +273,7 @@
         <ul class="sidebar-menu">
           <li><a id="nav-dashboard" class="active">📊 Dashboard</a></li>
           <li><a id="nav-investigation">🔍 Investigation & Money Flow</a></li>
+          <li><a id="nav-mule-intelligence">🔬 Money Mule Intelligence (MMIE)</a></li>
           <li><a id="nav-high-risk">🚨 High Risk Sessions</a></li>
           <li><a id="nav-ato-investigation">🛡️ Account Takeover Investigation</a></li>
           <li><a id="nav-settings">⚙️ Settings</a></li>
@@ -1107,6 +1111,185 @@
             <ul id="rd-signals-list" style="margin: 0.35rem 0 0 1.25rem; color: #334155;">
               <li>Normal transaction behavior</li>
             </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- VIEW 2.5: MONEY MULE INTELLIGENCE ENGINE (MMIE) WORKSPACE -->
+      <!-- ========================================================= -->
+      <div id="mule-intelligence-workspace" style="display: none;">
+        
+        <!-- Search Bar Card -->
+        <div class="card" style="border-top: 4px solid #7c3aed; margin-bottom: 1.5rem;">
+          <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem;">Money Mule Intelligence Search</h2>
+          <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
+            Inspect receiver standing postures, personalized PageRank network propagation, and attack timeline sequence templates.
+          </p>
+
+          <form id="mule-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <input type="text" id="mule-query-input" class="form-input" placeholder="e.g. TURTLE-2397733728" style="flex: 1; min-width: 280px;" required>
+            <button type="submit" id="mule-search-btn" class="btn" style="padding: 0.65rem 1.5rem; background: #7c3aed; color: #ffffff; border: none; font-weight: 700; cursor: pointer; border-radius: 6px;">
+              Analyze Account
+            </button>
+          </form>
+          <div id="mule-search-alert" class="alert alert-danger" style="display:none; margin-top: 1rem;"></div>
+        </div>
+
+        <!-- MONEY MULE INTELLIGENCE ENGINE (MMIE) PANEL -->
+        <div class="card" style="border-top: 4px solid #7c3aed;">
+          <div class="section-title" style="margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.15rem; font-weight: 700; color: #7c3aed;">Money Mule Intelligence Engine (MMIE)</span>
+            </div>
+            <span id="mule-decision-badge" class="badge badge-low">ALLOW</span>
+          </div>
+          <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
+            Real-time Bayesian fusion scoring correlating receiver standing postures, personalized PageRank network propagation, and attack timeline sequence templates.
+          </p>
+
+          <!-- Metrics Grid -->
+          <div class="summary-grid" style="margin-bottom: 1.5rem;">
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Mule Score</span>
+              <div id="mule-score" class="summary-val" style="color: #7c3aed;">0%</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Mule Posture Score</span>
+              <div id="mule-posture-score" class="summary-val" style="color: #dc2626;">0/100</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Hawkes Intensity</span>
+              <div id="mule-hawkes" class="summary-val">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Inbound Drain Half-life</span>
+              <div id="mule-halflife" class="summary-val">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Personalized PageRank</span>
+              <div id="mule-pagerank" class="summary-val">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Louvain Community ID</span>
+              <div id="mule-community" class="summary-val">-</div>
+            </div>
+          </div>
+
+          <!-- Explainable Evidence Chain & Network Ring Visualizer Block -->
+          <div style="margin-top: 1.5rem;">
+            
+            <!-- Evidence Chain (Full Width) -->
+            <div style="margin-bottom: 2rem;">
+              <h3 style="font-size: 0.95rem; font-weight: 700; color: #334155; margin-bottom: 0.85rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.4rem;">
+                Evidence & Contribution Chain
+              </h3>
+              <div id="mule-evidence-timeline" style="padding: 0.5rem 0; display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 1.5rem 0;">No active assessment available</div>
+              </div>
+            </div>
+
+            <!-- Louvain Community Sharing Ring (Full Width Card Container) -->
+            <div>
+              <h3 style="font-size: 0.95rem; font-weight: 700; color: #334155; margin-bottom: 0.85rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.4rem;">
+                Louvain Community Sharing Ring
+              </h3>
+              
+              <!-- 3-Column Workspace -->
+              <div style="display: grid; grid-template-columns: 210px 1fr 310px; gap: 1.25rem; align-items: start;">
+                
+                <!-- Column 1: Filters -->
+                <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; padding: 1rem; font-size: 0.82rem; color: #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 0.75rem;">
+                  <strong style="color: #0f172a; font-size: 0.88rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.4rem;">Graph Filters</strong>
+                  <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+                      <input type="checkbox" id="filter-mule-devices" checked style="cursor: pointer;"> <span>Devices</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+                      <input type="checkbox" id="filter-mule-ips" checked style="cursor: pointer;"> <span>IP Addresses</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+                      <input type="checkbox" id="filter-mule-phones" checked style="cursor: pointer;"> <span>Phone Numbers</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+                      <input type="checkbox" id="filter-mule-beneficiaries" checked style="cursor: pointer;"> <span>Beneficiaries</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+                      <input type="checkbox" id="filter-mule-emails" checked style="cursor: pointer;"> <span>Emails</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+                      <input type="checkbox" id="filter-mule-cards" checked style="cursor: pointer;"> <span>Cards</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+                      <input type="checkbox" id="filter-mule-transactions" checked style="cursor: pointer;"> <span>Transactions</span>
+                    </label>
+                  </div>
+                  
+                  <strong style="color: #0f172a; font-size: 0.88rem; border-top: 1px solid #e2e8f0; padding-top: 0.6rem; margin-top: 0.25rem;">Threat Criteria</strong>
+                  <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+                      <input type="checkbox" id="filter-mule-only" style="cursor: pointer;"> <span>Mule Accounts Only</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-weight: 500;">
+                      <input type="checkbox" id="filter-mule-highrisk" style="cursor: pointer;"> <span>High Risk Only (≥50)</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Column 2: Graph Canvas -->
+                <div style="position: relative; display: flex; flex-direction: column;">
+                  
+                  <!-- Toolbar Controls -->
+                  <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 0.5rem; gap: 0.35rem;">
+                    <button type="button" class="btn" id="mule-cy-zoom-in" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;" title="Zoom In">+</button>
+                    <button type="button" class="btn" id="mule-cy-zoom-out" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;" title="Zoom Out">-</button>
+                    <button type="button" class="btn" id="mule-cy-fit" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; cursor: pointer;" title="Fit Graph">Fit</button>
+                    <button type="button" class="btn" id="mule-cy-cose" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; cursor: pointer;" title="Reset Radial Layout">Reset Layout</button>
+                  </div>
+
+                  <!-- Canvas Container -->
+                  <div id="mule-ring-container" style="height: 480px; background: #faf8ff; border: 1px solid #cbd5e1; border-radius: 12px; position: relative; overflow: hidden; box-shadow: inset 0 2px 8px rgba(0,0,0,0.02);">
+                    <div id="mule-cy-canvas" style="width: 100%; height: 100%; display: none;"></div>
+                    
+                    <div id="mule-cy-placeholder" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 0.85rem; background: #faf8ff; z-index: 10;">
+                      Query an account to map sharing rings
+                    </div>
+
+                    <!-- Floating Legend -->
+                    <div id="mule-cy-legend" style="position: absolute; bottom: 0.75rem; left: 0.75rem; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(8px); border: 1px solid #cbd5e1; padding: 0.6rem; border-radius: 8px; font-size: 0.68rem; color: #475569; z-index: 5; pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
+                      <strong style="color: #1e293b; display: block; margin-bottom: 0.25rem;">Legend (Relationship Quadrants):</strong>
+                      <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                        <div style="display: flex; align-items: center; gap: 0.25rem;"><span style="width: 10px; height: 3px; background: #60a5fa; display: inline-block;"></span> TOP: IP Address</div>
+                        <div style="display: flex; align-items: center; gap: 0.25rem;"><span style="width: 10px; height: 3px; background: #c084fc; display: inline-block;"></span> LEFT: Device ID</div>
+                        <div style="display: flex; align-items: center; gap: 0.25rem;"><span style="width: 10px; height: 3px; background: #fbbf24; display: inline-block;"></span> RIGHT: Beneficiary Name</div>
+                        <div style="display: flex; align-items: center; gap: 0.25rem;"><span style="width: 10px; height: 3px; background: #f472b6; display: inline-block;"></span> BOTTOM: Phone Number</div>
+                      </div>
+                    </div>
+
+                    <!-- Floating Tooltip -->
+                    <div id="mule-cy-tooltip" style="position: absolute; display: none; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); border: 1px solid #334155; padding: 0.5rem 0.75rem; border-radius: 6px; color: #f8fafc; font-size: 0.72rem; pointer-events: none; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.3); line-height: 1.35;"></div>
+                  </div>
+
+
+                </div>
+
+                <!-- Column 3: Sidebar Details -->
+                <div id="mule-cy-details-sidebar" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; padding: 1rem; font-size: 0.82rem; color: #1e293b; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; gap: 0.75rem; min-height: 400px;">
+                  <div style="border-bottom: 2px solid #7c3aed; padding-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <strong style="color: #7c3aed; font-size: 0.9rem;">🔍 Node Details</strong>
+                    <span id="mule-cy-sidebar-badge" class="badge" style="display: none;">-</span>
+                  </div>
+                  <div id="mule-cy-sidebar-content" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div style="text-align: center; color: #64748b; padding: 4rem 0; font-style: italic; line-height: 1.4;">
+                      Select an account node inside the sharing ring canvas to investigate threat characteristics and transaction links.
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </div>
         </div>
 
