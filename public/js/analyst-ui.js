@@ -211,6 +211,12 @@ function setupViewNavigation() {
     switchAnalystView('ato-investigation');
   });
 
+  const navInsider = document.getElementById('nav-insider-threat');
+  navInsider?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchAnalystView('insider-threat');
+  });
+
   navSet?.addEventListener('click', (e) => {
     e.preventDefault();
     switchAnalystView('settings');
