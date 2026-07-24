@@ -638,6 +638,39 @@ router.post('/logout', async (req, res) => {
 });
 
 /**
+ * Get Current Threat Status API (For Live UI Meter Polling)
+ * GET /api/auth/current-threat-status
+ */
+router.get('/current-threat-status', (req, res) => {
+  try {
+    const ipAddress = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket?.remoteAddress || req.ip || '127.0.0.1';
+    const identifier = req.query.identifier || 'unknown';
+
+    const threatCheck = credentialStuffingDetector.detect({
+      event_id: `EVT_POLL_${Date.now()}`,
+      event_type: 'login',
+      entity_id: identifier,
+      ip_address: ipAddress,
+      timestamp: new Date(),
+      payload: {}
+    }, null, true);
+
+    const score = threatCheck.score || 0;
+    const level = score >= 70 ? 'CRITICAL (BLOCK)' : (score >= 45 ? 'HIGH (REVIEW)' : (score > 0 ? 'MEDIUM (MONITOR)' : 'LOW (ALLOW)'));
+
+    return res.status(200).json({
+      success: true,
+      riskScore: score,
+      riskLevel: level,
+      reasons: threatCheck.reasons || [],
+      isBlocked: score >= 70
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
  * Reset Threat Stores API (Demo Reset)
  * POST /api/auth/reset-threat-stores
  */
@@ -649,6 +682,26 @@ router.post('/reset-threat-stores', (req, res) => {
     return res.status(200).json({
       success: true,
       message: '🧹 Threat stores cleared successfully. All accumulated risk scores reset to 0.',
+      riskScore: 0,
+      riskLevel: 'LOW (ALLOW)'
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * Unblock IP / Account API
+ * POST /api/auth/unblock-entity
+ */
+router.post('/unblock-entity', (req, res) => {
+  try {
+    if (credentialStuffingDetector.ipStore) credentialStuffingDetector.ipStore.clear();
+    if (credentialStuffingDetector.userStore) credentialStuffingDetector.userStore.clear();
+    if (credentialStuffingDetector.hashStore) credentialStuffingDetector.hashStore.clear();
+    return res.status(200).json({
+      success: true,
+      message: '🟢 Account and IP have been successfully unblocked! You may now sign in.',
       riskScore: 0,
       riskLevel: 'LOW (ALLOW)'
     });

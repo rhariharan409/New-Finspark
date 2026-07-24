@@ -96,11 +96,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordInput = document.getElementById('login-password');
   const submitBtn = document.getElementById('login-submit-btn');
 
-  function showAlert(msg, isSuccess = false) {
+  function showAlert(msg, isSuccess = false, showUnblockBtn = false) {
     if (!alertEl) return;
-    alertEl.textContent = msg;
+    alertEl.innerHTML = `
+      <div>${msg}</div>
+      ${showUnblockBtn ? `
+        <button id="alert-unblock-btn" style="margin-top: 0.75rem; background: #dc2626; color: #ffffff; border: none; padding: 0.4rem 0.85rem; border-radius: 6px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;">
+          🔓 Click Here to Unblock Account / IP Now
+        </button>
+      ` : ''}
+    `;
     alertEl.className = isSuccess ? 'alert alert-success' : 'alert alert-danger';
     alertEl.style.display = 'block';
+
+    const alertUnblock = document.getElementById('alert-unblock-btn');
+    if (alertUnblock) {
+      alertUnblock.addEventListener('click', unblockEntity);
+    }
   }
 
   function hideAlert() {
@@ -156,19 +168,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  if (resetBtn) {
-    resetBtn.addEventListener('click', async () => {
-      try {
-        const res = await fetch('/api/auth/reset-threat-stores', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          updateRiskWidget(0, 'LOW (ALLOW)', []);
-          showAlert('🧹 Threat stores cleared. Risk score reset to 0.', true);
-        }
-      } catch (e) {
-        console.error('Reset error:', e);
+  async function unblockEntity() {
+    try {
+      const res = await fetch('/api/auth/unblock-entity', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        updateRiskWidget(0, 'LOW (ALLOW)', []);
+        showAlert('🟢 Account and IP have been successfully unblocked! You may now sign in.', true);
       }
-    });
+    } catch (e) {
+      console.error('Unblock error:', e);
+    }
+  }
+
+  async function fetchLiveThreatStatus() {
+    try {
+      const id = emailInput ? emailInput.value.trim() : '';
+      const res = await fetch(`/api/auth/current-threat-status?identifier=${encodeURIComponent(id || 'unknown')}`);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        updateRiskWidget(data.riskScore, data.riskLevel, data.reasons || []);
+        if (data.isBlocked) {
+          showAlert('Access blocked due to suspicious activity.', false, true);
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Poll live threat status every 1.5 seconds for real-time risk meter updates
+  fetchLiveThreatStatus();
+  setInterval(fetchLiveThreatStatus, 1500);
+
+  if (emailInput) {
+    emailInput.addEventListener('input', fetchLiveThreatStatus);
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', unblockEntity);
   }
 
   if (form) {
@@ -211,7 +247,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!response.ok || !data.success) {
-          return showAlert(data.message || 'Login failed. Invalid credentials.');
+          const isBlocked = data.riskScore >= 70 || (data.message && data.message.toLowerCase().includes('blocked'));
+          return showAlert(data.message || 'Login failed. Invalid credentials.', false, isBlocked);
         }
 
         showAlert('Sign in successful! Establishing trusted session environment...', true);
