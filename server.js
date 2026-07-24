@@ -53,6 +53,10 @@ app.use('/api/risk', riskModule.router);
 app.use('/api/analyst', analystModule.router);
 app.use('/api/card-not-present', cardNotPresentModule.router);
 
+// Direct root aliases for official authorization and review completion
+app.use('/api/official', analystModule.router);
+app.use('/api/review', analystModule.router);
+
 // Protected API Route example
 app.get('/api/protected/dashboard-data', sessionModule.requireAuth, (req, res) => {
   res.json({

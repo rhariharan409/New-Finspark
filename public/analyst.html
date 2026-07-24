@@ -272,7 +272,6 @@
           <li><a id="nav-investigation">🔍 Investigation & Money Flow</a></li>
           <li><a id="nav-high-risk">🚨 High Risk Sessions</a></li>
           <li><a id="nav-ato-investigation">🛡️ Account Takeover Investigation</a></li>
-          <li><a id="nav-insider-threat">🕵️ Insider Threat Monitor</a></li>
           <li><a id="nav-settings">⚙️ Settings</a></li>
         </ul>
       </div>
@@ -477,19 +476,286 @@
               </tbody>
             </table>
           </div>
+
+          <!-- COMPLETE REVIEW CYCLE ACTION BUTTON -->
+          <div style="display: flex; justify-content: flex-end; margin-top: 1.25rem;">
+            <button type="button" id="hr-complete-review-btn" class="btn btn-danger" style="background: #dc2626; border-color: #dc2626; padding: 0.75rem 2rem; font-size: 0.95rem; font-weight: 800; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);">
+              ✅ COMPLETE REVIEW CYCLE
+            </button>
+          </div>
         </div>
 
-        <!-- COMPLETE REVIEW BATCH BUTTON -->
-        <div id="hr-complete-review-container" style="margin-bottom: 1.5rem; text-align: center; background: #faf5ff; border: 2px dashed #a855f7; padding: 1.25rem; border-radius: 10px;">
-          <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; color: #5b21b6; font-weight: 800;">
-            ✓ Complete Current Review Cycle Batch
-          </h4>
-          <p style="margin: 0 0 0.85rem 0; font-size: 0.85rem; color: #6b21a8;">
-            Finished reviewing individual high-risk sessions? Click below to complete your active review cycle batch. The system will compare your completed batch metrics against your historical database baseline.
-          </p>
-          <button type="button" id="hr-complete-review-btn" class="btn btn-primary" style="background: #7c3aed; border-color: #7c3aed; padding: 0.65rem 2rem; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); cursor: pointer;">
-            ✓ COMPLETE REVIEW & ANALYZE BATCH
-          </button>
+        <!-- HIGHER OFFICIAL AUTHORIZATION & REVIEW COMPLETION FORM (REVEALED ON COMPLETE REVIEW CLICK) -->
+        <div id="hr-complete-review-container" class="card" style="display: none; border-top: 4px solid #2563eb; background: #ffffff; padding: 1.5rem; margin-bottom: 1.5rem; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+          <div style="margin-bottom: 1.25rem;">
+            <h3 style="margin: 0 0 0.4rem 0; font-size: 1.15rem; color: #0f172a; font-weight: 800;">
+              Complete Review Cycle & Generate Official Analyst Activity Documentation Report
+            </h3>
+            <p style="margin: 0; font-size: 0.88rem; color: #475569; line-height: 1.4;">
+              Finished reviewing high-risk sessions and recording decision reasons? Authorize the completion of this review cycle to generate a formal, printable Analyst Activity Documentation Report.
+            </p>
+          </div>
+
+          <!-- INLINE AUTHORIZATION ERROR MESSAGE -->
+          <div id="official-auth-error" style="display: none; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.88rem; font-weight: 700; margin-bottom: 1.25rem;">
+            <!-- Rendered dynamically on error -->
+          </div>
+
+          <!-- CREDENTIAL INPUTS GRID -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1rem; text-align: left;">
+            <div>
+              <label for="official-email-input" class="form-label" style="font-weight: 700; color: #0f172a;">Higher Official Email</label>
+              <input type="email" id="official-email-input" class="form-input" placeholder="Enter higher official email" required style="width: 100%; padding: 0.65rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;">
+            </div>
+
+            <div>
+              <label for="official-password-input" class="form-label" style="font-weight: 700; color: #0f172a;">Higher Official Password</label>
+              <input type="password" id="official-password-input" class="form-input" placeholder="Enter higher official password" required style="width: 100%; padding: 0.65rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;">
+              
+              <div style="margin-top: 0.4rem; display: flex; align-items: center; gap: 0.4rem;">
+                <input type="checkbox" id="toggle-official-password" style="cursor: pointer;">
+                <label for="toggle-official-password" style="font-size: 0.8rem; color: #475569; cursor: pointer; font-weight: 600;">Show password</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- AUTHORIZE BUTTON -->
+          <div style="text-align: right; margin-top: 1rem;">
+            <button type="button" id="btn-authorize-complete-review" class="btn btn-primary" style="background: #2563eb; border-color: #2563eb; padding: 0.75rem 2rem; font-size: 0.95rem; font-weight: 800; border-radius: 6px; cursor: pointer; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
+              AUTHORIZE & COMPLETE REVIEW
+            </button>
+          </div>
+
+          <!-- STEP-BY-STEP PROGRESS STATUS OVERLAY -->
+          <div id="official-progress-overlay" style="display: none; margin-top: 1.25rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem; text-align: left;">
+            <h4 style="margin: 0 0 0.85rem 0; font-size: 0.95rem; color: #0f172a; font-weight: 800;">Review Cycle Authorization Progress</h4>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.85rem;">
+              <div id="prog-step-1" style="display: flex; justify-content: space-between; align-items: center; color: #475569;">
+                <span>Authenticating Higher Official</span>
+                <span class="prog-icon" style="font-weight: 800; color: #2563eb;">⟳</span>
+              </div>
+              <div id="prog-step-2" style="display: flex; justify-content: space-between; align-items: center; color: #94a3b8;">
+                <span>Completing Review Cycle</span>
+                <span class="prog-icon" style="font-weight: 800;">⋯</span>
+              </div>
+              <div id="prog-step-3" style="display: flex; justify-content: space-between; align-items: center; color: #94a3b8;">
+                <span>Collecting Analyst Activities</span>
+                <span class="prog-icon" style="font-weight: 800;">⋯</span>
+              </div>
+              <div id="prog-step-4" style="display: flex; justify-content: space-between; align-items: center; color: #94a3b8;">
+                <span>Generating Documentation Report</span>
+                <span class="prog-icon" style="font-weight: 800;">⋯</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- COMPLETED REVIEW CYCLE TELEMETRY & BEHAVIORAL BASELINE DETAILS PANEL -->
+        <div id="review-cycle-telemetry-result" style="display: none; margin-bottom: 1.5rem;">
+          
+          <!-- AUTHORIZATION SUCCESS BANNER -->
+          <div style="display: flex; justify-content: space-between; align-items: center; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+            <div>
+              <span class="badge badge-low" style="font-weight: 800; background: #059669; color: #ffffff;">✓ AUTHORIZATION SUCCESSFUL & REVIEW CYCLE COMPLETED</span>
+              <h4 style="margin: 0.25rem 0 0 0; font-size: 1.1rem; color: #064e3b; font-weight: 800;">Official Analyst Behavioral Baseline & Operational Telemetry Result</h4>
+            </div>
+            <button type="button" id="btn-reopen-pdf-report" class="btn btn-primary" style="background: #2563eb; border-color: #2563eb; padding: 0.6rem 1.25rem; font-weight: 800; border-radius: 6px; cursor: pointer;">
+              📄 VIEW OFFICIAL PRINTABLE PDF REPORT
+            </button>
+          </div>
+
+          <!-- TARGET ANALYST PROFILE BANNER -->
+          <div class="card" style="border-top: 4px solid #7c3aed; background: #ffffff; margin-bottom: 1.25rem;">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 1rem; align-items: center; font-size: 0.85rem;">
+              <div>
+                <label style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 0.25rem;">TARGET ANALYST PROFILE INSPECTED</label>
+                <strong style="font-size: 1rem; color: #0f172a;" id="insider-target-profile-val">Analyzer 01 (analyzer1@gmail.com)</strong>
+              </div>
+              <div>
+                <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 0.25rem;">DEPARTMENT</span>
+                <strong style="color: #0f172a;" id="insider-department-val">Fraud Operations</strong>
+              </div>
+              <div>
+                <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 0.25rem;">WORKING WINDOW</span>
+                <strong style="color: #0f172a;" id="insider-working-hours-val">09:00 AM – 06:00 PM EST</strong>
+              </div>
+              <div>
+                <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 0.25rem;">EVALUATED RISK STATUS</span>
+                <span id="insider-risk-badge" class="badge badge-low" style="font-weight: 800; font-size: 0.85rem;">NORMAL</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- GRID 1: HISTORICAL NORMAL BASELINE vs CURRENT OPERATIONAL TELEMETRY -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
+            
+            <!-- CARD 1: HISTORICAL NORMAL BEHAVIORAL BASELINE -->
+            <div style="background: #ffffff; border: 1px solid #a7f3d0; border-top: 4px solid #10b981; border-radius: 8px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+              <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: #065f46; font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
+                🌱 HISTORICAL NORMAL BEHAVIORAL BASELINE
+              </h4>
+
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Average Daily Review Volume:</span>
+                  <strong style="color: #0f172a;" id="base-avg-reviews">10 reviews / day</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Normal Working Hours:</span>
+                  <strong style="color: #0f172a;" id="base-normal-hours">09:00 AM – 06:00 PM EST</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Normal Working Days:</span>
+                  <strong style="color: #0f172a;" id="base-normal-days">Monday – Friday</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Normal Location:</span>
+                  <strong style="color: #0f172a;" id="base-normal-location">New York, US</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Authorized IP Address:</span>
+                  <strong style="color: #0f172a;" id="base-normal-ip">192.168.1.101</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Authorized Workstation Device:</span>
+                  <strong style="color: #0f172a;" id="base-normal-device">Chrome 122 on Windows 11 Workstation</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #475569;">Normal Max Transaction Reviewed:</span>
+                  <strong style="color: #0f172a;" id="base-max-amount">₹50,000</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- CARD 2: CURRENT OPERATIONAL ACTIVITY TELEMETRY -->
+            <div style="background: #ffffff; border: 1px solid #fed7aa; border-top: 4px solid #f97316; border-radius: 8px; padding: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+              <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: #c2410c; font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
+                ⚡ CURRENT OPERATIONAL ACTIVITY TELEMETRY
+              </h4>
+
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem;">
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Total Reviews Handled Today:</span>
+                  <strong style="color: #c2410c; font-weight: 800;" id="curr-reviews-today">60 review(s) handled today</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Last Action Time:</span>
+                  <strong style="color: #0f172a;" id="curr-action-time">11:45 PM</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Current Operational Location:</span>
+                  <strong style="color: #c2410c; font-weight: 800;" id="curr-location">Frankfurt, Germany (Tor Proxy Node)</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Current Originating IP Address:</span>
+                  <strong style="color: #0f172a; font-weight: 800;" id="curr-ip">192.168.1.101</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Current Environment Device:</span>
+                  <strong style="color: #c2410c; font-weight: 800;" id="curr-device">Firefox 120 on Kali Linux (Unrecognized Device)</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.4rem;">
+                  <span style="color: #475569;">Current Reviewed Amount:</span>
+                  <strong style="color: #0f172a; font-weight: 800;" id="curr-amount">₹25,000</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span style="color: #475569;">Total Accepted / Rejected Counters:</span>
+                  <strong style="color: #0f172a; font-weight: 800;" id="curr-counters">Accepted: 0 | Rejected: 0</strong>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- CARD 3: DETECTED BEHAVIORAL DEVIATION SIGNALS -->
+          <div class="card" style="border-top: 4px solid #f59e0b; margin-bottom: 1.25rem;">
+            <div class="section-title">
+              <div>
+                <span style="font-size: 1.1rem; font-weight: 800; color: #92400e;">⚠️ DETECTED BEHAVIORAL DEVIATION SIGNALS</span>
+                <div style="font-size: 0.8rem; color: #64748b;">Multi-signal anomaly breakdown calculated against analyst's historical baseline</div>
+              </div>
+              <span id="deviation-count-badge" class="badge badge-high">0 DEVIATION(S) DETECTED</span>
+            </div>
+
+            <div id="insider-deviations-list" style="display: flex; flex-direction: column; gap: 0.65rem;">
+              <div style="text-align: center; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1rem; border-radius: 6px; font-weight: 600;">
+                ✅ Operational activity aligns strictly with historical analyst baseline. No anomalies detected.
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD 4: FULL POSSIBILITIES OF INSIDER THREAT & RISK EVALUATION (%) -->
+          <div class="card" style="border-top: 5px solid #dc2626; background: #fafafa; margin-bottom: 1.25rem;">
+            <div class="section-title">
+              <div>
+                <span style="font-size: 1.15rem; font-weight: 800; color: #991b1b;">🚨 FULL POSSIBILITIES OF INSIDER THREAT & RISK EVALUATION (%)</span>
+                <div style="font-size: 0.8rem; color: #64748b;">Comprehensive threat vector analysis evaluating potential internal malicious or compromised analyst scenarios</div>
+              </div>
+              <span id="threat-percentage-badge" class="badge badge-low" style="font-size: 1.05rem; padding: 0.35rem 0.85rem; font-weight: 900;">0% THREAT LEVEL</span>
+            </div>
+
+            <!-- THREAT PERCENTAGE GAUGE BAR -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.85rem; font-weight: 800; color: #0f172a; text-transform: uppercase;">Overall Insider Threat Probability Score</span>
+                <span id="threat-percentage-text" style="font-size: 1.4rem; font-weight: 900; color: #059669;">0%</span>
+              </div>
+              
+              <div style="width: 100%; height: 16px; background: #e2e8f0; border-radius: 8px; overflow: hidden; position: relative;">
+                <div id="threat-percentage-fill" style="width: 0%; height: 100%; background: #059669; transition: width 0.5s ease, background 0.5s ease;"></div>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: #64748b; margin-top: 0.35rem; font-weight: 700;">
+                <span>0% (NORMAL)</span>
+                <span>30% (LOW DEVIATION)</span>
+                <span>60% (HIGH DEVIATION)</span>
+                <span>80%-100% (CRITICAL INSIDER THREAT)</span>
+              </div>
+            </div>
+
+            <!-- THREAT POSSIBILITIES MATRIX TABLE -->
+            <h4 style="font-size: 0.95rem; color: #0f172a; margin-bottom: 0.75rem; font-weight: 800;">
+              Full Possibilities & Malicious Threat Vector Matrix
+            </h4>
+
+            <div id="threat-possibilities-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div style="text-align: center; color: #64748b; padding: 1rem;">Loading threat vectors...</div>
+            </div>
+          </div>
+
+          <!-- CARD 5: HISTORICAL COMPLETED REVIEW CYCLES ANALYSIS TABLE -->
+          <div class="card" style="border-top: 4px solid #2563eb; margin-bottom: 1.25rem;">
+            <div class="section-title">
+              <div>
+                <span style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">📜 HISTORICAL COMPLETED REVIEW CYCLES & ANALYSIS AUDIT TRAIL</span>
+                <div style="font-size: 0.8rem; color: #64748b;">Chronological audit log of all completed review cycle batches and analyzed database deviations</div>
+              </div>
+              <span id="insider-history-count-badge" class="badge badge-low">0 CYCLES COMPLETED</span>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="data-table" style="font-size: 0.82rem;">
+                <thead>
+                  <tr>
+                    <th>Cycle ID</th>
+                    <th>Completion Time</th>
+                    <th>Batch Size</th>
+                    <th>Approved / Rejected</th>
+                    <th>Duration</th>
+                    <th>Location</th>
+                    <th>Risk Level</th>
+                    <th>Threat Score</th>
+                  </tr>
+                </thead>
+                <tbody id="insider-history-table-body">
+                  <tr><td colspan="8" style="text-align:center; color:#64748b; padding: 1.25rem;">No completed review cycles recorded yet. Complete a review batch using [ AUTHORIZE & COMPLETE REVIEW ].</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
 
         <!-- DETAILED RISK EXPLANATION & EVIDENCE REPORT CARD (INSPECT VIEW) -->
@@ -1131,222 +1397,291 @@
       <!-- ========================================================= -->
       <!-- VIEW: INSIDER THREAT BEHAVIORAL MONITORING WORKSPACE      -->
       <!-- ========================================================= -->
-      <div id="insider-threat-workspace" style="display: none;">
-        
-        <!-- INSIDER THREAT HEADER & CONTROLS -->
-        <div class="card" style="border-top: 4px solid #7c3aed; margin-bottom: 1.5rem; background: #faf5ff;">
-          <div class="section-title">
-            <div>
-              <span style="font-size: 1.25rem; font-weight: 700; color: #5b21b6;">🕵️ INSIDER THREAT BEHAVIORAL MONITORING SYSTEM</span>
-              <div style="font-size: 0.8rem; color: #6b21a8;">Dynamic batch analysis triggered strictly on [ COMPLETE REVIEW ] using real database telemetry and analyst history</div>
-            </div>
-            <span id="insider-cycle-badge" class="badge" style="background: #7c3aed; color: #ffffff; font-weight: 800; font-size: 0.82rem; padding: 0.35rem 0.75rem;">BATCH ANALYSIS ACTIVE</span>
-          </div>
-
-          <!-- ANALYST SELECTION FOR INSIDER THREAT INSPECTION -->
-          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background: #ffffff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff;">
-            <div>
-              <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #5b21b6; text-transform: uppercase; margin-bottom: 0.25rem;">Target Analyst Profile to Inspect</label>
-              <select id="insider-analyst-select" class="form-input" style="min-width: 280px; font-size: 0.88rem; font-weight: 700; color: #0f172a; border-color: #c084fc;">
-                <!-- Populated dynamically via JS -->
-              </select>
-            </div>
-
-            <div style="display: flex; gap: 1rem; align-items: center;">
-              <div>
-                <span style="font-size: 0.7rem; color: #6b21a8; font-weight: 700; text-transform: uppercase; display: block;">Department</span>
-                <strong id="insider-department-val" style="color: #0f172a; font-size: 0.9rem;">Fraud Operations</strong>
-              </div>
-              <div style="height: 30px; width: 1px; background: #e9d5ff;"></div>
-              <div>
-                <span style="font-size: 0.7rem; color: #6b21a8; font-weight: 700; text-transform: uppercase; display: block;">Working Window</span>
-                <strong id="insider-working-hours-val" style="color: #0f172a; font-size: 0.9rem;">09:00 AM – 06:00 PM EST</strong>
-              </div>
-              <div style="height: 30px; width: 1px; background: #e9d5ff;"></div>
-              <div>
-                <span style="font-size: 0.7rem; color: #6b21a8; font-weight: 700; text-transform: uppercase; display: block;">Evaluated Risk Status</span>
-                <span id="insider-risk-badge" class="badge badge-low" style="font-weight: 800; font-size: 0.85rem;">NORMAL</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- LEARNING MODE NOTIFICATION BANNER -->
-        <div id="insider-learning-mode-banner" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; color: #1e40af; font-size: 0.88rem;">
-          <strong style="font-size: 0.95rem;">ℹ️ LEARNING MODE ACTIVE:</strong>
-          <span id="insider-learning-msg">Accumulating historical database review cycles to build a reliable behavioral baseline.</span>
-        </div>
-
-        <!-- BASELINE VS CURRENT OPERATIONAL ACTIVITY COMPARISON GRID -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+      <!-- ========================================================= -->
+      <!-- ANALYST ACTIVITY DOCUMENTATION REPORT MODAL (PRINTABLE PDF)-->
+      <!-- ========================================================= -->
+      <!-- ========================================================= -->
+      <!-- ANALYST ACTIVITY DOCUMENTATION REPORT MODAL (PRINTABLE PDF)-->
+      <!-- ========================================================= -->
+      <div id="analyst-activity-report-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); z-index: 10000; overflow-y: auto; padding: 2rem 1rem;">
+        <div style="background: #ffffff; border-radius: 12px; max-width: 960px; margin: 0 auto; padding: 2rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); position: relative;">
           
-          <!-- NORMAL BEHAVIORAL BASELINE CARD -->
-          <div class="card" style="border-top: 4px solid #059669; margin: 0; background: #f0fdf4;">
-            <h3 style="margin: 0 0 1rem 0; font-size: 1.05rem; color: #065f46; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-              <span>🌱 HISTORICAL NORMAL BEHAVIORAL BASELINE</span>
-            </h3>
+          <!-- SUCCESS PREVIEW ACTION BAR (NOT PRINTED) -->
+          <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;">
+            <div>
+              <div style="font-size: 0.8rem; font-weight: 800; color: #065f46; text-transform: uppercase; letter-spacing: 0.5px;">✓ REPORT GENERATED SUCCESSFULLY</div>
+              <h3 style="margin: 0.15rem 0 0 0; font-size: 1.15rem; color: #064e3b; font-weight: 800;">Official Analyst Activity Documentation Report</h3>
+            </div>
+            <div style="display: flex; gap: 0.75rem; align-items: center;">
+              <button type="button" id="btn-open-analyst-pdf" class="btn btn-outline" style="background: #ffffff; color: #064e3b; border-color: #a7f3d0; padding: 0.55rem 1rem; font-weight: 700;">
+                👁️ Open Report
+              </button>
+              <button type="button" id="btn-print-analyst-pdf" class="btn btn-primary" style="background: #059669; border-color: #059669; padding: 0.55rem 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
+                🖨️ Print Report
+              </button>
+              <button type="button" id="btn-download-analyst-pdf" class="btn btn-primary" style="background: #2563eb; border-color: #2563eb; padding: 0.55rem 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
+                📥 Save as PDF
+              </button>
+              <button type="button" id="btn-close-analyst-report" class="btn btn-outline" style="padding: 0.55rem 1rem; font-weight: 700;">
+                ✕ Close
+              </button>
+            </div>
+          </div>
+
+          <!-- PRINTABLE DOCUMENT CONTAINER -->
+          <div id="printable-analyst-report" style="background: #ffffff; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 1rem;">
             
-            <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem; color: #166534;">
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
-                <span>Average Daily Review Volume:</span>
-                <strong id="base-avg-reviews" style="color: #047857;">10 reviews / day</strong>
+            <!-- PAGE 1: OFFICIAL COVER & HEADER -->
+            <div class="report-page" style="margin-bottom: 2rem;">
+              <div style="border-bottom: 3px double #0f172a; padding-bottom: 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                    <span style="font-size: 1.5rem; font-weight: 900; color: #2563eb; letter-spacing: -0.5px;">FINSPARK</span>
+                    <span style="font-size: 0.75rem; font-weight: 800; background: #0f172a; color: #ffffff; padding: 0.2rem 0.6rem; border-radius: 4px; text-transform: uppercase;">Financial Threat Intelligence Platform</span>
+                  </div>
+                  <h1 style="margin: 0; font-size: 1.35rem; color: #0f172a; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px;">OFFICIAL ANALYST ACTIVITY DOCUMENTATION REPORT</h1>
+                  <div style="font-size: 0.8rem; color: #475569; margin-top: 0.25rem;">Fraud Operations & Executive Oversight Audit Compliance Record</div>
+                </div>
+                <div style="text-align: right; font-size: 0.82rem; color: #334155;">
+                  <div style="font-weight: 800; color: #0f172a;" id="rpt-doc-ref">Report ID: REPORT-2026-001</div>
+                  <div style="font-weight: 700; color: #2563eb;" id="rpt-doc-cycle">Cycle ID: RC-2026-001</div>
+                  <div style="color: #64748b;" id="rpt-doc-date">Date: July 24, 2026 | Time: 08:25:00 UTC</div>
+                  <div style="margin-top: 0.35rem;"><span class="badge" style="background: #059669; color: #ffffff; font-weight: 800; padding: 0.25rem 0.6rem;">AUTHORIZED BY HIGHER OFFICIAL</span></div>
+                </div>
               </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
-                <span>Normal Working Hours:</span>
-                <strong id="base-normal-hours" style="color: #047857;">09:00 AM – 06:00 PM EST</strong>
+
+              <!-- ANALYST INFORMATION GRID -->
+              <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; font-size: 0.85rem;">
+                <div>
+                  <span style="display: block; font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Analyst Name</span>
+                  <strong style="color: #0f172a; font-size: 0.95rem;" id="rpt-analyst-name">Sarah Connor</strong>
+                </div>
+                <div>
+                  <span style="display: block; font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Analyst ID</span>
+                  <strong style="color: #0f172a;" id="rpt-analyst-id">ANL-001001</strong>
+                </div>
+                <div>
+                  <span style="display: block; font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Department / Team</span>
+                  <strong style="color: #0f172a;" id="rpt-analyst-dept">Fraud Operations & Risk Management</strong>
+                </div>
+                <div>
+                  <span style="display: block; font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Review Cycle</span>
+                  <strong style="color: #2563eb;" id="rpt-analyst-cycle">RC-2026-001</strong>
+                </div>
               </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
-                <span>Normal Working Days:</span>
-                <strong id="base-normal-days" style="color: #047857;">Monday – Friday</strong>
-              </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
-                <span>Normal Location:</span>
-                <strong id="base-normal-location" style="color: #047857;">New York, US</strong>
-              </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
-                <span>Authorized IP Address:</span>
-                <code id="base-normal-ip" style="color: #047857; font-weight: 700;">192.168.1.101</code>
-              </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
-                <span>Authorized Workstation Device:</span>
-                <strong id="base-normal-device" style="color: #047857; font-size: 0.8rem;">Chrome 122 on Windows 11 Workstation</strong>
-              </div>
-              <div style="display: flex; justify-content: space-between;">
-                <span>Normal Max Transaction Reviewed:</span>
-                <strong id="base-max-amount" style="color: #047857;">₹50,000</strong>
+
+              <!-- REVIEW SUMMARY BOX -->
+              <div style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 1.25rem; background: #ffffff; margin-bottom: 1.5rem;">
+                <h3 style="font-size: 0.95rem; color: #0f172a; margin-bottom: 0.85rem; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.4rem;">
+                  REVIEW SUMMARY
+                </h3>
+
+                <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; text-align: center;">
+                  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.75rem;">
+                    <div style="font-size: 0.68rem; font-weight: 800; color: #64748b; text-transform: uppercase;">Transactions Reviewed</div>
+                    <div style="font-size: 1.4rem; font-weight: 900; color: #0f172a; margin-top: 0.2rem;" id="rpt-sum-txns">42</div>
+                  </div>
+                  <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 0.75rem;">
+                    <div style="font-size: 0.68rem; font-weight: 800; color: #991b1b; text-transform: uppercase;">High-Risk Sessions</div>
+                    <div style="font-size: 1.4rem; font-weight: 900; color: #dc2626; margin-top: 0.2rem;" id="rpt-sum-high">8</div>
+                  </div>
+                  <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 0.75rem;">
+                    <div style="font-size: 0.68rem; font-weight: 800; color: #92400e; text-transform: uppercase;">Medium-Risk Sessions</div>
+                    <div style="font-size: 1.4rem; font-weight: 900; color: #d97706; margin-top: 0.2rem;" id="rpt-sum-med">14</div>
+                  </div>
+                  <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.75rem;">
+                    <div style="font-size: 0.68rem; font-weight: 800; color: #166534; text-transform: uppercase;">Low-Risk Sessions</div>
+                    <div style="font-size: 1.4rem; font-weight: 900; color: #059669; margin-top: 0.2rem;" id="rpt-sum-low">20</div>
+                  </div>
+                  <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 0.75rem;">
+                    <div style="font-size: 0.68rem; font-weight: 800; color: #1e40af; text-transform: uppercase;">Threat Investigations</div>
+                    <div style="font-size: 1.4rem; font-weight: 900; color: #2563eb; margin-top: 0.2rem;" id="rpt-sum-investigations">5</div>
+                  </div>
+                  <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 6px; padding: 0.75rem;">
+                    <div style="font-size: 0.68rem; font-weight: 800; color: #6b21a8; text-transform: uppercase;">Completed Reviews</div>
+                    <div style="font-size: 1.4rem; font-weight: 900; color: #7c3aed; margin-top: 0.2rem;" id="rpt-sum-completed">8</div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- CURRENT OPERATIONAL ACTIVITY CARD -->
-          <div class="card" style="border-top: 4px solid #ea580c; margin: 0; background: #fff7ed;">
-            <h3 style="margin: 0 0 1rem 0; font-size: 1.05rem; color: #9a3412; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-              <span>⚡ CURRENT OPERATIONAL ACTIVITY TELEMETRY</span>
-            </h3>
+            <!-- PAGE 2: COMPLETE ANALYST ACTIVITY LOG -->
+            <div class="report-page" style="margin-bottom: 2rem;">
+              <h3 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.75rem; font-weight: 800; text-transform: uppercase; border-bottom: 2px solid #0f172a; padding-bottom: 0.35rem;">
+                COMPLETE ANALYST ACTIVITY LOG
+              </h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 1.5rem;">
+                <thead>
+                  <tr style="background: #0f172a; color: #ffffff; text-align: left;">
+                    <th style="padding: 0.6rem; width: 40px;">#</th>
+                    <th style="padding: 0.6rem; width: 90px;">Time</th>
+                    <th style="padding: 0.6rem; width: 140px;">Activity</th>
+                    <th style="padding: 0.6rem; width: 110px;">Entity / Txn ID</th>
+                    <th style="padding: 0.6rem; width: 90px;">Result</th>
+                    <th style="padding: 0.6rem;">Analyst Action / Description</th>
+                  </tr>
+                </thead>
+                <tbody id="rpt-activity-table-body">
+                  <!-- Dynamically populated via JS -->
+                </tbody>
+              </table>
+            </div>
 
-            <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem; color: #7c2d12;">
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
-                <span>Total Reviews Handled Today:</span>
-                <strong id="curr-reviews-today" style="color: #ea580c;">1 review</strong>
+            <!-- PAGE 3: DECISION LOG -->
+            <div class="report-page" style="margin-bottom: 2rem;">
+              <h3 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.75rem; font-weight: 800; text-transform: uppercase; border-bottom: 2px solid #0f172a; padding-bottom: 0.35rem;">
+                DECISION LOG & RATIONALE
+              </h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 1.5rem;">
+                <thead>
+                  <tr style="background: #0f172a; color: #ffffff; text-align: left;">
+                    <th style="padding: 0.6rem;">Transaction / Session ID</th>
+                    <th style="padding: 0.6rem;">Risk Level</th>
+                    <th style="padding: 0.6rem;">Risk Score</th>
+                    <th style="padding: 0.6rem;">Analyst Decision</th>
+                    <th style="padding: 0.6rem;">Decision Reason & Justification Notes</th>
+                  </tr>
+                </thead>
+                <tbody id="rpt-decision-table-body">
+                  <!-- Dynamically populated via JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- PAGE 4: VERIFICATION RESULTS -->
+            <div class="report-page" style="margin-bottom: 2rem;">
+              <h3 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.75rem; font-weight: 800; text-transform: uppercase; border-bottom: 2px solid #0f172a; padding-bottom: 0.35rem;">
+                SYSTEM VERIFICATION RESULTS
+              </h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 1.5rem;">
+                <thead>
+                  <tr style="background: #0f172a; color: #ffffff; text-align: left;">
+                    <th style="padding: 0.6rem;">Verification Check</th>
+                    <th style="padding: 0.6rem; width: 140px;">Status Text</th>
+                    <th style="padding: 0.6rem;">System Rationale & Baseline Analysis</th>
+                  </tr>
+                </thead>
+                <tbody id="rpt-verification-table-body">
+                  <!-- Dynamically populated via JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- PAGE 5: THREAT INTELLIGENCE SECTION -->
+            <div class="report-page" style="margin-bottom: 2rem;">
+              <h3 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.75rem; font-weight: 800; text-transform: uppercase; border-bottom: 2px solid #0f172a; padding-bottom: 0.35rem;">
+                THREAT INTELLIGENCE FINDINGS
+              </h3>
+              
+              <!-- VISUAL RELATIONSHIP TOPOLOGY -->
+              <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; text-align: center;">
+                <div style="font-size: 0.75rem; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 0.75rem;">Visual Threat Relationship Summary</div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 800; font-size: 0.85rem; color: #0f172a; flex-wrap: wrap;">
+                  <span style="background:#ffffff; border:1px solid #cbd5e1; padding:0.4rem 0.75rem; border-radius:6px;">User (Hariharan)</span>
+                  <span style="color:#2563eb;">↓</span>
+                  <span style="background:#ffffff; border:1px solid #cbd5e1; padding:0.4rem 0.75rem; border-radius:6px;">Session (SES-88291)</span>
+                  <span style="color:#2563eb;">↓</span>
+                  <span style="background:#ffffff; border:1px solid #cbd5e1; padding:0.4rem 0.75rem; border-radius:6px;">Device (Chrome/Win)</span>
+                  <span style="color:#2563eb;">↓</span>
+                  <span style="background:#ffffff; border:1px solid #cbd5e1; padding:0.4rem 0.75rem; border-radius:6px;">IP Address (192.168.4.11)</span>
+                  <span style="color:#2563eb;">↓</span>
+                  <span style="background:#ffffff; border:1px solid #cbd5e1; padding:0.4rem 0.75rem; border-radius:6px;">Transaction (₹85,000)</span>
+                  <span style="color:#dc2626;">↓</span>
+                  <span style="background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:0.4rem 0.75rem; border-radius:6px;">Threat Intelligence (HIGH)</span>
+                </div>
               </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
-                <span>Last Action Time:</span>
-                <strong id="curr-action-time" style="color: #ea580c;">-</strong>
-              </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
-                <span>Current Operational Location:</span>
-                <strong id="curr-location" style="color: #ea580c;">New York, US</strong>
-              </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
-                <span>Current Originating IP Address:</span>
-                <code id="curr-ip" style="color: #ea580c; font-weight: 700;">192.168.1.101</code>
-              </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
-                <span>Current Environment Device:</span>
-                <strong id="curr-device" style="color: #ea580c; font-size: 0.8rem;">Chrome 122 on Windows 11 Workstation</strong>
-              </div>
-              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
-                <span>Current Reviewed Amount:</span>
-                <strong id="curr-amount" style="color: #ea580c;">₹25,000</strong>
-              </div>
-              <div style="display: flex; justify-content: space-between;">
-                <span>Total Accepted / Rejected Counters:</span>
-                <strong id="curr-counters" style="color: #ea580c;">Accepted: 0 | Rejected: 0</strong>
+
+              <div id="rpt-threat-intel-details" style="font-size: 0.85rem;">
+                <!-- Dynamically populated via JS -->
               </div>
             </div>
+
+            <!-- PAGE 6: FINAL REVIEW COMPLETION SIGN-OFF RECORD -->
+            <div class="report-page" style="border: 2px solid #0f172a; border-radius: 8px; padding: 1.5rem; background: #fafafa;">
+              <h3 style="font-size: 1.1rem; color: #0f172a; margin-bottom: 0.5rem; font-weight: 900; text-transform: uppercase;">
+                REVIEW CYCLE FINAL SIGN-OFF RECORD
+              </h3>
+              <p style="margin: 0 0 1.25rem 0; font-size: 0.85rem; color: #475569; line-height: 1.4;">
+                This document certifies that all activities performed during the review cycle have been fully audited, recorded, and authorized by a higher official. Higher officials may reference these itemized decisions during future risk review meetings to discuss analyst rationales.
+              </p>
+
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; font-size: 0.85rem; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                  <span style="display: block; font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Review Status</span>
+                  <strong style="color: #059669; font-size: 0.95rem;">COMPLETED</strong>
+                </div>
+                <div>
+                  <span style="display: block; font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Authorized By</span>
+                  <strong style="color: #0f172a; font-size: 0.95rem;" id="rpt-sign-auth-by">Higher Official (rhariharan409@gmail.com)</strong>
+                </div>
+                <div>
+                  <span style="display: block; font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Authorization Time</span>
+                  <strong style="color: #0f172a;" id="rpt-sign-auth-time">July 24, 2026 08:25:00 UTC</strong>
+                </div>
+                <div>
+                  <span style="display: block; font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Review Cycle ID / Report ID</span>
+                  <strong style="color: #2563eb;" id="rpt-sign-ids">RC-2026-001 / REPORT-2026-001</strong>
+                </div>
+              </div>
+
+              <!-- OFFICIAL SIGNATURE BLOCKS -->
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #cbd5e1; font-size: 0.78rem;">
+                <div>
+                  <div style="border-bottom: 1px solid #0f172a; height: 35px; margin-bottom: 0.35rem;"></div>
+                  <strong style="display: block; color: #0f172a;">Investigating Analyst Signature</strong>
+                  <span style="color: #64748b;">Date: ________________________</span>
+                </div>
+                <div>
+                  <div style="border-bottom: 1px solid #0f172a; height: 35px; margin-bottom: 0.35rem;"></div>
+                  <strong style="display: block; color: #0f172a;">Higher Official / Manager Signature</strong>
+                  <span style="color: #64748b;">Date: ________________________</span>
+                </div>
+                <div>
+                  <div style="border-bottom: 1px solid #0f172a; height: 35px; margin-bottom: 0.35rem;"></div>
+                  <strong style="display: block; color: #0f172a;">Chief Risk Officer (CRO) Signature</strong>
+                  <span style="color: #64748b;">Date: ________________________</span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
         </div>
-
-        <!-- DETECTED DEVIATION SIGNALS BREAKDOWN -->
-        <div class="card" style="border-top: 4px solid #dc2626; margin-bottom: 1.5rem;">
-          <div class="section-title">
-            <div>
-              <span style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">⚠️ DETECTED BEHAVIORAL DEVIATION SIGNALS</span>
-              <div style="font-size: 0.8rem; color: #64748b;">Multi-signal anomaly breakdown calculated against analyst's historical baseline</div>
-            </div>
-            <span id="deviation-count-badge" class="badge badge-low" style="font-weight: 700;">0 DEVIATIONS DETECTED</span>
-          </div>
-
-          <div id="insider-deviations-list" style="display: flex; flex-direction: column; gap: 0.6rem;">
-            <div style="text-align: center; color: #64748b; padding: 1rem;">No behavioral deviations detected for selected analyst profile.</div>
-          </div>
-        </div>
-
-        <!-- ==================================================================== -->
-        <!-- BOTTOM SECTION: FULL POSSIBILITIES OF INSIDER THREAT & THREAT %     -->
-        <!-- ==================================================================== -->
-        <div class="card" style="border-top: 5px solid #dc2626; background: #fafafa; margin-bottom: 1.5rem;">
-          <div class="section-title">
-            <div>
-              <span style="font-size: 1.25rem; font-weight: 800; color: #991b1b;">🚨 FULL POSSIBILITIES OF INSIDER THREAT & RISK EVALUATION (%)</span>
-              <div style="font-size: 0.8rem; color: #64748b;">Comprehensive threat vector analysis evaluating potential internal malicious or compromised analyst scenarios</div>
-            </div>
-            <span id="threat-percentage-badge" class="badge badge-low" style="font-size: 1.1rem; padding: 0.4rem 1rem; font-weight: 900;">0% THREAT LEVEL</span>
-          </div>
-
-          <!-- THREAT PERCENTAGE GAUGE BAR -->
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-              <span style="font-size: 0.85rem; font-weight: 800; color: #0f172a; text-transform: uppercase;">Overall Insider Threat Probability Score</span>
-              <span id="threat-percentage-text" style="font-size: 1.4rem; font-weight: 900; color: #059669;">0%</span>
-            </div>
-            
-            <div style="width: 100%; height: 16px; background: #e2e8f0; border-radius: 8px; overflow: hidden; position: relative;">
-              <div id="threat-percentage-fill" style="width: 0%; height: 100%; background: #059669; transition: width 0.5s ease, background 0.5s ease;"></div>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: #64748b; margin-top: 0.35rem; font-weight: 700;">
-              <span>0% (NORMAL)</span>
-              <span>30% (LOW DEVIATION)</span>
-              <span>60% (HIGH DEVIATION)</span>
-              <span>80%-100% (CRITICAL INSIDER THREAT)</span>
-            </div>
-          </div>
-
-          <!-- THREAT POSSIBILITIES MATRIX TABLE -->
-          <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.75rem; font-weight: 700;">
-            Full Possibilities & Malicious Threat Vector Matrix
-          </h4>
-
-          <div id="threat-possibilities-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <!-- Populated dynamically via JS -->
-            <div style="text-align: center; color: #64748b; padding: 1rem;">Loading threat vectors...</div>
-          </div>
-        </div>
-
-        <!-- HISTORICAL COMPLETED REVIEW CYCLES ANALYSIS TABLE -->
-        <div class="card" style="border-top: 4px solid #2563eb; margin-bottom: 1.5rem;">
-          <div class="section-title">
-            <div>
-              <span style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">📜 HISTORICAL COMPLETED REVIEW CYCLES & ANALYSIS AUDIT TRAIL</span>
-              <div style="font-size: 0.8rem; color: #64748b;">Chronological audit log of all completed review cycle batches and analyzed database deviations</div>
-            </div>
-            <span id="insider-history-count-badge" class="badge badge-low">0 CYCLES COMPLETED</span>
-          </div>
-
-          <div style="overflow-x: auto;">
-            <table class="data-table" style="font-size: 0.82rem;">
-              <thead>
-                <tr>
-                  <th>Cycle ID</th>
-                  <th>Completion Time</th>
-                  <th>Batch Size</th>
-                  <th>Approved / Rejected</th>
-                  <th>Duration</th>
-                  <th>Location</th>
-                  <th>Risk Level</th>
-                  <th>Threat Score</th>
-                </tr>
-              </thead>
-              <tbody id="insider-history-table-body">
-                <tr><td colspan="8" style="text-align:center; color:#64748b; padding: 1.25rem;">No completed review cycles recorded yet. Complete a review batch using [ COMPLETE REVIEW ] in High Risk Sessions.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
       </div>
+
+      <!-- DEDICATED MULTI-PAGE PRINT STYLES -->
+      <style>
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #analyst-activity-report-modal,
+          #analyst-activity-report-modal * {
+            visibility: visible !important;
+          }
+          #analyst-activity-report-modal {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            background: #ffffff !important;
+            padding: 0 !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          #printable-analyst-report {
+            padding: 0 !important;
+          }
+          .report-page {
+            page-break-after: always;
+          }
+          .report-page:last-child {
+            page-break-after: avoid;
+          }
+        }
+      </style>
 
     </main>
   </div>
