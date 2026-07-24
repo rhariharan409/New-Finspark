@@ -100,6 +100,7 @@ router.post('/', sessionModule.requireAuth, async (req, res) => {
       success: true,
       message: userMessage,
       transaction: safeTransaction,
+      sender_balance: transaction.sender_balance,
       riskScore: riskDecision?.risk_score || 0,
       riskLevel: `${riskLevel} (${decisionType})`,
       reasons: riskDecision?.risk_factors?.contributing_signals || []

@@ -9,6 +9,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let currentUserId = null;
 let pollApprovalInterval = null;
+let currentDemoOTP = '8874';
+let currentUserBalance = 1000000.00;
+
+function generateFreshDemoOTP() {
+  currentDemoOTP = Math.floor(1000 + Math.random() * 9000).toString();
+  const displayEl = document.getElementById('demo-otp-display');
+  if (displayEl) displayEl.textContent = currentDemoOTP;
+  return currentDemoOTP;
+}
+
+function updateBalanceDisplay(amt) {
+  currentUserBalance = typeof amt === 'number' ? amt : parseFloat(amt) || currentUserBalance;
+  const balanceEl = document.getElementById('dash-total-amount');
+  if (balanceEl) {
+    const formatted = currentUserBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    balanceEl.textContent = `₹${formatted}`;
+  }
+}
 
 async function initDashboard() {
   const welcomeName = document.getElementById('dash-welcome-name');
@@ -16,6 +34,9 @@ async function initDashboard() {
   const accountId = document.getElementById('dash-account-id');
   const logoutBtn = document.getElementById('logout-btn');
   const txnForm = document.getElementById('txn-form');
+
+  // Initialize fresh Demo OTP
+  generateFreshDemoOTP();
 
   // 1. Verify User Session & Load Profile
   try {
@@ -42,6 +63,9 @@ async function initDashboard() {
       const level = data.sessionIntegrity?.action === 'BLOCK' ? 'CRITICAL (BLOCK)' : (score >= 70 ? 'CRITICAL (BLOCK)' : (score >= 45 ? 'HIGH (REVIEW)' : (score > 0 ? 'MEDIUM (MONITOR)' : 'LOW (ALLOW)')));
       updateDashboardRiskWidget(score, level, rules);
     }
+
+    // Display Available Account Balance
+    updateBalanceDisplay(u.total_amount || u.account_balance || 1000000.00);
 
     // 2. Load User Banking Transaction History
     await loadTransactionHistory();
@@ -93,14 +117,30 @@ async function initDashboard() {
       const receiverInput = document.getElementById('txn-receiver');
       const amountInput = document.getElementById('txn-amount');
       const descInput = document.getElementById('txn-description');
+      const otpInput = document.getElementById('txn-otp-input');
       const submitBtn = document.getElementById('txn-submit-btn');
 
       const receiver_identifier = receiverInput.value.trim();
       const amount = parseFloat(amountInput.value);
       const description = descInput ? descInput.value.trim() : '';
+      const enteredOTP = otpInput ? otpInput.value.trim() : '';
 
       if (!receiver_identifier || isNaN(amount) || amount <= 0) {
         showTxnAlert('Please provide a valid receiver account and amount.', 'danger');
+        return;
+      }
+
+      // DEMO OTP VERIFICATION CHECK
+      if (enteredOTP !== currentDemoOTP) {
+        showTxnAlert(`Invalid OTP Code! Please enter the correct Demo OTP displayed above (Demo OTP: ${currentDemoOTP}).`, 'danger');
+        if (otpInput) otpInput.focus();
+        return;
+      }
+
+      // INSUFFICIENT BALANCE CHECK
+      if (amount > currentUserBalance) {
+        const formattedBal = currentUserBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        showTxnAlert(`Insufficient Account Balance. Your available balance is ₹${formattedBal}.`, 'danger');
         return;
       }
 
@@ -135,9 +175,20 @@ async function initDashboard() {
           showTxnAlert(msg, 'success');
         }
 
+        // Update balance if returned by backend or calculate locally
+        if (typeof data.sender_balance === 'number') {
+          updateBalanceDisplay(data.sender_balance);
+        } else {
+          updateBalanceDisplay(currentUserBalance - amount);
+        }
+
+        // Reset form inputs & generate fresh Demo OTP
         receiverInput.value = '';
         amountInput.value = '';
         if (descInput) descInput.value = '';
+        if (otpInput) otpInput.value = '';
+        generateFreshDemoOTP();
+
         await loadTransactionHistory();
 
       } catch (err) {

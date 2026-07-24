@@ -61,9 +61,18 @@
             Account Number: <strong id="dash-account-id" style="color: #2563eb;">TURTLE-0000000000</strong>
           </p>
         </div>
-        <div>
-          <span id="dash-account-status" class="badge" style="background: #10b981; color: white; padding: 0.35rem 0.75rem; font-size: 0.85rem;">Account Status: Active</span>
+        <div style="text-align: right;">
+          <span id="dash-account-status" class="badge" style="background: #10b981; color: white; padding: 0.35rem 0.75rem; font-size: 0.85rem; display: inline-block; margin-bottom: 0.5rem;">Account Status: Active</span>
         </div>
+      </div>
+
+      <!-- TOTAL AVAILABLE ACCOUNT BALANCE DISPLAY CARD -->
+      <div style="margin-top: 1rem; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 1rem 1.25rem; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <span style="font-size: 0.78rem; color: #166534; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display: block;">Total Available Account Balance</span>
+          <div id="dash-total-amount" style="font-size: 1.85rem; font-weight: 900; color: #15803d; margin-top: 0.1rem;">₹10,00,000.00</div>
+        </div>
+        <span class="badge" style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-weight: 700; font-size: 0.8rem;">REAL-TIME SYNCED</span>
       </div>
     </div>
 
@@ -91,6 +100,19 @@
         <div class="form-group">
           <label class="form-label" for="txn-description">Description / Note (Optional)</label>
           <input type="text" id="txn-description" class="form-input" placeholder="e.g. Payment for invoice">
+        </div>
+
+        <!-- DEMO OTP VERIFICATION CONTAINER -->
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+            <span style="font-size: 0.85rem; color: #92400e; font-weight: 800;">🔐 TRANSACTION SECURITY DEMO OTP:</span>
+            <code id="demo-otp-display" style="font-size: 1.2rem; color: #b45309; font-weight: 900; background: #ffffff; padding: 0.25rem 0.75rem; border-radius: 6px; border: 1px solid #fcd34d; font-family: monospace; letter-spacing: 2px;">8874</code>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="txn-otp-input" style="font-weight: 700; color: #78350f; font-size: 0.85rem;">Enter 4-Digit Security OTP</label>
+            <input type="text" id="txn-otp-input" class="form-input" placeholder="Enter the Demo OTP displayed above (e.g. 8874)" maxlength="6" required style="font-size: 1rem; letter-spacing: 2px; font-weight: 700; background: #ffffff;">
+          </div>
         </div>
 
         <button type="submit" id="txn-submit-btn" class="btn btn-primary btn-full" style="padding: 0.75rem;">

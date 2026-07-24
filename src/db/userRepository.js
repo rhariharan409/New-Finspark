@@ -6,7 +6,33 @@
 import { supabase } from './supabaseClient.js';
 import { createUserEntity } from '../models/userModel.js';
 
+// In-memory balance cache initialized with ₹10,00,000.00 (10 Lakhs baseline) per user
+const userBalancesMap = new Map();
+
 export const userRepository = {
+  /**
+   * Retrieves user's total available balance (default 10 Lakhs baseline)
+   */
+  getUserBalance(userId) {
+    if (!userId) return 1000000.00;
+    const cleanId = String(userId).trim();
+    if (!userBalancesMap.has(cleanId)) {
+      userBalancesMap.set(cleanId, 1000000.00); // Baseline ₹10,00,000.00
+    }
+    return userBalancesMap.get(cleanId);
+  },
+
+  /**
+   * Updates user's total account balance in memory store
+   */
+  updateUserBalance(userId, newBalance) {
+    if (!userId) return 1000000.00;
+    const cleanId = String(userId).trim();
+    const rounded = Math.max(0, Math.round(newBalance * 100) / 100);
+    userBalancesMap.set(cleanId, rounded);
+    return rounded;
+  },
+
   /**
    * Check if an email address already exists in users table
    */

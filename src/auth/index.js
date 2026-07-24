@@ -15,6 +15,7 @@ import { supabase } from '../db/supabaseClient.js';
 import { riskRepository } from '../db/riskRepository.js';
 import { atoVerificationService } from '../services/atoVerificationService.js';
 import { credentialStuffingDetector } from '../security/credential_stuffing/credentialStuffingDetector.js';
+import { userRepository } from '../db/userRepository.js';
 
 const router = express.Router();
 
@@ -570,14 +571,17 @@ router.get('/me', sessionModule.requireAuth, async (req, res) => {
   if (req.session && req.session.userId) {
     const safeUser = await userService.findUserById(req.session.userId);
     if (safeUser) {
+      const balance = userRepository.getUserBalance(safeUser.user_id);
       return res.status(200).json({
         success: true,
         authenticated: true,
         user: {
+          user_id: safeUser.user_id,
           full_name: safeUser.full_name,
           email: safeUser.email,
-          account_id: safeUser.account_id,
-          created_at: safeUser.created_at
+          created_at: safeUser.created_at,
+          total_amount: balance,
+          account_balance: balance
         },
         sessionRiskContext: req.sessionRiskContext,
         sessionIntegrity: req.sessionIntegrity
