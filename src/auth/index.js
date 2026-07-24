@@ -566,7 +566,7 @@ router.post('/verify-session-id-login', async (req, res) => {
  * Session Verification API
  * GET /api/auth/me
  */
-router.get('/me', async (req, res) => {
+router.get('/me', sessionModule.requireAuth, async (req, res) => {
   if (req.session && req.session.userId) {
     const safeUser = await userService.findUserById(req.session.userId);
     if (safeUser) {
@@ -578,7 +578,9 @@ router.get('/me', async (req, res) => {
           email: safeUser.email,
           account_id: safeUser.account_id,
           created_at: safeUser.created_at
-        }
+        },
+        sessionRiskContext: req.sessionRiskContext,
+        sessionIntegrity: req.sessionIntegrity
       });
     }
   }

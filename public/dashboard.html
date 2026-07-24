@@ -23,7 +23,35 @@
 
   <!-- Authenticated User Banking Dashboard -->
   <main id="dashboard-view" class="container" style="max-width: 900px; margin-top: 2rem;">
-    
+    <!-- LIVE CORRELATED SESSION RISK SCORE WIDGET -->
+    <div id="session-risk-widget" class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; background: #0f172a; color: #f8fafc; border-radius: 12px; border: 1px solid #1e293b;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.75rem;">
+        <div>
+          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #38bdf8; font-weight: 700;">⚡ Live Correlated Session Risk Score (Pre-Auth + Session + Transaction)</span>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
+            <span id="dash-risk-score-val" style="font-size: 2.25rem; font-weight: 800; color: #22c55e;">0</span>
+            <span style="font-size: 0.9rem; color: #64748b;">/ 100</span>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <span id="dash-risk-badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); padding: 0.35rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">
+            LOW (ALLOW)
+          </span>
+          <button id="dash-reset-threat-btn" type="button" style="display: block; margin-top: 0.5rem; background: #334155; color: #cbd5e1; border: none; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.7rem; cursor: pointer; float: right;">
+            🔄 Reset Threat Store
+          </button>
+        </div>
+      </div>
+
+      <!-- Risk Meter Bar -->
+      <div style="width: 100%; height: 8px; background: #334155; border-radius: 9999px; overflow: hidden;">
+        <div id="dash-risk-score-bar" style="width: 0%; height: 100%; background: #22c55e; transition: width 0.4s ease, background-color 0.4s ease;"></div>
+      </div>
+
+      <!-- Live Triggered Reasons / Pre-Auth Carryover Evidence -->
+      <div id="dash-risk-reasons" style="font-size: 0.75rem; color: #cbd5e1; margin-top: 0.65rem; display: none;"></div>
+    </div>
+
     <!-- User Profile & Account Overview Card -->
     <div class="account-card" style="margin-bottom: 1.5rem; border-top: 4px solid #2563eb;">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
