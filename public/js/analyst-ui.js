@@ -212,6 +212,12 @@ function setupViewNavigation() {
     switchAnalystView('mule-intelligence');
   });
 
+  const navCNP = document.getElementById('nav-cnp-fraud');
+  navCNP?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchAnalystView('cnp-fraud');
+  });
+
   navHighRisk?.addEventListener('click', (e) => {
     e.preventDefault();
     switchAnalystView('high-risk');
@@ -220,17 +226,6 @@ function setupViewNavigation() {
   navATO?.addEventListener('click', (e) => {
     e.preventDefault();
     switchAnalystView('ato-investigation');
-  });
-
-  const navInsider = document.getElementById('nav-insider-threat');
-  navInsider?.addEventListener('click', (e) => {
-    e.preventDefault();
-    switchAnalystView('insider-threat');
-  });
-
-  navSet?.addEventListener('click', (e) => {
-    e.preventDefault();
-    switchAnalystView('settings');
   });
 
   // Mule Search Form submission handler
@@ -262,6 +257,7 @@ function setupViewNavigation() {
       }
     }
   });
+
   // Filter & Search bindings for High Risk Sessions
   document.getElementById('hr-search-input')?.addEventListener('input', (e) => {
     highRiskSearchQuery = e.target.value.trim();
@@ -280,20 +276,18 @@ function switchAnalystView(viewName) {
   const dashView = document.getElementById('dashboard-view-wrapper');
   const invView = document.getElementById('investigation-workspace');
   const muleView = document.getElementById('mule-intelligence-workspace');
+  const cnpView = document.getElementById('cnp-fraud-workspace');
   const highRiskView = document.getElementById('high-risk-sessions-workspace');
   const atoView = document.getElementById('ato-investigation-workspace');
-  const insiderView = document.getElementById('insider-threat-workspace');
-  const setView = document.getElementById('settings-workspace');
 
   const navDash = document.getElementById('nav-dashboard');
   const navInv = document.getElementById('nav-investigation');
   const navMule = document.getElementById('nav-mule-intelligence');
+  const navCNP = document.getElementById('nav-cnp-fraud');
   const navHighRisk = document.getElementById('nav-high-risk');
   const navATO = document.getElementById('nav-ato-investigation');
-  const navInsider = document.getElementById('nav-insider-threat');
-  const navSet = document.getElementById('nav-settings');
 
-  [navDash, navInv, navMule, navHighRisk, navATO, navInsider, navSet].forEach(el => el?.classList.remove('active'));
+  [navDash, navInv, navMule, navCNP, navHighRisk, navATO].forEach(el => el?.classList.remove('active'));
 
   if (atoAlertsPollInterval) {
     clearInterval(atoAlertsPollInterval);
@@ -304,28 +298,25 @@ function switchAnalystView(viewName) {
     if (dashView) dashView.style.display = 'block';
     if (invView) invView.style.display = 'none';
     if (muleView) muleView.style.display = 'none';
+    if (cnpView) cnpView.style.display = 'none';
     if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'none';
-    if (insiderView) insiderView.style.display = 'none';
-    if (setView) setView.style.display = 'none';
     navDash?.classList.add('active');
   } else if (viewName === 'investigation') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'block';
     if (muleView) muleView.style.display = 'none';
+    if (cnpView) cnpView.style.display = 'none';
     if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'none';
-    if (insiderView) insiderView.style.display = 'none';
-    if (setView) setView.style.display = 'none';
     navInv?.classList.add('active');
   } else if (viewName === 'mule-intelligence') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'none';
     if (muleView) muleView.style.display = 'block';
+    if (cnpView) cnpView.style.display = 'none';
     if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'none';
-    if (insiderView) insiderView.style.display = 'none';
-    if (setView) setView.style.display = 'none';
     navMule?.classList.add('active');
     if (muleCy) {
       setTimeout(() => {
@@ -333,24 +324,30 @@ function switchAnalystView(viewName) {
         muleCy.fit();
       }, 50);
     }
+  } else if (viewName === 'cnp-fraud') {
+    if (dashView) dashView.style.display = 'none';
+    if (invView) invView.style.display = 'none';
+    if (muleView) muleView.style.display = 'none';
+    if (cnpView) cnpView.style.display = 'block';
+    if (highRiskView) highRiskView.style.display = 'none';
+    if (atoView) atoView.style.display = 'none';
+    navCNP?.classList.add('active');
   } else if (viewName === 'high-risk') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'none';
     if (muleView) muleView.style.display = 'none';
+    if (cnpView) cnpView.style.display = 'none';
     if (highRiskView) highRiskView.style.display = 'block';
     if (atoView) atoView.style.display = 'none';
-    if (insiderView) insiderView.style.display = 'none';
-    if (setView) setView.style.display = 'none';
     navHighRisk?.classList.add('active');
     renderHighRiskSessionsWorkspace();
   } else if (viewName === 'ato-investigation') {
     if (dashView) dashView.style.display = 'none';
     if (invView) invView.style.display = 'none';
     if (muleView) muleView.style.display = 'none';
+    if (cnpView) cnpView.style.display = 'none';
     if (highRiskView) highRiskView.style.display = 'none';
     if (atoView) atoView.style.display = 'block';
-    if (insiderView) insiderView.style.display = 'none';
-    if (setView) setView.style.display = 'none';
     navATO?.classList.add('active');
   } else if (viewName === 'insider-threat') {
     if (dashView) dashView.style.display = 'none';
