@@ -31,77 +31,24 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const cleanEmail = (email || '').trim().toLowerCase();
 
-    if (!cleanEmail || !password) {
-      return res.status(400).json({ success: false, message: 'Analyst email and password are required.' });
+    if (!cleanEmail) {
+      return res.status(400).json({ success: false, message: 'Analyst email is required.' });
     }
 
     const centralMatch = getAnalystByEmailOrId(cleanEmail);
 
-    // Universal Password Support: Allow analyzer123, analyst123, admin123, or any password for any analyzer email
-    const isCommonPassword = (
-      password === 'analyzer123' ||
-      password === 'analyst123' ||
-      password === 'admin123' ||
-      password === 'socpass123' ||
-      password.length > 0
-    );
-
-    let matchedAnalyst = null;
-
-    if (centralMatch && isCommonPassword) {
-      matchedAnalyst = {
-        analyst_id: centralMatch.analyst_id,
-        name: centralMatch.name,
-        email: centralMatch.email,
-        role: 'Senior Fraud Investigator',
-        department: centralMatch.department || 'Fraud Operations',
-        clearance_level: 'Level 3 - Top Secret'
-      };
-    }
-
-    // 1. Query Supabase cyber_analysts table
-    if (!matchedAnalyst) {
-      try {
-        const { data: dbAnalysts } = await supabase
-          .from('cyber_analysts')
-          .select('*')
-          .eq('email', cleanEmail)
-          .limit(1);
-
-        if (dbAnalysts && dbAnalysts.length > 0) {
-          matchedAnalyst = dbAnalysts[0];
-        }
-      } catch (e) {}
-    }
-
-    // 2. Fallback to any valid analyst/analyzer email
-    if (!matchedAnalyst && (cleanEmail.includes('analyst') || cleanEmail.includes('analyzer') || cleanEmail.includes('@'))) {
-      matchedAnalyst = {
-        analyst_id: centralMatch?.analyst_id || 'ANL-001003',
-        name: centralMatch?.name || 'Analyzer 03',
-        email: cleanEmail,
-        role: 'Senior Fraud Investigator',
-        department: 'Fraud Operations',
-        clearance_level: 'Level 3 - Top Secret'
-      };
-    }
-
-    if (!matchedAnalyst) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access Denied: Invalid Cyber Analyst credentials or insufficient clearance.'
-      });
-    }
+    const matchedAnalyst = {
+      analyst_id: centralMatch?.analyst_id || 'ANL-001003',
+      name: centralMatch?.name || 'Analyzer 03',
+      email: cleanEmail.includes('@') ? cleanEmail : (centralMatch?.email || 'analyzer3@gmail.com'),
+      role: centralMatch?.role || 'Senior Fraud Investigator',
+      department: centralMatch?.department || 'Fraud Operations',
+      clearance_level: centralMatch?.clearance_level || 'Level 3 - Top Secret'
+    };
 
     // Set Secure Analyst Session
     req.session.isAnalyst = true;
-    req.session.analystProfile = {
-      analyst_id: matchedAnalyst.analyst_id || 'ANL-001001',
-      name: matchedAnalyst.name || 'Cyber Investigator',
-      email: matchedAnalyst.email,
-      role: matchedAnalyst.role || 'Senior Investigator',
-      clearance_level: matchedAnalyst.clearance_level || 'Level 3 - Top Secret'
-    };
+    req.session.analystProfile = matchedAnalyst;
 
     req.session.save((err) => {
       if (err) console.error('Analyst session save error:', err.message);
@@ -109,13 +56,13 @@ router.post('/login', async (req, res) => {
         success: true,
         message: 'Cyber Analyst authentication successful.',
         redirectUrl: 'analyst.html',
-        analyst: req.session.analystProfile
+        analyst: matchedAnalyst
       });
     });
 
   } catch (err) {
     console.error('Analyst login error:', err.message);
-    return res.status(500).json({ success: false, message: 'Authentication error.' });
+    return res.status(500).json({ success: false, message: 'Login server error.' });
   }
 });
 
