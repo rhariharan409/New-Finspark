@@ -4,35 +4,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>User Login - FINSPARK</title>
+  <title>User Login - Bank of Maharashtra FINSPARK</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 
-<body>
+<body style="background-color: #f8f9ff; font-family: 'IBM Plex Sans', sans-serif;">
 
   <!-- Navigation Bar -->
-  <nav class="navbar">
-    <a href="index.html" class="brand">
-      <span class="brand-icon">⚡</span>
-      <span>FINSPARK</span>
+  <nav class="navbar" style="background-color: #005994; border-bottom: 1px solid #00497b; padding: 0.85rem 2rem;">
+    <a href="index.html" class="brand" style="color: #ffffff; display: flex; align-items: center; gap: 0.65rem;">
+      <span class="brand-icon" style="color: #9ccaff; font-size: 1.3rem;">⚡</span>
+      <span style="font-weight: 700; letter-spacing: 0.02em;">FINSPARK</span>
+      <span style="font-size: 0.72rem; background: rgba(255,255,255,0.15); color: #d0e4ff; padding: 0.2rem 0.6rem; border-radius: 9999px; font-weight: 600; text-transform: uppercase;">
+        Bank of Maharashtra
+      </span>
     </a>
     <div class="nav-links">
-      <a href="signup.html" class="btn btn-primary">Register Account</a>
+      <a href="signup.html" class="btn btn-primary" style="background: #0072bb; border-color: #0072bb;">Register Account</a>
     </div>
   </nav>
 
-  <main class="container" style="max-width: 480px; margin-top: 2rem;">
+  <main class="container" style="max-width: 480px; margin-top: 2.5rem;">
     <!-- Live Risk Score Meter Widget at Top of Page -->
     <div id="risk-score-widget" class="card"
-      style="padding: 1.25rem; margin-bottom: 1.25rem; background: #0f172a; color: #f8fafc; border-radius: 12px; border: 1px solid #1e293b;">
+      style="padding: 1.25rem; margin-bottom: 1.25rem; background: #001d35; color: #f8fafc; border-radius: 8px; border: 1px solid #00497b; box-shadow: 0 4px 12px rgba(0, 29, 53, 0.2);">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
         <div>
           <span
-            style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; font-weight: 700;">🛡️
+            style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ccaff; font-weight: 700;">🛡️
             Live Threat Detector Risk Score</span>
           <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
             <span id="widget-score-val" style="font-size: 2.25rem; font-weight: 800; color: #22c55e;">0</span>
-            <span style="font-size: 0.9rem; color: #64748b;">/ 100</span>
+            <span style="font-size: 0.9rem; color: #94a3b8;">/ 100</span>
           </div>
         </div>
         <div style="text-align: right;">
@@ -41,14 +44,14 @@
             LOW (ALLOW)
           </span>
           <button id="reset-threat-btn" type="button"
-            style="display: block; margin-top: 0.5rem; background: #334155; color: #cbd5e1; border: none; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.7rem; cursor: pointer;">
+            style="display: block; margin-top: 0.5rem; background: #00497b; color: #d0e4ff; border: none; padding: 0.35rem 0.75rem; border-radius: 4px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">
             🔄 Reset Threat Store
           </button>
         </div>
       </div>
 
       <!-- Risk Meter Bar -->
-      <div style="width: 100%; height: 8px; background: #334155; border-radius: 9999px; overflow: hidden;">
+      <div style="width: 100%; height: 8px; background: #002d50; border-radius: 9999px; overflow: hidden;">
         <div id="widget-score-bar"
           style="width: 0%; height: 100%; background: #22c55e; transition: width 0.4s ease, background-color 0.4s ease;">
         </div>
@@ -58,43 +61,41 @@
       <div id="widget-reasons" style="font-size: 0.75rem; color: #cbd5e1; margin-top: 0.65rem; display: none;"></div>
     </div>
 
-    <div class="card" style="padding: 2rem;">
-      <h2 style="font-size: 1.5rem; color: #0f172a; margin-bottom: 0.25rem; text-align: center;">User Login</h2>
-      <p style="color: #64748b; font-size: 0.85rem; text-align: center; margin-bottom: 1.5rem;">Access your secure
-        FINSPARK banking account</p>
+    <div class="card" style="padding: 2rem; background: #ffffff; border: 1px solid #c0c7d2; border-radius: 8px; border-top: 4px solid #005994; box-shadow: 0 4px 14px rgba(11, 28, 48, 0.05);">
+      <h2 style="font-size: 1.5rem; color: #0b1c30; margin-bottom: 0.25rem; text-align: center; font-weight: 700;">User Banking Login</h2>
+      <p style="color: #404751; font-size: 0.85rem; text-align: center; margin-bottom: 1.5rem;">Access your secure Bank of Maharashtra FINSPARK account</p>
 
       <div id="login-alert" class="alert" style="display:none;"></div>
 
       <form id="login-form">
         <div class="form-group">
-          <label class="form-label" for="login-email">Email Address or Account ID</label>
-          <input type="text" id="login-email" class="form-input" placeholder="user@example.com or TURTLE-..." required>
+          <label class="form-label" for="login-email" style="font-weight: 600; color: #0b1c30;">Email Address or Account ID</label>
+          <input type="text" id="login-email" class="form-input" placeholder="user@example.com or TURTLE-..." required style="padding: 0.7rem;">
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="login-password">Password</label>
-          <input type="password" id="login-password" class="form-input" placeholder="Enter password" required>
+          <label class="form-label" for="login-password" style="font-weight: 600; color: #0b1c30;">Password</label>
+          <input type="password" id="login-password" class="form-input" placeholder="Enter password" required style="padding: 0.7rem;">
         </div>
 
         <button type="submit" id="login-submit-btn" class="btn btn-primary btn-full"
-          style="padding: 0.75rem; margin-top: 0.5rem;">
+          style="padding: 0.75rem; margin-top: 0.5rem; font-weight: 700; background: #0072bb; border-color: #0072bb; box-shadow: 0 2px 8px rgba(0, 114, 187, 0.25);">
           Sign In to Banking
         </button>
       </form>
 
-      <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: #64748b;">
+      <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: #404751;">
         Don't have an account? <a href="signup.html"
-          style="color: #2563eb; text-decoration: none; font-weight: 600;">Register here</a>
+          style="color: #005994; text-decoration: none; font-weight: 700;">Register here</a>
       </div>
     </div>
   </main>
 
-
-  <footer class="footer">
-    FINSPARK — Secure Digital Banking
+  <footer class="footer" style="background: #ffffff; border-top: 1px solid #c0c7d2; margin-top: 3rem;">
+    FINSPARK — Bank of Maharashtra Digital Banking
   </footer>
 
   <script src="js/login-ui.js"></script>
 </body>
 
-</html>
+</html>
