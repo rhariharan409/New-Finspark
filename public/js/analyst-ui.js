@@ -2107,7 +2107,12 @@ function setupAuthorizationForm() {
         if (progressOverlay) progressOverlay.style.display = 'none';
 
         if (completeData.success && completeData.reportData) {
-          // Display the 2 Telemetry & Behavioral Baseline Panels (Image 2)
+          // Render full Insider Threat Behavioral & Telemetry details
+          try {
+            await renderInsiderThreatWorkspace();
+          } catch (e) {}
+
+          // Display the Telemetry & Behavioral Baseline Panels (Image 2)
           if (telemetryResultContainer) {
             telemetryResultContainer.style.display = 'block';
           }
