@@ -1987,6 +1987,42 @@ async function renderInsiderThreatWorkspace() {
 }
 
 function setupAuthorizationForm() {
+  // Populate Active Analyst Dropdown in Top Nav if present
+  const activeDropdown = document.getElementById('active-analyst-dropdown');
+  if (activeDropdown && !activeDropdown.dataset.initialized) {
+    activeDropdown.dataset.initialized = 'true';
+    activeDropdown.innerHTML = `
+      <option value="analyzer1@gmail.com">Analyzer 01 (analyzer1@gmail.com)</option>
+      <option value="analyzer2@gmail.com">Analyzer 02 (analyzer2@gmail.com)</option>
+      <option value="analyzer3@gmail.com">Analyzer 03 (analyzer3@gmail.com)</option>
+      <option value="analyzer4@gmail.com">Analyzer 04 (analyzer4@gmail.com)</option>
+      <option value="analyzer5@gmail.com">Analyzer 05 (analyzer5@gmail.com)</option>
+      <option value="analyzer6@gmail.com">Analyzer 06 (analyzer6@gmail.com)</option>
+      <option value="analyzer7@gmail.com">Analyzer 07 (analyzer7@gmail.com)</option>
+      <option value="analyzer8@gmail.com">Analyzer 08 (analyzer8@gmail.com)</option>
+      <option value="analyzer9@gmail.com">Analyzer 09 (analyzer9@gmail.com)</option>
+      <option value="analyzer10@gmail.com">Analyzer 10 (analyzer10@gmail.com)</option>
+    `;
+    const savedEmail = sessionStorage.getItem('activeAnalystEmail') || 'analyzer3@gmail.com';
+    activeDropdown.value = savedEmail;
+    selectedInsiderAnalystEmail = savedEmail;
+
+    activeDropdown.addEventListener('change', (e) => {
+      selectedInsiderAnalystEmail = e.target.value;
+      sessionStorage.setItem('activeAnalystEmail', e.target.value);
+    });
+  }
+
+  // Bind COMPLETE REVIEW CYCLE button to reveal Higher Official Form
+  const hrCompleteBtn = document.getElementById('hr-complete-review-btn');
+  const hrFormContainer = document.getElementById('hr-complete-review-container');
+  if (hrCompleteBtn && hrFormContainer) {
+    hrCompleteBtn.addEventListener('click', () => {
+      hrFormContainer.style.display = 'block';
+      hrFormContainer.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+
   // Bind Show Password toggle
   const togglePwd = document.getElementById('toggle-official-password');
   const pwdInput = document.getElementById('official-password-input');
