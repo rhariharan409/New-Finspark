@@ -4,7 +4,7 @@
  * Supports Fast2SMS, Twilio, and REST SMS API Gateways.
  */
 
-import fetch from 'node-fetch';
+// Native global fetch used (Node.js 18+)
 
 export const smsService = {
   /**

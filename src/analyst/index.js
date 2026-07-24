@@ -12,6 +12,10 @@ import { unifiedThreatService } from '../services/unifiedThreatService.js';
 import { initCyberAnalystTables, INITIAL_ANALYSTS } from '../db/cyberSchemaInitializer.js';
 import { passwordService } from '../security/passwordService.js';
 import { sessionIntegrityEngine } from '../services/sessionIntegrityEngine.js';
+import { CENTRALIZED_ANALYSTS, getAnalystByEmailOrId } from './analystsConfig.js';
+import { analystDecisionRepository } from '../db/analystDecisionRepository.js';
+import { insiderThreatRepository } from '../features/insider-threat/insiderThreatRepository.js';
+import { insiderThreatEngine } from '../features/insider-threat/insiderThreatEngine.js';
 
 const router = express.Router();
 
@@ -533,6 +537,345 @@ router.get('/ato-alerts', async (req, res) => {
   } catch (err) {
     console.error('ATO alerts API error:', err.message);
     return res.status(500).json({ success: false, message: 'Failed to load ATO alerts.' });
+  }
+});
+
+/**
+ * Centralized Multi-Analyst Registry API
+ * GET /api/analyst/accounts
+ */
+router.get('/accounts', async (req, res) => {
+  try {
+    const listWithStats = await Promise.all(CENTRALIZED_ANALYSTS.map(async (a) => {
+      const stats = await analystDecisionRepository.getAnalystStatistics(a.email);
+      return {
+        ...a,
+        ...stats
+      };
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: listWithStats.length,
+      analysts: listWithStats
+    });
+  } catch (err) {
+    console.error('Fetch analyst accounts error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to load analyst registry.' });
+  }
+});
+
+/**
+ * Analyst Statistics API for a specific Analyst ID or Email
+ * GET /api/analyst/stats/:analystId
+ */
+router.get('/stats/:analystId', async (req, res) => {
+  try {
+    const { analystId } = req.params;
+    const stats = await analystDecisionRepository.getAnalystStatistics(analystId);
+    return res.status(200).json({
+      success: true,
+      stats
+    });
+  } catch (err) {
+    console.error('Fetch analyst stats error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch analyst statistics.' });
+  }
+});
+
+/**
+ * Recent Analyst Decisions / Audit Trail Activity Log API
+ * GET /api/analyst/activity
+ */
+router.get('/activity', async (req, res) => {
+  try {
+    const decisions = await analystDecisionRepository.getAllDecisions();
+    return res.status(200).json({
+      success: true,
+      count: decisions.length,
+      activity: decisions.slice(0, 30)
+    });
+  } catch (err) {
+    console.error('Fetch analyst activity error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch analyst activity.' });
+  }
+});
+
+/**
+ * High Risk Sessions Queue with Case Ownership & Realtime Decision Statuses
+ * GET /api/analyst/high-risk-queue
+ */
+router.get('/high-risk-queue', async (req, res) => {
+  try {
+    const { data: dbSessions } = await supabase.from('sessions').select('*').order('login_time', { ascending: false });
+    const { data: dbTxns } = await supabase.from('transactions').select('*').order('transaction_timestamp', { ascending: false });
+    const { data: dbUsers } = await supabase.from('users').select('user_id, account_id, full_name, email');
+    const { data: dbRisk } = await supabase.from('risk_decisions').select('*').order('created_at', { ascending: false });
+
+    const sessions = dbSessions || [];
+    const txns = dbTxns || [];
+    const users = dbUsers || [];
+    const risks = dbRisk || [];
+    const allAnalystDecisions = await analystDecisionRepository.getAllDecisions();
+
+    const usersMap = {};
+    users.forEach(u => { usersMap[u.user_id] = u; });
+
+    // Map each session with risk engine details and human analyst decisions
+    const queue = sessions.map(s => {
+      const u = usersMap[s.user_id] || { full_name: 'Unknown User', account_id: s.user_id };
+      const sTxns = txns.filter(t => t.session_id === s.session_id || t.sender_user_id === s.user_id);
+      const latestTx = sTxns.length > 0 ? sTxns[0] : null;
+      const maxTxAmount = sTxns.length > 0 ? Math.max(...sTxns.map(t => parseFloat(t.amount) || 0)) : 0;
+      
+      const rObj = risks.find(r => r.session_id === s.session_id || r.user_id === s.user_id) || {};
+      const riskScore = rObj.risk_score !== undefined ? rObj.risk_score : (maxTxAmount > 50000 ? 85 : (sTxns.length > 0 ? 45 : 15));
+      const riskLevel = rObj.risk_level || (riskScore >= 80 ? 'CRITICAL' : (riskScore >= 60 ? 'HIGH' : (riskScore >= 30 ? 'MEDIUM' : 'LOW')));
+      
+      // Fetch analyst decisions for this session
+      const latestAnalystDecision = allAnalystDecisions.find(d => d.session_id === s.session_id);
+      const caseAssignment = analystDecisionRepository.getCaseAssignment(s.session_id);
+
+      let decisionStatus = 'PENDING_REVIEW';
+      if (latestAnalystDecision) {
+        decisionStatus = latestAnalystDecision.decision; // APPROVED, REJECTED, BLOCKED, HELD, ESCALATED
+      } else if (caseAssignment && caseAssignment.status) {
+        decisionStatus = caseAssignment.status;
+      }
+
+      let priority = 'MEDIUM';
+      if (riskScore >= 80 || decisionStatus === 'BLOCKED') priority = 'CRITICAL';
+      else if (riskScore >= 50 || decisionStatus === 'ESCALATED') priority = 'HIGH';
+
+      return {
+        session_id: s.session_id,
+        user_id: s.user_id,
+        account_id: u.account_id || s.user_id,
+        user_name: u.full_name || u.account_id || s.user_id,
+        transaction_id: latestTx ? latestTx.transaction_id : null,
+        amount: maxTxAmount,
+        risk_score: riskScore,
+        risk_level: riskLevel,
+        threat_type: rObj.risk_factors ? rObj.risk_factors.split(',')[0] : 'BEHAVIORAL_ANOMALY',
+        priority,
+        status: decisionStatus,
+        assigned_analyst: caseAssignment ? {
+          analyst_id: caseAssignment.assigned_analyst_id,
+          name: caseAssignment.assigned_analyst_name,
+          email: caseAssignment.assigned_analyst_email
+        } : null,
+        latest_decision: latestAnalystDecision || null,
+        login_time: s.login_time,
+        ip_address: s.ip_address || '192.168.1.100',
+        device: s.device_type || 'Windows PC',
+        location: s.location || 'Mumbai, India'
+      };
+    });
+
+    // Filter to suspicious or assigned/reviewed high risk items
+    const highRiskOnly = queue.filter(q => q.risk_score >= 30 || q.status !== 'PENDING_REVIEW' || q.assigned_analyst);
+
+    return res.status(200).json({
+      success: true,
+      count: highRiskOnly.length,
+      queue: highRiskOnly
+    });
+
+  } catch (err) {
+    console.error('High risk queue API error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch high risk queue.' });
+  }
+});
+
+/**
+ * Assign / Reassign Case API
+ * POST /api/analyst/assign-case
+ */
+router.post('/assign-case', async (req, res) => {
+  try {
+    const { sessionId, analystEmail, analystId } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ success: false, message: 'Session ID is required.' });
+    }
+
+    const assignment = analystDecisionRepository.assignCase(sessionId, analystId, analystEmail, 'UNDER_REVIEW');
+    const analystInfo = getAnalystByEmailOrId(analystEmail || analystId);
+
+    // Audit Log
+    await caseService.logAnalystAction({
+      analystId: analystInfo.analyst_id,
+      targetUserId: sessionId,
+      action: 'ASSIGN_CASE',
+      metadata: { sessionId, assignedTo: analystInfo.email, timestamp: new Date().toISOString() }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Case '${sessionId}' assigned to ${analystInfo.name} (${analystInfo.email}).`,
+      assignment
+    });
+
+  } catch (err) {
+    console.error('Assign case error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to assign case.' });
+  }
+});
+
+/**
+ * Formal Analyst Decision Endpoint (Approve / Reject / Block / Hold / Escalate)
+ * POST /api/analyst/decision
+ */
+router.post('/decision', async (req, res) => {
+  try {
+    const { 
+      sessionId, 
+      transactionId, 
+      userId, 
+      analystEmail, 
+      analystId, 
+      decision, 
+      decisionReason, 
+      analystNotes, 
+      threatType, 
+      riskScore 
+    } = req.body;
+
+    if (!sessionId || !decision || !decisionReason) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Session ID, decision (APPROVED/REJECTED/BLOCKED/HELD/ESCALATED), and decision reason are required.' 
+      });
+    }
+
+    const activeAnalyst = getAnalystByEmailOrId(analystEmail || analystId || req.session?.analystProfile?.email);
+
+    // 1. Save Decision in Repository & Database
+    const savedRecord = await analystDecisionRepository.saveDecision({
+      analyst_id: activeAnalyst.analyst_id,
+      analyst_email: activeAnalyst.email,
+      session_id: sessionId,
+      transaction_id: transactionId || null,
+      user_id: userId || null,
+      threat_type: threatType || 'BEHAVIORAL_FRAUD',
+      risk_score: parseFloat(riskScore) || 50,
+      decision: String(decision).toUpperCase(),
+      decision_reason: decisionReason,
+      analyst_notes: analystNotes || null,
+      previous_status: 'UNDER_REVIEW',
+      new_status: String(decision).toUpperCase()
+    });
+
+    // 2. Log in Audit Trail
+    await caseService.logAnalystAction({
+      analystId: activeAnalyst.analyst_id,
+      targetUserId: userId || sessionId,
+      action: `ANALYST_DECISION_${decision}`,
+      metadata: { 
+        sessionId, 
+        transactionId, 
+        decision, 
+        reason: decisionReason,
+        analystEmail: activeAnalyst.email 
+      }
+    });
+
+    // 3. Increment Analyst Insider Threat Counters & Log Activity Event
+    let updatedInsiderProfile = null;
+    let insiderEvaluation = null;
+    const uppercaseDecision = String(decision).toUpperCase();
+
+    if (uppercaseDecision === 'APPROVED') {
+      updatedInsiderProfile = await insiderThreatRepository.incrementAcceptedTransaction(activeAnalyst.email);
+    } else if (uppercaseDecision === 'REJECTED') {
+      updatedInsiderProfile = await insiderThreatRepository.incrementRejectedTransaction(activeAnalyst.email);
+    }
+
+    // Log Action in Analyst Active Review Cycle Batch
+    let activeCycleState = null;
+    try {
+      activeCycleState = insiderThreatEngine.recordActionInCycle(activeAnalyst.email, {
+        decision: uppercaseDecision,
+        sessionId,
+        transactionId: transactionId || null,
+        decisionReason,
+        riskScore: parseFloat(riskScore) || 50
+      });
+    } catch (e) {
+      console.warn('Notice: Record action in cycle warning:', e.message);
+    }
+
+    // 4. Fetch updated analyst stats
+    const updatedStats = await analystDecisionRepository.getAnalystStatistics(activeAnalyst.email);
+
+    return res.status(200).json({
+      success: true,
+      message: `Formal analyst decision '${decision}' recorded successfully by ${activeAnalyst.name}.`,
+      decision: savedRecord,
+      analystStats: updatedStats,
+      insiderProfile: updatedInsiderProfile,
+      activeCycleState
+    });
+
+  } catch (err) {
+    console.error('Submit analyst decision error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to record analyst decision.' });
+  }
+});
+
+/**
+ * Insider Threat Employee Profiles API
+ * GET /api/analyst/insider-threat/profiles
+ */
+router.get('/insider-threat/profiles', async (req, res) => {
+  try {
+    const profiles = await insiderThreatRepository.getAllProfiles();
+    return res.status(200).json({
+      success: true,
+      profiles
+    });
+  } catch (err) {
+    console.error('Get insider profiles error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch insider threat employee profiles.' });
+  }
+});
+
+/**
+/**
+ * Complete Review Batch API (Triggered by [ COMPLETE REVIEW ] button)
+ * POST /api/analyst/insider-threat/complete-review
+ */
+router.post('/insider-threat/complete-review', async (req, res) => {
+  try {
+    const { analystEmail } = req.body;
+    const result = await insiderThreatEngine.completeReviewCycle(analystEmail || 'analyzer1@gmail.com');
+
+    return res.status(200).json({
+      success: true,
+      message: `Review cycle '${result.cycle.review_cycle_id}' completed and analyzed successfully against database baseline.`,
+      cycle: result.cycle,
+      analysis: result.analysis
+    });
+  } catch (err) {
+    console.error('Complete review cycle error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to complete review cycle analysis.' });
+  }
+});
+
+/**
+ * Insider Threat Complete Telemetry & History API
+ * GET /api/analyst/insider-threat/telemetry/:identifier
+ */
+router.get('/insider-threat/telemetry/:identifier', async (req, res) => {
+  try {
+    const { identifier } = req.params;
+    const telemetry = await insiderThreatEngine.getAnalystTelemetry(identifier);
+    return res.status(200).json({
+      success: true,
+      telemetry
+    });
+  } catch (err) {
+    console.error('Get insider telemetry error:', err.message);
+    return res.status(500).json({ success: false, message: 'Failed to fetch insider threat telemetry.' });
   }
 });
 
