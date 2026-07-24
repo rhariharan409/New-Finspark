@@ -46,8 +46,9 @@ async function initDashboard() {
     // 2. Load User Banking Transaction History
     await loadTransactionHistory();
 
-    // 3. Start Polling for Real-Time ATO Approvals
+    // 3. Start Polling for Real-Time ATO Approvals & Real-Time Threat Score Meter Updates
     startPendingApprovalsPolling();
+    startLiveDashboardThreatPolling();
 
   } catch (err) {
     console.error('Session check error:', err);
@@ -196,6 +197,24 @@ function startPendingApprovalsPolling() {
   checkPendingApprovals();
   if (pollApprovalInterval) clearInterval(pollApprovalInterval);
   pollApprovalInterval = setInterval(checkPendingApprovals, 2000);
+}
+
+let pollDashboardThreatInterval = null;
+
+function startLiveDashboardThreatPolling() {
+  async function checkLiveThreat() {
+    try {
+      const res = await fetch('/api/auth/current-threat-status');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        updateDashboardRiskWidget(data.riskScore, data.riskLevel, data.reasons || []);
+      }
+    } catch (e) {}
+  }
+
+  checkLiveThreat();
+  if (pollDashboardThreatInterval) clearInterval(pollDashboardThreatInterval);
+  pollDashboardThreatInterval = setInterval(checkLiveThreat, 1500);
 }
 
 async function checkPendingApprovals() {

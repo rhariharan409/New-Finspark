@@ -644,7 +644,16 @@ router.post('/logout', async (req, res) => {
 router.get('/current-threat-status', (req, res) => {
   try {
     const ipAddress = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket?.remoteAddress || req.ip || '127.0.0.1';
-    const identifier = req.query.identifier || 'unknown';
+    
+    let identifier = req.query.identifier;
+    if (!identifier && req.session && req.session.userId) {
+      identifier = req.session.userId;
+    }
+    if (!identifier) {
+      const ipState = credentialStuffingDetector.ipStore ? credentialStuffingDetector.ipStore.getIPState(ipAddress) : null;
+      const targetUsers = ipState?.target_users_set ? Array.from(ipState.target_users_set) : [];
+      identifier = targetUsers.length > 0 ? targetUsers[targetUsers.length - 1] : 'unknown';
+    }
 
     const threatCheck = credentialStuffingDetector.detect({
       event_id: `EVT_POLL_${Date.now()}`,

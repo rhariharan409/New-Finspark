@@ -8,18 +8,18 @@ export function checkBruteForce(userState = {}, entityId = '', baselineTracker =
   const sourceIpsSet = userState.source_ips_set || new Set();
   const sourceIpsCount = sourceIpsSet.size;
 
-  let threshold = 5.0;
+  let threshold = 3.0;
   let mean = 0.0;
   let stdDev = 0.0;
 
   if (baselineTracker) {
-    const res = baselineTracker.getThreshold(entityId, 2.5, 5.0);
+    const res = baselineTracker.getThreshold(entityId, 2.5, 3.0);
     threshold = res.threshold;
     mean = res.mean;
     stdDev = res.stdDev;
   }
 
-  if (failedCount >= threshold) {
+  if (failedCount >= 3) {
     const reason = `Account brute force: ${failedCount} failed login attempts for user '${entityId}' in the last 2 minutes from ${sourceIpsCount} distinct IP(s)`;
     const evidence = {
       rule: 'brute_force',
@@ -33,7 +33,7 @@ export function checkBruteForce(userState = {}, entityId = '', baselineTracker =
     };
 
     return {
-      score_contribution: 45.0,
+      score_contribution: failedCount >= 5 ? 90.0 : 75.0,
       reason,
       evidence
     };
