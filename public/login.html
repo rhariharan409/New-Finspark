@@ -19,7 +19,36 @@
     </div>
   </nav>
 
-  <main class="container" style="max-width: 420px; margin-top: 3rem;">
+  <main class="container" style="max-width: 480px; margin-top: 2rem;">
+    <!-- Live Risk Score Meter Widget at Top of Page -->
+    <div id="risk-score-widget" class="card" style="padding: 1.25rem; margin-bottom: 1.25rem; background: #0f172a; color: #f8fafc; border-radius: 12px; border: 1px solid #1e293b;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <div>
+          <span style="font-size: 0.75rem; text-transform: uppercase; tracking: 0.05em; color: #94a3b8; font-weight: 700;">🛡️ Live Threat Detector Risk Score</span>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
+            <span id="widget-score-val" style="font-size: 2.25rem; font-weight: 800; color: #22c55e;">0</span>
+            <span style="font-size: 0.9rem; color: #64748b;">/ 100</span>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <span id="widget-risk-badge" style="background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); padding: 0.35rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">
+            LOW (ALLOW)
+          </span>
+          <button id="reset-threat-btn" type="button" style="display: block; margin-top: 0.5rem; background: #334155; color: #cbd5e1; border: none; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.7rem; cursor: pointer;">
+            🔄 Reset Threat Store
+          </button>
+        </div>
+      </div>
+
+      <!-- Risk Meter Bar -->
+      <div style="width: 100%; height: 8px; background: #334155; border-radius: 9999px; overflow: hidden;">
+        <div id="widget-score-bar" style="width: 0%; height: 100%; background: #22c55e; transition: width 0.4s ease, background-color 0.4s ease;"></div>
+      </div>
+
+      <!-- Live Triggered Reasons -->
+      <div id="widget-reasons" style="font-size: 0.75rem; color: #cbd5e1; margin-top: 0.65rem; display: none;"></div>
+    </div>
+
     <div class="card" style="padding: 2rem;">
       <h2 style="font-size: 1.5rem; color: #0f172a; margin-bottom: 0.25rem; text-align: center;">User Login</h2>
       <p style="color: #64748b; font-size: 0.85rem; text-align: center; margin-bottom: 1.5rem;">Access your secure FINSPARK banking account</p>

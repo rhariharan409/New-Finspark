@@ -107,6 +107,70 @@ document.addEventListener('DOMContentLoaded', () => {
     if (alertEl) alertEl.style.display = 'none';
   }
 
+  const scoreVal = document.getElementById('widget-score-val');
+  const scoreBar = document.getElementById('widget-score-bar');
+  const riskBadge = document.getElementById('widget-risk-badge');
+  const reasonsDiv = document.getElementById('widget-reasons');
+  const resetBtn = document.getElementById('reset-threat-btn');
+
+  function updateRiskWidget(score = 0, level = 'LOW (ALLOW)', reasons = []) {
+    if (!scoreVal || !scoreBar || !riskBadge) return;
+    const numScore = Math.min(100, Math.max(0, parseFloat(score) || 0));
+
+    scoreVal.textContent = Math.round(numScore);
+    scoreBar.style.width = `${numScore}%`;
+
+    let color = '#22c55e'; // Green
+    let badgeBg = 'rgba(34, 197, 94, 0.15)';
+    let badgeBorder = 'rgba(34, 197, 94, 0.3)';
+
+    if (numScore >= 70) {
+      color = '#ef4444'; // Red
+      badgeBg = 'rgba(239, 68, 68, 0.2)';
+      badgeBorder = 'rgba(239, 68, 68, 0.4)';
+    } else if (numScore >= 45) {
+      color = '#f97316'; // Orange
+      badgeBg = 'rgba(249, 115, 22, 0.2)';
+      badgeBorder = 'rgba(249, 115, 22, 0.4)';
+    } else if (numScore > 0) {
+      color = '#eab308'; // Yellow
+      badgeBg = 'rgba(234, 179, 8, 0.2)';
+      badgeBorder = 'rgba(234, 179, 8, 0.4)';
+    }
+
+    scoreVal.style.color = color;
+    scoreBar.style.backgroundColor = color;
+    riskBadge.style.color = color;
+    riskBadge.style.background = badgeBg;
+    riskBadge.style.borderColor = badgeBorder;
+    riskBadge.textContent = level;
+
+    if (reasonsDiv) {
+      if (reasons && reasons.length > 0) {
+        reasonsDiv.style.display = 'block';
+        reasonsDiv.innerHTML = `<span style="color: #f87171; font-weight: 700;">⚠️ Triggered Rules:</span> ${reasons.join('; ')}`;
+      } else {
+        reasonsDiv.style.display = 'none';
+        reasonsDiv.innerHTML = '';
+      }
+    }
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/auth/reset-threat-stores', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          updateRiskWidget(0, 'LOW (ALLOW)', []);
+          showAlert('🧹 Threat stores cleared. Risk score reset to 0.', true);
+        }
+      } catch (e) {
+        console.error('Reset error:', e);
+      }
+    });
+  }
+
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -139,6 +203,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = 'Sign In to Banking';
+        }
+
+        // Live Risk Score Update
+        if (typeof data.riskScore !== 'undefined') {
+          updateRiskWidget(data.riskScore, data.riskLevel, data.reasons || []);
         }
 
         if (!response.ok || !data.success) {

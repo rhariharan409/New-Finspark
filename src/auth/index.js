@@ -171,9 +171,21 @@ router.post('/login', async (req, res) => {
         }
       }, null, false); // dryRun = false
 
+      const postFailThreat = credentialStuffingDetector.detect({
+        event_id: `EVT_CHECK_POST_${Date.now()}`,
+        event_type: 'login',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: { login_success: false, password_hash: passwordHash, user_agent: userAgent }
+      }, null, true);
+
       return res.status(403).json({
         success: false,
-        message: 'Access blocked due to suspicious activity.'
+        message: 'Access blocked due to suspicious activity.',
+        riskScore: threatCheck.score,
+        riskLevel: threatCheck.score >= 70 ? 'CRITICAL (BLOCK)' : 'HIGH',
+        reasons: threatCheck.reasons
       });
     }
 
@@ -202,9 +214,21 @@ router.post('/login', async (req, res) => {
         }
       }, null, false); // dryRun = false
 
+      const postFailThreat = credentialStuffingDetector.detect({
+        event_id: `EVT_CHECK_POST_${Date.now()}`,
+        event_type: 'login',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: { login_success: false, password_hash: passwordHash, user_agent: userAgent }
+      }, null, true);
+
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password.'
+        message: 'Invalid email or password.',
+        riskScore: postFailThreat.score,
+        riskLevel: postFailThreat.score >= 70 ? 'CRITICAL (BLOCK)' : (postFailThreat.score >= 45 ? 'HIGH (REVIEW)' : (postFailThreat.score > 0 ? 'MEDIUM (MONITOR)' : 'LOW (ALLOW)')),
+        reasons: postFailThreat.reasons
       });
     }
 
@@ -241,9 +265,21 @@ router.post('/login', async (req, res) => {
         }
       }, null, false); // dryRun = false
 
+      const postFailThreat = credentialStuffingDetector.detect({
+        event_id: `EVT_CHECK_POST_${Date.now()}`,
+        event_type: 'login',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: { login_success: false, password_hash: passwordHash, user_agent: userAgent }
+      }, null, true);
+
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password.'
+        message: 'Invalid email or password.',
+        riskScore: postFailThreat.score,
+        riskLevel: postFailThreat.score >= 70 ? 'CRITICAL (BLOCK)' : (postFailThreat.score >= 45 ? 'HIGH (REVIEW)' : (postFailThreat.score > 0 ? 'MEDIUM (MONITOR)' : 'LOW (ALLOW)')),
+        reasons: postFailThreat.reasons
       });
     }
 
@@ -596,6 +632,26 @@ router.post('/logout', async (req, res) => {
       success: false,
       message: 'An error occurred during logout.'
     });
+  }
+});
+
+/**
+ * Reset Threat Stores API (Demo Reset)
+ * POST /api/auth/reset-threat-stores
+ */
+router.post('/reset-threat-stores', (req, res) => {
+  try {
+    if (credentialStuffingDetector.ipStore) credentialStuffingDetector.ipStore.clear();
+    if (credentialStuffingDetector.userStore) credentialStuffingDetector.userStore.clear();
+    if (credentialStuffingDetector.hashStore) credentialStuffingDetector.hashStore.clear();
+    return res.status(200).json({
+      success: true,
+      message: '🧹 Threat stores cleared successfully. All accumulated risk scores reset to 0.',
+      riskScore: 0,
+      riskLevel: 'LOW (ALLOW)'
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 
