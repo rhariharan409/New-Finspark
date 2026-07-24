@@ -2016,12 +2016,21 @@ function setupAuthorizationForm() {
       authBtn.textContent = 'Authenticating Credentials...';
 
       try {
-        // Step 1: Validate Higher Official Credentials against backend
-        const authRes = await fetch('/api/official/authorize-review', {
+        // Step 1: Validate Higher Official Credentials against backend (with path fallback)
+        let authRes = await fetch('/api/official/authorize-review', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
+
+        if (authRes.status === 404) {
+          authRes = await fetch('/api/analyst/official/authorize-review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+        }
+
         const authData = await authRes.json();
 
         if (!authRes.ok || !authData.success) {
@@ -2057,8 +2066,8 @@ function setupAuthorizationForm() {
         updateStep('prog-step-3', 'Collecting Analyst Activities', '✓', '#059669');
         updateStep('prog-step-4', 'Generating Documentation Report', '⟳', '#2563eb');
 
-        // Step 3: Complete Review Cycle & Retrieve Report Payload
-        const completeRes = await fetch('/api/review/complete', {
+        // Step 3: Complete Review Cycle & Retrieve Report Payload (with path fallback)
+        let completeRes = await fetch('/api/review/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2068,6 +2077,20 @@ function setupAuthorizationForm() {
             activityLogs: getTrackedAnalystActivities()
           })
         });
+
+        if (completeRes.status === 404) {
+          completeRes = await fetch('/api/analyst/review/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              password,
+              analystId: activeAnalystProfile?.analyst_id || 'ANL-001001',
+              activityLogs: getTrackedAnalystActivities()
+            })
+          });
+        }
+
         const completeData = await completeRes.json();
 
         updateStep('prog-step-4', 'Generating Documentation Report', '✓', '#059669');

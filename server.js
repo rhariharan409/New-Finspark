@@ -50,6 +50,10 @@ app.use('/api/baseline', baselineModule.router);
 app.use('/api/risk', riskModule.router);
 app.use('/api/analyst', analystModule.router);
 
+// Direct root aliases for official authorization and review completion
+app.use('/api/official', analystModule.router);
+app.use('/api/review', analystModule.router);
+
 // Protected API Route example
 app.get('/api/protected/dashboard-data', sessionModule.requireAuth, (req, res) => {
   res.json({
