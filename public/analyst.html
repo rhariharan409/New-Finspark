@@ -3,567 +3,1399 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QUANTRA CORRELATE | Financial Threat Intelligence Platform</title>
+  <title>Analyst Portal - FINSPARK</title>
   <link rel="stylesheet" href="css/style.css">
-  <!-- Supabase JS Client -->
+  <!-- Supabase JS Client for Realtime Subscriptions -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .layout-wrapper {
+      display: flex;
+      min-height: calc(100vh - 60px);
+    }
+    .sidebar {
+      width: 260px;
+      background: #f8fafc;
+      border-right: 1px solid #e2e8f0;
+      padding: 1.25rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .nav-group-title {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+      padding-left: 0.5rem;
+    }
+    .sidebar-menu {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .sidebar-menu li {
+      margin-bottom: 0.25rem;
+    }
+    .sidebar-menu li a {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #334155;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .sidebar-menu li a:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .sidebar-menu li a.active {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .content-area {
+      flex: 1;
+      padding: 1.5rem 2rem;
+      max-width: 1350px;
+    }
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 1rem;
+    }
+    .summary-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 0.85rem;
+    }
+    .summary-val {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 0.2rem;
+      word-break: break-all;
+    }
+    .filter-btn-group {
+      display: flex;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+    }
+    .time-filter-btn, .hop-filter-btn {
+      padding: 0.28rem 0.65rem;
+      font-size: 0.76rem;
+      font-weight: 600;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .time-filter-btn.active, .time-filter-btn:hover,
+    .hop-filter-btn.active, .hop-filter-btn:hover {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #2563eb;
+    }
+
+    /* Timeline step node styling */
+    .timeline-node {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      position: relative;
+      padding-bottom: 1.25rem;
+    }
+    .timeline-node:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 36px;
+      bottom: 0;
+      width: 2px;
+      background: #cbd5e1;
+    }
+    .timeline-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #eff6ff;
+      border: 2px solid #2563eb;
+      color: #2563eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      z-index: 2;
+    }
+    .timeline-badge.alert {
+      background: #fef2f2;
+      border-color: #dc2626;
+      color: #dc2626;
+    }
+
+    /* Graph Canvas & Controls */
+    #graph-container {
+      position: relative;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      height: 520px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
+    }
+    #graph-svg {
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+    #graph-svg:active {
+      cursor: grabbing;
+    }
+    .graph-control-bar {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      z-index: 10;
+    }
+    .graph-ctrl-btn {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: #0f172a;
+      cursor: pointer;
+    }
+    .graph-ctrl-btn:hover {
+      background: #f1f5f9;
+      border-color: #2563eb;
+      color: #2563eb;
+    }
+
+    /* Side Panel / Drawer */
+    .side-panel {
+      position: fixed;
+      top: 0; right: -420px;
+      width: 400px;
+      height: 100vh;
+      background: #ffffff;
+      border-left: 1px solid #cbd5e1;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.12);
+      transition: right 0.25s ease;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+    }
+    .side-panel.open { right: 0; }
+    .side-panel-header {
+      padding: 1.25rem;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+    }
+    .side-panel-body {
+      padding: 1.25rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    @media print {
+      body { background: #ffffff !important; color: #000000 !important; }
+      .navbar, .sidebar, #ato-verification-card, .btn:not(#hr-print-btn), .graph-control-bar { display: none !important; }
+      .layout-wrapper { min-height: auto !important; display: block !important; }
+      .content-area { max-width: 100% !important; padding: 0 !important; }
+      .card { border: 1px solid #cbd5e1 !important; box-shadow: none !important; margin-bottom: 1.5rem !important; break-inside: avoid; }
+      .print-only-header { display: block !important; }
+      #hr-print-btn { display: none !important; }
+    }
+  </style>
 </head>
-<body>
+<body style="background-color: #ffffff;">
 
-  <!-- Top Application Header -->
-  <header class="app-header glass-header">
-    <div class="header-brand">
-      <div class="header-brand-icon">QC</div>
-      <div class="brand-titles">
-        <span class="brand-main-title">QUANTRA CORRELATE</span>
-        <span class="brand-subtitle">Financial Threat Intelligence Platform</span>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <a href="index.html" class="brand">
+      <span class="brand-icon">⚡</span>
+      <span>FINSPARK</span>
+      <span style="font-size: 0.75rem; background: #1e293b; color: #38bdf8; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; text-transform: uppercase;">Analyst Portal</span>
+    </a>
+    <div class="nav-links" style="display: flex; align-items: center; gap: 1rem;">
+      <div style="display: flex; align-items: center; gap: 0.5rem; background: #0f172a; border: 1px solid #334155; padding: 0.25rem 0.65rem; border-radius: 6px;">
+        <span style="font-size: 0.72rem; color: #38bdf8; font-weight: 800; text-transform: uppercase;">⚡ ACTIVE ANALYST:</span>
+        <select id="active-analyst-dropdown" style="background: #1e293b; color: #ffffff; border: 1px solid #475569; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.82rem; font-weight: 600; cursor: pointer; min-width: 220px;">
+          <!-- Populated dynamically with 10 analysts via JS -->
+        </select>
       </div>
+      <span id="analyst-info" style="font-size: 0.85rem; color: #cbd5e1; display: none;">Analyst</span>
+      <button id="analyst-logout-btn" class="btn btn-danger" style="padding: 0.35rem 0.85rem; font-size: 0.8rem;">Logout</button>
     </div>
+  </nav>
 
-    <div class="global-search-container">
-      <svg class="search-icon-svg" viewBox="0 0 24 24">
-        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <input type="text" id="globalSearchInput" class="global-search-input" placeholder="Search transactions, users, IP addresses, devices, session IDs...">
-    </div>
-
-    <div class="header-actions">
-      <div class="header-time-stamp" id="liveTimestamp">
-        <span class="status-dot green"></span>
-        <span id="timestampText">2026-07-24 07:45:00 UTC</span>
-      </div>
-
-      <button class="action-btn-icon" id="btnRefreshData" title="Refresh Feed">
-        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-        <span>Refresh</span>
-      </button>
-
-      <button class="action-btn-icon" id="btnNotifications" title="Notification Center">
-        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-        <span class="status-dot red"></span>
-      </button>
-
-      <div class="user-profile-badge">
-        <div class="profile-avatar-initials" id="userInitials">SC</div>
-        <div class="profile-info">
-          <span class="profile-name" id="userName">Sarah Connor</span>
-          <span class="profile-role" id="userRole">Lead SOC Investigator</span>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Global Application Three-Panel Layout -->
   <div class="layout-wrapper">
-    
-    <!-- Compact Expandable Sidebar -->
+    <!-- LEFT SIDEBAR NAVIGATION -->
     <aside class="sidebar">
-      <div class="nav-section">
-        <div class="nav-section-title">Overview</div>
-        <ul class="nav-menu">
-          <li class="nav-menu-item"><a href="#" class="active" data-view="dashboard">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-            <span>Overview</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="#" data-view="intel-overview">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-            <span>Intelligence Overview</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="#" data-view="risk-dashboard">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            <span>Risk Dashboard</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="#" data-view="active-investigations">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            <span>Active Investigations</span>
-          </a></li>
-        </ul>
-      </div>
-
-      <div class="nav-section">
-        <div class="nav-section-title">Detection</div>
-        <ul class="nav-menu">
-          <li class="nav-menu-item"><a href="#" data-view="txn-analysis">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-            <span>Transaction Analysis</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="#" data-view="high-risk-txns">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            <span>High-Risk Transactions</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="#" data-view="cnp-detection">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457-.39-2.823-1.07-4"/></svg>
-            <span>Card-Not-Present</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="#" data-view="behavioral-analysis">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-            <span>Behavioral Analysis</span>
-          </a></li>
-        </ul>
-      </div>
-
-      <div class="nav-section">
-        <div class="nav-section-title">Intelligence</div>
-        <ul class="nav-menu">
-          <li class="nav-menu-item"><a href="threat-intel.html">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-            <span>Threat Intelligence</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="threat-intel.html#internal-threats">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-            <span>Internal Threats</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="#" data-view="entity-correlation">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
-            <span>Entity Correlation</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="#" data-view="attack-patterns">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L5.6 15.11a2 2 0 00-1.83.693l-1.42 1.42a1 1 0 001.414 1.414l1.42-1.42a.5.5 0 01.457-.173l2.387.477a8 8 0 005.146-.69l.318-.158a8 8 0 015.146-.69l2.387.477a.5.5 0 01.256.137l1.42 1.42a1 1 0 001.414-1.414l-1.42-1.42z"/></svg>
-            <span>Attack Patterns</span>
-          </a></li>
-        </ul>
-      </div>
-
-      <div class="nav-section">
-        <div class="nav-section-title">Operations</div>
-        <ul class="nav-menu">
-          <li class="nav-menu-item"><a href="#" data-view="investigation-queue">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-            <span>Investigation Queue</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="#" data-view="case-management">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
-            <span>Case Management</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="#" data-view="activity-timeline">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span>Activity Timeline</span>
-          </a></li>
-          <li class="nav-menu-item"><a href="#" data-view="reports">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            <span>Reports</span>
-          </a></li>
+      <div>
+        <div class="nav-group-title">ANALYST CONSOLE</div>
+        <ul class="sidebar-menu">
+          <li><a id="nav-dashboard" class="active">📊 Dashboard</a></li>
+          <li><a id="nav-investigation">🔍 Investigation & Money Flow</a></li>
+          <li><a id="nav-high-risk">🚨 High Risk Sessions</a></li>
+          <li><a id="nav-ato-investigation">🛡️ Account Takeover Investigation</a></li>
+          <li><a id="nav-insider-threat">🕵️ Insider Threat Monitor</a></li>
+          <li><a id="nav-settings">⚙️ Settings</a></li>
         </ul>
       </div>
     </aside>
 
-    <!-- Main Content Area -->
-    <main class="main-content" id="mainDashboardView">
-      
-      <!-- Top Operational Metrics (4 Glass Cards) -->
-      <section class="metrics-row" id="metricsContainer">
-        <!-- Metric 1 -->
-        <div class="glass-panel metric-panel">
-          <div class="metric-header">
-            <span class="metric-label">Active Investigations</span>
-            <span class="metric-trend trend-up">
-              <svg class="nav-icon" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7"/></svg> +4
-            </span>
-          </div>
-          <div class="metric-value-container">
-            <span class="metric-value" id="valActiveInvestigations">24</span>
-            <svg class="metric-sparkline" viewBox="0 0 70 26">
-              <path d="M0 20 L15 15 L30 18 L45 8 L60 12 L70 4" fill="none" stroke="#2563eb" stroke-width="2"/>
-            </svg>
-          </div>
-        </div>
+    <main class="content-area">
 
-        <!-- Metric 2 -->
-        <div class="glass-panel metric-panel">
-          <div class="metric-header">
-            <span class="metric-label">High-Risk Transactions</span>
-            <span class="metric-trend trend-up">
-              <svg class="nav-icon" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7"/></svg> +2
-            </span>
-          </div>
-          <div class="metric-value-container">
-            <span class="metric-value" id="valHighRiskTxns">18</span>
-            <svg class="metric-sparkline" viewBox="0 0 70 26">
-              <path d="M0 22 L15 19 L30 14 L45 18 L60 6 L70 3" fill="none" stroke="#ef4444" stroke-width="2"/>
-            </svg>
-          </div>
-        </div>
+      <!-- ========================================================= -->
+      <!-- VIEW 1: UNIFIED ANALYST DASHBOARD (DEFAULT PAGE)          -->
+      <!-- ========================================================= -->
+      <div id="dashboard-view-wrapper">
 
-        <!-- Metric 3 -->
-        <div class="glass-panel metric-panel">
-          <div class="metric-header">
-            <span class="metric-label">Suspicious Entities</span>
-            <span class="metric-trend trend-down">
-              <svg class="nav-icon" style="width:12px;height:12px;" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg> -5
-            </span>
-          </div>
-          <div class="metric-value-container">
-            <span class="metric-value" id="valSuspiciousEntities">46</span>
-            <svg class="metric-sparkline" viewBox="0 0 70 26">
-              <path d="M0 10 L15 14 L30 8 L45 16 L60 18 L70 22" fill="none" stroke="#f97316" stroke-width="2"/>
-            </svg>
-          </div>
-        </div>
-
-        <!-- Metric 4 -->
-        <div class="glass-panel metric-panel">
-          <div class="metric-header">
-            <span class="metric-label">Threat Confidence</span>
-            <span class="metric-trend trend-neutral">High</span>
-          </div>
-          <div class="metric-value-container">
-            <span class="metric-value" id="valThreatConfidence">87%</span>
-            <svg class="metric-sparkline" viewBox="0 0 70 26">
-              <path d="M0 18 L15 16 L30 12 L45 10 L60 8 L70 6" fill="none" stroke="#10b981" stroke-width="2"/>
-            </svg>
-          </div>
-        </div>
-      </section>
-
-      <!-- Main Intelligence Visualization: Interactive Node Correlation Graph -->
-      <section class="glass-panel viz-section">
-        <div class="section-header-row">
-          <div class="section-header-title">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
-            <span>Diagrammatic Threat Correlation Engine</span>
-          </div>
-          <span class="section-header-badge" id="graphFocusLabel">Live Investigation: INV-20431 (Hariharan)</span>
-        </div>
-
-        <div class="node-graph-canvas" id="nodeGraphCanvas">
-          <div class="node-flow-horizontal" id="nodeFlowContainer">
-            <!-- Node 1: User -->
-            <div class="graph-node-box risk-low" data-node="user">
-              <span class="node-type-label">USER</span>
-              <span class="node-title-value">Hariharan</span>
-              <div class="node-meta-row">
-                <span>USR-90412</span>
-                <span class="status-dot green"></span>
-              </div>
+        <!-- SECTION 1: GLOBAL SYSTEM OVERVIEW -->
+        <div class="card" style="border-top: 4px solid #2563eb; margin-bottom: 1.5rem;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">Section 1: Global System Overview</span>
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: normal;">Real-time enterprise fraud detection statistics across all users</div>
             </div>
-
-            <div class="node-connector-line"><div class="node-connector-arrow"></div></div>
-
-            <!-- Node 2: Session -->
-            <div class="graph-node-box risk-medium" data-node="session">
-              <span class="node-type-label">SESSION</span>
-              <span class="node-title-value">SES-88291</span>
-              <div class="node-meta-row">
-                <span>Active 4m</span>
-                <span class="status-dot amber"></span>
-              </div>
-            </div>
-
-            <div class="node-connector-line"><div class="node-connector-arrow"></div></div>
-
-            <!-- Node 3: Device -->
-            <div class="graph-node-box risk-high" data-node="device">
-              <span class="node-type-label">DEVICE</span>
-              <span class="node-title-value">Chrome / Win</span>
-              <div class="node-meta-row">
-                <span>New Device</span>
-                <span class="status-dot red"></span>
-              </div>
-            </div>
-
-            <div class="node-connector-line"><div class="node-connector-arrow"></div></div>
-
-            <!-- Node 4: IP Address -->
-            <div class="graph-node-box risk-high" data-node="ip">
-              <span class="node-type-label">IP ADDRESS</span>
-              <span class="node-title-value">192.168.4.11</span>
-              <div class="node-meta-row">
-                <span>Tor / Proxy</span>
-                <span class="status-dot red"></span>
-              </div>
-            </div>
-
-            <div class="node-connector-line"><div class="node-connector-arrow"></div></div>
-
-            <!-- Node 5: Transaction -->
-            <div class="graph-node-box risk-high" data-node="txn">
-              <span class="node-type-label">TRANSACTION</span>
-              <span class="node-title-value">₹85,000</span>
-              <div class="node-meta-row">
-                <span>TXN-7731</span>
-                <span class="status-dot red"></span>
-              </div>
-            </div>
-
-            <div class="node-connector-line"><div class="node-connector-arrow"></div></div>
-
-            <!-- Node 6: Behavior -->
-            <div class="graph-node-box risk-high" data-node="behavior">
-              <span class="node-type-label">BEHAVIOR</span>
-              <span class="node-title-value">78% Anomaly</span>
-              <div class="node-meta-row">
-                <span>Keystroke/Velocity</span>
-                <span class="status-dot red"></span>
-              </div>
-            </div>
-
-            <div class="node-connector-line"><div class="node-connector-arrow"></div></div>
-
-            <!-- Node 7: Risk Decision -->
-            <div class="graph-node-box risk-high selected" data-node="decision">
-              <span class="node-type-label">DECISION</span>
-              <span class="node-title-value">HIGH RISK</span>
-              <div class="node-meta-row">
-                <span>Score: 87/100</span>
-                <span class="status-dot red"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Diagrammatic Risk Breakdown & Prediction Explanation -->
-      <section class="intelligence-grid">
-        
-        <!-- Risk Intelligence Breakdown (Factor Contribution) -->
-        <div class="glass-panel viz-section">
-          <div class="section-header-row">
-            <div class="section-header-title">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
-              <span>Risk Factor Breakdown</span>
-            </div>
-            <span class="section-header-badge">Overall Score: 87 / 100</span>
+            <span id="live-system-status-badge" class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 0.35rem 0.75rem;">🟢 LIVE REALTIME CONNECTED</span>
           </div>
 
-          <div class="factor-list" id="factorListContainer">
-            <div class="factor-item">
-              <div class="factor-meta">
-                <span>IP Reputation Deviation</span>
-                <span class="factor-score-badge">+24</span>
-              </div>
-              <div class="factor-bar-bg"><div class="factor-bar-fill" style="width: 82%;"></div></div>
+          <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.85rem;">
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Total Sessions Scanned</span>
+              <div id="metric-sessions-scanned" class="summary-val" style="color: #0f172a;">-</div>
             </div>
-
-            <div class="factor-item">
-              <div class="factor-meta">
-                <span>Device Trust Anomaly</span>
-                <span class="factor-score-badge">+18</span>
-              </div>
-              <div class="factor-bar-bg"><div class="factor-bar-fill" style="width: 68%;"></div></div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Allowed Sessions</span>
+              <div id="metric-allowed-sessions" class="summary-val" style="color: #059669;">-</div>
             </div>
-
-            <div class="factor-item">
-              <div class="factor-meta">
-                <span>Behavioral Cadence Deviation</span>
-                <span class="factor-score-badge">+27</span>
-              </div>
-              <div class="factor-bar-bg"><div class="factor-bar-fill" style="width: 94%;"></div></div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Step-Up Sessions</span>
+              <div id="metric-stepup-sessions" class="summary-val" style="color: #d97706;">-</div>
             </div>
-
-            <div class="factor-item">
-              <div class="factor-meta">
-                <span>Transaction Amount Anomaly</span>
-                <span class="factor-score-badge">+12</span>
-              </div>
-              <div class="factor-bar-bg"><div class="factor-bar-fill" style="width: 55%;"></div></div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Blocked Sessions</span>
+              <div id="metric-blocked-sessions" class="summary-val" style="color: #dc2626;">-</div>
             </div>
-
-            <div class="factor-item">
-              <div class="factor-meta">
-                <span>Location Mismatch / Velocity</span>
-                <span class="factor-score-badge">+6</span>
-              </div>
-              <div class="factor-bar-bg"><div class="factor-bar-fill" style="width: 30%;"></div></div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Total Users</span>
+              <div id="metric-total-users" class="summary-val" style="color: #2563eb;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Active Users</span>
+              <div id="metric-active-users" class="summary-val" style="color: #059669;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Total Transactions</span>
+              <div id="metric-total-txns" class="summary-val" style="color: #0f172a;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Total Alerts Generated</span>
+              <div id="metric-total-alerts" class="summary-val" style="color: #dc2626;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Average Risk Score</span>
+              <div id="metric-avg-risk-score" class="summary-val" style="color: #d97706;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">High Risk Sessions</span>
+              <div id="metric-high-risk-sessions" class="summary-val" style="color: #dc2626;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Medium Risk Sessions</span>
+              <div id="metric-med-risk-sessions" class="summary-val" style="color: #d97706;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Low Risk Sessions</span>
+              <div id="metric-low-risk-sessions" class="summary-val" style="color: #059669;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Decision Confidence</span>
+              <div id="metric-decision-confidence" class="summary-val" style="color: #059669;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Last Scan Time</span>
+              <div id="metric-last-scan-time" class="summary-val" style="font-size: 0.85rem; color: #475569;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Live System Status</span>
+              <div id="metric-live-status" class="summary-val" style="font-size: 0.85rem; color: #059669;">ONLINE (REALTIME)</div>
             </div>
           </div>
         </div>
 
-        <!-- Visual Decision Chain ("WHY THIS TRANSACTION IS RISKY") -->
-        <div class="glass-panel viz-section">
-          <div class="section-header-row">
-            <div class="section-header-title">
-              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span>Why This Transaction Is Risky</span>
+        <!-- SECTION 2: ALL USER SESSION MONITOR -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">Section 2: All User Session Monitor</span>
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: normal;">Main monitoring console displaying every session record from the database</div>
             </div>
-            <span class="section-header-badge">XAI Decision Chain</span>
+            <span id="session-monitor-count" class="badge badge-low">0 SESSIONS</span>
           </div>
 
-          <div class="decision-chain-container" id="decisionChainContainer">
-            <div class="decision-step-card" data-step="1">
-              <span class="decision-step-num">STEP 01</span>
-              <span class="decision-step-title">New Device</span>
-              <span class="decision-step-diff">Unrecognized Fingerprint (+18)</span>
-            </div>
-            <div class="decision-step-card" data-step="2">
-              <span class="decision-step-num">STEP 02</span>
-              <span class="decision-step-title">New IP Address</span>
-              <span class="decision-step-diff">VPN Subnet Detected (+24)</span>
-            </div>
-            <div class="decision-step-card" data-step="3">
-              <span class="decision-step-num">STEP 03</span>
-              <span class="decision-step-title">Location Shift</span>
-              <span class="decision-step-diff">Impossible Velocity (+6)</span>
-            </div>
-            <div class="decision-step-card" data-step="4">
-              <span class="decision-step-num">STEP 04</span>
-              <span class="decision-step-title">Amount Spike</span>
-              <span class="decision-step-diff">3x Daily Baseline (+12)</span>
-            </div>
-            <div class="decision-step-card" data-step="5">
-              <span class="decision-step-num">STEP 05</span>
-              <span class="decision-step-title">Behavior Anomaly</span>
-              <span class="decision-step-diff">Keystroke Cadence (+27)</span>
-            </div>
+          <!-- Search, Filter & Sort Toolbar -->
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center;">
+            <input type="text" id="session-search-input" class="form-input" placeholder="Search by User Name, User ID, Account Number, Session ID, IP, Location..." style="flex: 2; min-width: 240px;">
+            
+            <select id="session-decision-filter" class="form-input" style="flex: 1; min-width: 140px;">
+              <option value="ALL">All Decisions</option>
+              <option value="ALLOW">Allow Only</option>
+              <option value="STEP-UP">Step-Up Only</option>
+              <option value="BLOCK">Block Only</option>
+              <option value="MONITOR">Monitor Only</option>
+            </select>
+
+            <select id="session-sort-select" class="form-input" style="flex: 1; min-width: 140px;">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="risk-desc">Highest Risk First</option>
+              <option value="risk-asc">Lowest Risk First</option>
+            </select>
           </div>
-          
-          <div id="decisionNodeDetailCard" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:0.75rem 1rem; font-size:0.8rem; color:#334155;">
-            <strong>Click any step above</strong> to inspect exact observed vs. baseline parameters.
+
+          <!-- Table Container -->
+          <div style="overflow-x: auto;">
+            <table class="data-table" style="font-size: 0.78rem;">
+              <thead>
+                <tr>
+                  <th>User Name</th>
+                  <th>User ID</th>
+                  <th>Account Number</th>
+                  <th>Session ID</th>
+                  <th>Login Time</th>
+                  <th>Logout Time</th>
+                  <th>Duration</th>
+                  <th>IP Address</th>
+                  <th>Device</th>
+                  <th>Browser</th>
+                  <th>OS</th>
+                  <th>Location</th>
+                  <th>Risk Score</th>
+                  <th>AI Confidence</th>
+                  <th>Decision</th>
+                  <th>Timestamp</th>
+                  <th>Inspect</th>
+                </tr>
+              </thead>
+              <tbody id="all-sessions-table-body">
+                <tr><td colspan="17" style="text-align:center; color:#64748b; padding: 1.5rem;">Loading session records from Supabase...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination Bar -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; flex-wrap: wrap; gap: 0.5rem; font-size: 0.85rem;">
+            <div id="session-pagination-info" style="color: #64748b;">Showing 0 - 0 of 0 sessions</div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="button" id="session-prev-btn" class="btn btn-outline" style="padding: 0.3rem 0.75rem;" disabled>Previous</button>
+              <button type="button" id="session-next-btn" class="btn btn-outline" style="padding: 0.3rem 0.75rem;" disabled>Next</button>
+            </div>
           </div>
         </div>
 
-      </section>
-
-      <!-- Active Investigations Management Table -->
-      <section class="glass-panel investigations-table-panel">
-        <div class="section-header-row" style="margin-bottom: 1rem;">
-          <div class="section-header-title">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-            <span>Active Investigations Queue</span>
-          </div>
-          <span class="section-header-badge" id="queueCountBadge">18 Flagged Incidents</span>
-        </div>
-
-        <div style="overflow-x: auto;">
-          <table class="investigations-table" id="investigationsTable">
-            <thead>
-              <tr>
-                <th>Risk</th>
-                <th>Status</th>
-                <th>Investigation ID</th>
-                <th>User / Account</th>
-                <th>Transaction Amount</th>
-                <th>Detection Type</th>
-                <th>Created Time</th>
-              </tr>
-            </thead>
-            <tbody id="investigationsTbody">
-              <!-- Dynamically populated rows -->
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-    </main>
-
-    <!-- Right-Side Investigation Detail Panel Drawer -->
-    <div class="drawer-panel" id="investigationDrawer">
-      <div class="drawer-header">
-        <div class="drawer-title-group">
-          <span class="drawer-title" id="drawerInvTitle">Investigation INV-20431</span>
-          <span class="drawer-subtitle" id="drawerInvSubtitle">High-Risk Transaction Detected</span>
-        </div>
-        <button class="close-drawer-btn" id="btnCloseDrawer">&times;</button>
       </div>
 
-      <div class="drawer-body">
+      <!-- ========================================================= -->
+      <!-- VIEW: HIGH RISK SESSIONS WORKSPACE                        -->
+      <!-- ========================================================= -->
+      <div id="high-risk-sessions-workspace" style="display: none;">
         
-        <!-- Risk & Status Badge Header -->
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:0.85rem; border-radius:8px; border:1px solid #e2e8f0;">
-          <div>
-            <span style="font-size:0.7rem; font-weight:800; color:#64748b; text-transform:uppercase;">Risk Level</span>
-            <div style="font-size:1.1rem; font-weight:800; color:#dc2626;" id="drawerRiskScore">HIGH (87/100)</div>
+        <!-- HIGH RISK INVESTIGATION QUEUE CARD -->
+        <div class="card" style="border-top: 4px solid #dc2626; margin-bottom: 1.5rem;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.25rem; font-weight: 700; color: #0f172a;">🚨 HIGH RISK SESSIONS INVESTIGATION QUEUE</span>
+              <div style="font-size: 0.8rem; color: #64748b; font-weight: normal;">Automatically collected suspicious sessions evaluated by real-time risk decision engine (STEP-UP, BLOCK, MONITOR, or Risk Score &ge; 30)</div>
+            </div>
+            <span id="queue-count-badge" class="badge badge-high" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">0 QUEUED</span>
           </div>
-          <span class="status-badge new" id="drawerStatusBadge">NEW</span>
+
+          <!-- Filter & Search Toolbar -->
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center;">
+            <input type="text" id="hr-search-input" class="form-input" placeholder="Search high risk sessions by User Name, Account ID, Session ID..." style="flex: 2; min-width: 260px;">
+            <select id="hr-priority-filter" class="form-input" style="flex: 1; min-width: 150px;">
+              <option value="ALL">All Priorities</option>
+              <option value="CRITICAL">Critical Priority Only</option>
+              <option value="HIGH">High Priority Only</option>
+              <option value="MEDIUM">Medium Priority Only</option>
+            </select>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="data-table" style="font-size: 0.82rem;">
+              <thead>
+                <tr>
+                  <th>User Name</th>
+                  <th>Account Number</th>
+                  <th>Session ID</th>
+                  <th>Risk Score</th>
+                  <th>Decision</th>
+                  <th>Detection Reason</th>
+                  <th>Detected Time</th>
+                  <th>Priority</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="queue-table-body">
+                <tr><td colspan="9" style="text-align:center; color:#64748b; padding: 1.5rem;">Loading high risk sessions from database...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <!-- Description -->
-        <div>
-          <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase;">Description</span>
-          <p style="font-size:0.83rem; color:#334155; margin-top:0.25rem; line-height:1.4;" id="drawerDescription">
-            Subject initiated ₹85,000 transfer via unrecognised Windows PC device and VPN proxy IP. Keystroke telemetry indicates potential automated script execution.
+        <!-- COMPLETE REVIEW BATCH BUTTON -->
+        <div id="hr-complete-review-container" style="margin-bottom: 1.5rem; text-align: center; background: #faf5ff; border: 2px dashed #a855f7; padding: 1.25rem; border-radius: 10px;">
+          <h4 style="margin: 0 0 0.4rem 0; font-size: 1.05rem; color: #5b21b6; font-weight: 800;">
+            ✓ Complete Current Review Cycle Batch
+          </h4>
+          <p style="margin: 0 0 0.85rem 0; font-size: 0.85rem; color: #6b21a8;">
+            Finished reviewing individual high-risk sessions? Click below to complete your active review cycle batch. The system will compare your completed batch metrics against your historical database baseline.
           </p>
-        </div>
-
-        <!-- Visual Evidence Counters -->
-        <div>
-          <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:0.4rem;">Evidence Summary</span>
-          <div class="evidence-counter-grid">
-            <div class="counter-box">
-              <div class="counter-val" id="cntEvents">12</div>
-              <div class="counter-lbl">Events</div>
-            </div>
-            <div class="counter-box">
-              <div class="counter-val" id="cntAlerts">4</div>
-              <div class="counter-lbl">Alerts</div>
-            </div>
-            <div class="counter-box">
-              <div class="counter-val" id="cntFactors">7</div>
-              <div class="counter-lbl">Risk Factors</div>
-            </div>
-            <div class="counter-box">
-              <div class="counter-val" id="cntEntities">3</div>
-              <div class="counter-lbl">Entities</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Connected Entities Cards -->
-        <div>
-          <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:0.4rem;">Entities Involved</span>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;" id="drawerEntitiesGrid">
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.5rem 0.75rem; font-size:0.78rem;">
-              <div style="color:#64748b; font-size:0.65rem; font-weight:700;">USER</div>
-              <div style="font-weight:700; color:#0f172a;" id="entUser">Hariharan</div>
-            </div>
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.5rem 0.75rem; font-size:0.78rem;">
-              <div style="color:#64748b; font-size:0.65rem; font-weight:700;">IP ADDRESS</div>
-              <div style="font-weight:700; color:#0f172a;" id="entIP">192.168.4.11</div>
-            </div>
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.5rem 0.75rem; font-size:0.78rem;">
-              <div style="color:#64748b; font-size:0.65rem; font-weight:700;">DEVICE</div>
-              <div style="font-weight:700; color:#0f172a;" id="entDevice">Chrome / Win</div>
-            </div>
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:0.5rem 0.75rem; font-size:0.78rem;">
-              <div style="color:#64748b; font-size:0.65rem; font-weight:700;">SESSION</div>
-              <div style="font-weight:700; color:#0f172a;" id="entSession">SES-88291</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Vertical Incident Timeline -->
-        <div>
-          <span style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:0.5rem;">Incident Timeline</span>
-          <div class="timeline-list" id="drawerTimeline">
-            <div class="timeline-item">
-              <span class="timeline-time">10:02:11 UTC</span>
-              <span class="timeline-event-name">User Login Initiated</span>
-            </div>
-            <div class="timeline-item">
-              <span class="timeline-time">10:02:18 UTC</span>
-              <span class="timeline-event-name">Unrecognized Device Detected</span>
-            </div>
-            <div class="timeline-item">
-              <span class="timeline-time">10:02:31 UTC</span>
-              <span class="timeline-event-name">IP Reputation & VPN Anomaly</span>
-            </div>
-            <div class="timeline-item">
-              <span class="timeline-time">10:03:04 UTC</span>
-              <span class="timeline-event-name">High-Value Transfer Requested</span>
-            </div>
-            <div class="timeline-item">
-              <span class="timeline-time">10:03:05 UTC</span>
-              <span class="timeline-event-name">Risk Score Calculated: 87 / 100</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Prominent Complete Review Action Button -->
-        <div style="margin-top:0.5rem;">
-          <button class="complete-review-btn" id="btnCompleteReview">
-            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-            <span>COMPLETE REVIEW</span>
+          <button type="button" id="hr-complete-review-btn" class="btn btn-primary" style="background: #7c3aed; border-color: #7c3aed; padding: 0.65rem 2rem; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); cursor: pointer;">
+            ✓ COMPLETE REVIEW & ANALYZE BATCH
           </button>
         </div>
 
-      </div>
-    </div>
+        <!-- DETAILED RISK EXPLANATION & EVIDENCE REPORT CARD (INSPECT VIEW) -->
+        <div id="high-risk-report-card" class="card" style="border-top: 4px solid #dc2626; display: none; margin-bottom: 1.5rem; background: #ffffff;">
+          
+          <!-- PRINT HEADER (ONLY VISIBLE IN PRINT PDF MODE) -->
+          <div class="print-only-header" style="display: none; padding-bottom: 1rem; border-bottom: 2px solid #0f172a; margin-bottom: 1.5rem;">
+            <h1 style="margin:0; font-size: 1.6rem; color: #0f172a;">FINSPARK CYBER RISK FORENSIC AUDIT REPORT</h1>
+            <p style="margin: 0.25rem 0 0 0; color: #475569; font-size: 0.85rem;">Confidential Security Analysis & Risk Prediction Documentation</p>
+          </div>
 
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.2rem; font-weight: 700; color: #0f172a;">🔍 DETAILED RISK SCORE PREDICTION & FORENSIC RATIONALE</span>
+              <div style="font-size: 0.8rem; color: #64748b;">Target Session: <code id="hr-rep-session-id" style="color: #2563eb; font-weight: 700;">-</code></div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <button type="button" id="hr-print-btn" class="btn btn-primary" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; font-weight: 700; background: #2563eb;">
+                🖨️ Print / Export PDF Report
+              </button>
+              <span id="hr-rep-decision-badge" class="badge badge-critical" style="font-weight: 800; font-size: 0.85rem;">BLOCK</span>
+            </div>
+          </div>
+
+          <!-- SESSION & IDENTITY SUMMARY GRID -->
+          <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 1.5rem;">
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">User Name</span>
+              <div id="hr-rep-user-name" class="summary-val" style="color: #0f172a;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Account ID</span>
+              <div id="hr-rep-account-id" class="summary-val" style="color: #2563eb;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Predicted Risk Score</span>
+              <div id="hr-rep-risk-score" class="summary-val" style="color: #dc2626;">0/100</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Login Time</span>
+              <div id="hr-rep-login-time" class="summary-val" style="font-size: 0.85rem; color: #475569;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">IP Address / Location</span>
+              <div id="hr-rep-location" class="summary-val" style="font-size: 0.85rem; color: #334155;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Device Environment</span>
+              <div id="hr-rep-device" class="summary-val" style="font-size: 0.85rem; color: #334155;">-</div>
+            </div>
+          </div>
+
+          <!-- WHY THE RISK SCORE WAS PREDICTED HIGH (DYNAMIC DATABASE RATIONALE) -->
+          <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 0.98rem; color: #991b1b; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+              <span>⚠️ RISK ENGINE PREDICTION ANALYSIS (WHY THE RISK SCORE IS HIGH)</span>
+            </h4>
+            <div id="hr-rep-reasons-list" style="font-size: 0.88rem; color: #7f1d1d; line-height: 1.7;">
+              Loading prediction rationale...
+            </div>
+          </div>
+
+          <!-- DATABASE TRANSACTIONS EXECUTED DURING THIS SESSION -->
+          <div style="margin-bottom: 1.5rem;">
+            <h4 style="font-size: 0.95rem; color: #0f172a; margin-bottom: 0.5rem; font-weight: 700;">
+              Transactions Executed During Session (Database Audit Proof)
+            </h4>
+            <div style="overflow-x: auto;">
+              <table class="data-table" style="font-size: 0.82rem;">
+                <thead>
+                  <tr>
+                    <th>Transaction ID</th>
+                    <th>Receiver Account</th>
+                    <th>Amount (₹)</th>
+                    <th>Timestamp</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="hr-rep-txns-body">
+                  <tr><td colspan="5" style="text-align:center; color:#64748b;">No transactions recorded during this session</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TELEMETRY & SECURITY EVENT AUDIT LOGS FROM DB -->
+          <div>
+            <h4 style="font-size: 0.95rem; color: #0f172a; margin-bottom: 0.5rem; font-weight: 700;">
+              Database Telemetry & Security Events
+            </h4>
+            <div style="overflow-x: auto;">
+              <table class="data-table" style="font-size: 0.8rem;">
+                <thead>
+                  <tr>
+                    <th>Event ID</th>
+                    <th>Event Type</th>
+                    <th>Category</th>
+                    <th>IP Address</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody id="hr-rep-telemetry-body">
+                  <tr><td colspan="5" style="text-align:center; color:#64748b;">No security events recorded</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- ========================================================= -->
+      <!-- VIEW 2: INVESTIGATION & MONEY FLOW WORKSPACE              -->
+      <!-- ========================================================= -->
+      <div id="investigation-workspace" style="display: none;">
+
+        <!-- Search Bar Card -->
+        <div class="card" style="border-top: 4px solid #2563eb;">
+          <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem;">Account & Session Investigation Search</h2>
+          <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
+            Inspect target user account or session ID to inspect real-time multi-hop money flow graph, session telemetry, and risk intelligence.
+          </p>
+
+          <form id="analyst-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <input type="text" id="analyst-query-input" class="form-input" placeholder="e.g. TURTLE-1749020303, USR-001001, or SES-993821" style="flex: 1; min-width: 280px;" required>
+            <button type="submit" id="analyst-search-btn" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
+              Investigate Target
+            </button>
+          </form>
+          <div id="analyst-search-alert" class="alert alert-danger" style="display:none; margin-top: 1rem;"></div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="card">
+          <div class="section-title">
+            <span>1. Account Investigation Summary</span>
+            <span id="overall-risk-badge" class="badge badge-low">LOW RISK</span>
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">User Name</span>
+              <div id="sum-name" class="summary-val">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Account ID</span>
+              <div id="sum-account-id" class="summary-val" style="color: #2563eb;">-</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Account Status</span>
+              <div id="sum-status" class="summary-val" style="color: #059669;">Active</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Current Risk Score</span>
+              <div id="sum-risk-score" class="summary-val" style="color: #dc2626;">0/100</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Total Amount Transferred</span>
+              <div id="sum-total-amount" class="summary-val" style="color: #059669;">₹0.00</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Total Transactions</span>
+              <div id="sum-total-txns" class="summary-val">0</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Number of Sessions</span>
+              <div id="sum-total-sessions" class="summary-val">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MONEY FLOW ANALYSIS GRAPH SECTION -->
+        <div class="card" style="border-top: 4px solid #2563eb;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">2. MONEY FLOW ANALYSIS GRAPH</span>
+              <div style="font-size: 0.78rem; color: #64748b; font-weight: normal;">Interactive multi-hop directed transaction relationship graph</div>
+            </div>
+
+            <!-- Controls: Hop Depth & Time Filter Buttons -->
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+              <div class="filter-btn-group">
+                <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; align-self: center; margin-right: 0.25rem;">DEPTH:</span>
+                <button type="button" class="hop-filter-btn active" data-hop="1">Hop 1</button>
+                <button type="button" class="hop-filter-btn" data-hop="2">Hop 2</button>
+                <button type="button" class="hop-filter-btn" data-hop="3">Hop 3</button>
+                <button type="button" class="hop-filter-btn" data-hop="4">Hop 4</button>
+              </div>
+
+              <div class="filter-btn-group">
+                <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; align-self: center; margin-right: 0.25rem;">TIME:</span>
+                <button type="button" class="time-filter-btn" data-range="1h">1H</button>
+                <button type="button" class="time-filter-btn" data-range="6h">6H</button>
+                <button type="button" class="time-filter-btn" data-range="12h">12H</button>
+                <button type="button" class="time-filter-btn" data-range="24h">24H</button>
+                <button type="button" class="time-filter-btn" data-range="7d">7D</button>
+                <button type="button" class="time-filter-btn" data-range="30d">30D</button>
+                <button type="button" class="time-filter-btn active" data-range="all">All</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Split-Transaction Alert Box -->
+          <div id="flow-splitting-alert" class="alert alert-warning" style="display:none; margin-bottom: 1rem;">
+            <strong>⚠️ Split Transaction / Structuring Pattern Detected:</strong>
+            <div id="flow-splitting-text" style="margin-top: 0.25rem;">-</div>
+          </div>
+
+          <!-- Flow Summary Grid -->
+          <div class="summary-grid" style="margin-bottom: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Selected Hops / Period</span>
+              <div id="flow-period-val" class="summary-val" style="font-size: 0.95rem; color: #2563eb;">HOP 1 | ALL TIME</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total Transfers</span>
+              <div id="flow-total-txns" class="summary-val" style="font-size: 0.95rem;">0</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total Transferred</span>
+              <div id="flow-total-amount" class="summary-val" style="font-size: 0.95rem; color: #059669;">₹0.00</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Unique Senders</span>
+              <div id="flow-senders-count" class="summary-val" style="font-size: 0.95rem;">0</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Unique Receivers</span>
+              <div id="flow-receivers-count" class="summary-val" style="font-size: 0.95rem;">0</div>
+            </div>
+          </div>
+
+          <!-- Interactive SVG Graph Container -->
+          <div id="graph-container">
+            <div class="graph-control-bar">
+              <button class="graph-ctrl-btn" id="btn-zoom-in" title="Zoom In">+</button>
+              <button class="graph-ctrl-btn" id="btn-zoom-out" title="Zoom Out">-</button>
+              <button class="graph-ctrl-btn" id="btn-reset-view" title="Reset View">Fit</button>
+              <button class="graph-ctrl-btn" id="btn-auto-layout" title="Auto Layout">Auto Layout</button>
+            </div>
+
+            <svg id="graph-svg" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <marker id="arrow-LOW" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669" />
+                </marker>
+                <marker id="arrow-MEDIUM" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706" />
+                </marker>
+                <marker id="arrow-HIGH" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#ea580c" />
+                </marker>
+                <marker id="arrow-CRITICAL" viewBox="0 0 10 10" refX="28" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626" />
+                </marker>
+                <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+              <g id="viewport-group">
+                <g id="edges-layer"></g>
+                <g id="nodes-layer"></g>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Session Analysis -->
+        <div class="card">
+          <div class="section-title">
+            <span>3. Session Analysis & Aggregation</span>
+            <span id="session-count-badge" class="badge badge-low">0 Sessions</span>
+          </div>
+          <div id="session-table-container" style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Session ID</th>
+                  <th>Login Time</th>
+                  <th>Logout Time</th>
+                  <th>Duration</th>
+                  <th>Tx Count</th>
+                  <th>Total Amount</th>
+                  <th>Avg Amount</th>
+                  <th>Largest Tx</th>
+                  <th>Unique Receivers</th>
+                  <th>Session Risk</th>
+                </tr>
+              </thead>
+              <tbody id="session-table-body">
+                <tr><td colspan="10" style="text-align:center; color:#64748b;">No session records available</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Transaction Analysis -->
+        <div class="card">
+          <div class="section-title">
+            <span>4. Transaction Analysis</span>
+            <span id="tx-count-badge" class="badge badge-low">0 Transactions</span>
+          </div>
+          <div id="tx-table-container" style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Transaction ID</th>
+                  <th>Sender</th>
+                  <th>Receiver</th>
+                  <th>Amount</th>
+                  <th>Date & Time</th>
+                  <th>Session ID</th>
+                  <th>Risk Level</th>
+                  <th>Decision</th>
+                </tr>
+              </thead>
+              <tbody id="tx-table-body">
+                <tr><td colspan="8" style="text-align:center; color:#64748b;">No transactions available</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Behavioral Analysis & Risk Summary -->
+        <div class="card">
+          <div class="section-title">
+            <span>5. Behavioral Analysis & Risk Decision Summary</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Historical Average Txn Amount</span>
+              <div id="beh-base-avg" class="summary-val">₹0.00</div>
+            </div>
+            <div class="summary-box">
+              <span style="font-size: 0.75rem; color: #64748b;">Current Txn Deviation</span>
+              <div id="beh-curr-dev" class="summary-val" style="color: #d97706;">1.0x</div>
+            </div>
+          </div>
+
+          <div style="font-size: 0.85rem; color: #475569; background: #f8fafc; padding: 0.85rem; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
+            <strong>Behavioral Deviation Assessment:</strong>
+            <div id="beh-explanation" style="margin-top: 0.25rem;">Current activity parameters align with historical user baseline.</div>
+          </div>
+
+          <div style="display: flex; gap: 2rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
+            <div><strong>Risk Score:</strong> <span id="rd-score" style="font-size: 1.2rem; font-weight: 700; color: #dc2626;">0/100</span></div>
+            <div><strong>Risk Level:</strong> <span id="rd-level" class="badge badge-low">LOW</span></div>
+            <div><strong>Decision:</strong> <span id="rd-decision" class="badge badge-low">ALLOW</span></div>
+          </div>
+          <div style="font-size: 0.85rem;">
+            <strong>Contributing Risk Signals:</strong>
+            <ul id="rd-signals-list" style="margin: 0.35rem 0 0 1.25rem; color: #334155;">
+              <li>Normal transaction behavior</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- VIEW 3: ACCOUNT TAKEOVER (ATO) INVESTIGATION PAGE          -->
+      <!-- ========================================================= -->
+      <div id="ato-investigation-workspace" style="display: none;">
+        <!-- PAGE HEADER & SEARCH -->
+        <div class="card" style="border-top: 4px solid #dc2626;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.25rem; font-weight: 700; color: #0f172a;">🛡️ ACCOUNT TAKEOVER (ATO) INVESTIGATION</span>
+              <div style="font-size: 0.8rem; color: #64748b;">Visual session integrity analysis, environment baseline comparison, detection timeline, and analyst decision console</div>
+            </div>
+            <span id="ato-page-status-badge" class="badge badge-high" style="background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; padding: 0.35rem 0.75rem;">ATO ENGINE ACTIVE</span>
+          </div>
+
+          <!-- ATO Search Bar -->
+          <form id="ato-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
+            <input type="text" id="ato-search-input" class="form-input" placeholder="Search by User ID, Email, Account No, or Session ID..." style="flex: 1; min-width: 280px;" required>
+            <button type="submit" id="ato-search-btn" class="btn btn-danger" style="padding: 0.65rem 1.5rem; font-weight: 700;">
+              🔍 Search & Investigate ATO
+            </button>
+          </form>
+          <div id="ato-search-alert" class="alert alert-danger" style="display:none; margin-top: 1rem;"></div>
+        </div>
+
+        <!-- CONTAINER FOR SEARCH RESULT ATO VISUALIZATION -->
+        <div id="ato-results-container" style="display: none;">
+
+          <!-- TOP SESSION SUMMARY CARD -->
+          <div class="card" style="border-left: 4px solid #dc2626;">
+            <div class="section-title">
+              <span style="font-weight: 700; color: #0f172a;">SESSION INTEGRITY SUMMARY</span>
+              <span id="ato-sum-decision-badge" class="badge badge-critical">BLOCK</span>
+            </div>
+
+            <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">User Name</span>
+                <div id="ato-sum-user" class="summary-val" style="color: #0f172a;">-</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Session ID</span>
+                <div id="ato-sum-session-id" class="summary-val" style="color: #2563eb; font-size: 1rem;">-</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Session Status</span>
+                <div id="ato-sum-status" class="summary-val" style="color: #059669;">ACTIVE</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">ATO Risk Score</span>
+                <div id="ato-sum-risk-score" class="summary-val" style="color: #dc2626;">0/100</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Automated Decision</span>
+                <div id="ato-sum-decision" class="summary-val" style="color: #dc2626;">-</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Detection Reason</span>
+                <div id="ato-sum-reason" class="summary-val" style="color: #991b1b; font-size: 0.95rem;">Account Takeover (ATO)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- GRID FOR ORIGINAL vs CURRENT PROFILES -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem;">
+            <!-- 1. ORIGINAL LOGIN PROFILE -->
+            <div class="card" style="border-top: 4px solid #059669; margin: 0;">
+              <div class="section-title">
+                <span style="color: #059669;">1. ORIGINAL LOGIN PROFILE (TRUSTED BASELINE)</span>
+                <span class="badge badge-low">TRUSTED</span>
+              </div>
+              <div style="font-size: 0.85rem; color: #334155; line-height: 1.8;">
+                <div><strong>Device:</strong> <span id="ato-orig-device">-</span></div>
+                <div><strong>Device Fingerprint:</strong> <code id="ato-orig-fingerprint">-</code></div>
+                <div><strong>Browser:</strong> <span id="ato-orig-browser">-</span></div>
+                <div><strong>Operating System:</strong> <span id="ato-orig-os">-</span></div>
+                <div><strong>IP Address:</strong> <code id="ato-orig-ip">-</code></div>
+                <div><strong>Country:</strong> <span id="ato-orig-country">-</span></div>
+                <div><strong>Timezone:</strong> <span id="ato-orig-timezone">-</span></div>
+                <div><strong>Login Time:</strong> <span id="ato-orig-logintime">-</span></div>
+              </div>
+            </div>
+
+            <!-- 2. CURRENT SESSION PROFILE -->
+            <div class="card" style="border-top: 4px solid #dc2626; margin: 0;">
+              <div class="section-title">
+                <span style="color: #dc2626;">2. CURRENT SESSION PROFILE (INCOMING REQUEST)</span>
+                <span class="badge badge-critical">EVALUATED</span>
+              </div>
+              <div style="font-size: 0.85rem; color: #334155; line-height: 1.8;">
+                <div><strong>Device:</strong> <span id="ato-curr-device">-</span></div>
+                <div><strong>Device Fingerprint:</strong> <code id="ato-curr-fingerprint">-</code></div>
+                <div><strong>Browser:</strong> <span id="ato-curr-browser">-</span></div>
+                <div><strong>Operating System:</strong> <span id="ato-curr-os">-</span></div>
+                <div><strong>IP Address:</strong> <code id="ato-curr-ip">-</code></div>
+                <div><strong>Country:</strong> <span id="ato-curr-country">-</span></div>
+                <div><strong>Timezone:</strong> <span id="ato-curr-timezone">-</span></div>
+                <div><strong>Current Time:</strong> <span id="ato-curr-time">-</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. SESSION COMPARISON -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="section-title">
+              <span>3. SESSION COMPARISON (ENVIRONMENTAL MATCH ANALYSIS)</span>
+              <span class="badge badge-medium">ATTRIBUTE DIFFERENTIAL</span>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="data-table" style="font-size: 0.85rem;">
+                <thead>
+                  <tr>
+                    <th>Attribute Name</th>
+                    <th>Trusted Baseline Value</th>
+                    <th>Current Request Value</th>
+                    <th>Match Status</th>
+                  </tr>
+                </thead>
+                <tbody id="ato-comparison-table-body">
+                  <!-- Populated via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 4. RISK CALCULATION -->
+          <div class="card" style="border-top: 4px solid #d97706; margin-bottom: 1.5rem;">
+            <div class="section-title">
+              <span>4. RISK CALCULATION (CONFIGURABLE WEIGHTED RULE SCORE)</span>
+              <span id="ato-calc-risk-level-badge" class="badge badge-critical">CRITICAL RISK</span>
+            </div>
+            <div id="ato-risk-calc-rules-list" style="margin-bottom: 1rem;">
+              <!-- Triggered rules with point breakdown (+40, +20, etc.) -->
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; font-weight: 700;">
+              <span style="font-size: 1.05rem; color: #0f172a;">TOTAL CALCULATED ATO RISK SCORE</span>
+              <span id="ato-calc-total-score" style="font-size: 1.5rem; color: #dc2626;">175 / 100</span>
+            </div>
+          </div>
+
+          <!-- 5. DETECTION TIMELINE -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="section-title">
+              <span>5. DETECTION TIMELINE (CHRONOLOGICAL EVENT FLOW)</span>
+            </div>
+            <div id="ato-timeline-flow-container" style="padding: 1rem 0.5rem;">
+              <!-- Chronological flow graph / timeline -->
+            </div>
+          </div>
+
+          <!-- 6. INVESTIGATION EVIDENCE -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="section-title">
+              <span>6. INVESTIGATION EVIDENCE & AUDIT PROOF</span>
+            </div>
+            <div id="ato-evidence-checklist" style="margin-bottom: 1rem;">
+              <!-- Checkbox evidence items -->
+            </div>
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem;">
+              <strong>Forensic Summary:</strong>
+              <div id="ato-forensic-summary-text" style="margin-top: 0.25rem; color: #475569;">-</div>
+            </div>
+          </div>
+
+          <!-- ATO ATTACK SIMULATOR CARD -->
+          <div class="card" style="border-top: 4px solid #7c3aed; margin-bottom: 1.5rem; background: #faf5ff;">
+            <div class="section-title">
+              <div>
+                <span style="font-size: 1.05rem; font-weight: 700; color: #5b21b6;">⚡ ATO ATTACK SIMULATOR (TEST MODE FOR PROJECT DEMO)</span>
+                <div style="font-size: 0.8rem; color: #6b21a8;">Simulate real-time session hijacking attack vectors to evaluate engine response live</div>
+              </div>
+              <span class="badge" style="background:#f3e8ff; color:#6b21a8; border:1px solid #d8b4fe; font-weight:700;">DEMO TEST MODE</span>
+            </div>
+
+            <p style="font-size: 0.85rem; color: #581c87; margin-bottom: 1rem;">
+              Select an attack preset below to inject a simulated hijacked request against this user session and observe the risk engine score jump, rule triggering, and automated enforcement in real time:
+            </p>
+
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline" style="border-color: #7c3aed; color: #7c3aed; font-weight: 700;" onclick="triggerSimulatedATOAttack('BROWSER_SWITCH')">
+                🦊 Simulate Browser Switch (Firefox / Linux) [+40 Risk]
+              </button>
+              <button type="button" class="btn btn-danger" style="background: #7c3aed; border-color: #7c3aed; font-weight: 700;" onclick="triggerSimulatedATOAttack('CROSS_COUNTRY_HIJACK')">
+                🌍 Simulate Cross-Country Hijack (Germany IP + Firefox) [+95 Risk - BLOCK]
+              </button>
+              <button type="button" class="btn btn-outline" style="border-color: #dc2626; color: #dc2626; font-weight: 700;" onclick="triggerSimulatedATOAttack('SESSION_REPLAY')">
+                ⚡ Simulate Session Replay Attack [+80 Risk]
+              </button>
+            </div>
+
+            <div id="ato-simulator-feedback-alert" class="alert alert-success" style="display:none; margin-top: 1rem;"></div>
+          </div>
+
+          <!-- 7. ANALYST ACTION CONSOLE -->
+          <div class="card" style="border-top: 4px solid #2563eb;">
+            <div class="section-title">
+              <span>7. ANALYST ACTION CONSOLE</span>
+              <span style="font-size: 0.8rem; color: #64748b;">Execute binding security decision</span>
+            </div>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
+              Select an analyst enforcement decision below to override or enforce account security policy and record in audit logs:
+            </p>
+
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline" style="border-color: #059669; color: #059669; font-weight: 700;" onclick="executeAnalystATOAction('ALLOW')">
+                🟢 Allow Session
+              </button>
+              <button type="button" class="btn btn-outline" style="border-color: #d97706; color: #d97706; font-weight: 700;" onclick="executeAnalystATOAction('MONITOR')">
+                🟡 Monitor Activity
+              </button>
+              <button type="button" class="btn btn-outline" style="border-color: #ea580c; color: #ea580c; font-weight: 700;" onclick="executeAnalystATOAction('STEP-UP')">
+                🟠 Challenge Step-Up MFA
+              </button>
+              <button type="button" class="btn btn-danger" style="font-weight: 700;" onclick="executeAnalystATOAction('BLOCK')">
+                🔴 Block & Terminate Session
+              </button>
+              <button type="button" class="btn btn-danger" style="background: #991b1b; border-color: #991b1b; font-weight: 700;" onclick="executeAnalystATOAction('FREEZE_ACCOUNT')">
+                🔒 Freeze User Account
+              </button>
+            </div>
+
+            <div id="ato-action-feedback-alert" class="alert alert-success" style="display:none; margin-top: 1rem;"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- VIEW 4: SETTINGS WORKSPACE                                -->
+      <!-- ========================================================= -->
+      <div id="settings-workspace" style="display: none;">
+        <div class="card" style="border-top: 4px solid #2563eb;">
+          <div class="section-title">
+            <span>⚙️ Analyst Console Settings & Environment</span>
+          </div>
+
+          <div style="margin-bottom: 1.5rem;">
+            <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.5rem;">Analyst Profile & RBAC Security</h4>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Active clearance privileges and security role configuration.</p>
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem;">
+              <div style="margin-bottom: 0.35rem;"><strong>Active Analyst ID:</strong> <span id="settings-analyst-id" style="color: #2563eb;">ANL-001001</span></div>
+              <div style="margin-bottom: 0.35rem;"><strong>Email:</strong> <span id="settings-analyst-email">analyst@finspark.com</span></div>
+              <div style="margin-bottom: 0.35rem;"><strong>Role:</strong> Senior Fraud Investigator</div>
+              <div><strong>Clearance Level:</strong> Level 3 - Full Database Telemetry Access</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 1.5rem;">
+            <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.5rem;">System Risk Engine Thresholds</h4>
+            <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Configured threshold boundaries for automated session routing.</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+              <div class="summary-box">
+                <span style="font-size: 0.75rem; color: #059669; font-weight: 700;">ALLOW THRESHOLD</span>
+                <div class="summary-val" style="font-size: 1rem; color: #059669;">Risk Score &lt; 30</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.75rem; color: #d97706; font-weight: 700;">MEDIUM RISK / STEP-UP THRESHOLD</span>
+                <div class="summary-val" style="font-size: 1rem; color: #d97706;">Risk Score 30 - 74</div>
+              </div>
+              <div class="summary-box">
+                <span style="font-size: 0.75rem; color: #dc2626; font-weight: 700;">BLOCK THRESHOLD</span>
+                <div class="summary-val" style="font-size: 1rem; color: #dc2626;">Risk Score &ge; 75</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.5rem;">Supabase Realtime Stream Engine</h4>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.85rem; border-radius: 6px; color: #166534; font-size: 0.85rem;">
+              <strong>Active Connection:</strong> Supabase PostgreSQL WebSockets Subscriptions enabled for <code>sessions</code>, <code>transactions</code>, <code>risk_decisions</code>, and <code>telemetry_events</code> tables.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ========================================================= -->
+      <!-- VIEW: INSIDER THREAT BEHAVIORAL MONITORING WORKSPACE      -->
+      <!-- ========================================================= -->
+      <div id="insider-threat-workspace" style="display: none;">
+        
+        <!-- INSIDER THREAT HEADER & CONTROLS -->
+        <div class="card" style="border-top: 4px solid #7c3aed; margin-bottom: 1.5rem; background: #faf5ff;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.25rem; font-weight: 700; color: #5b21b6;">🕵️ INSIDER THREAT BEHAVIORAL MONITORING SYSTEM</span>
+              <div style="font-size: 0.8rem; color: #6b21a8;">Dynamic batch analysis triggered strictly on [ COMPLETE REVIEW ] using real database telemetry and analyst history</div>
+            </div>
+            <span id="insider-cycle-badge" class="badge" style="background: #7c3aed; color: #ffffff; font-weight: 800; font-size: 0.82rem; padding: 0.35rem 0.75rem;">BATCH ANALYSIS ACTIVE</span>
+          </div>
+
+          <!-- ANALYST SELECTION FOR INSIDER THREAT INSPECTION -->
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background: #ffffff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff;">
+            <div>
+              <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #5b21b6; text-transform: uppercase; margin-bottom: 0.25rem;">Target Analyst Profile to Inspect</label>
+              <select id="insider-analyst-select" class="form-input" style="min-width: 280px; font-size: 0.88rem; font-weight: 700; color: #0f172a; border-color: #c084fc;">
+                <!-- Populated dynamically via JS -->
+              </select>
+            </div>
+
+            <div style="display: flex; gap: 1rem; align-items: center;">
+              <div>
+                <span style="font-size: 0.7rem; color: #6b21a8; font-weight: 700; text-transform: uppercase; display: block;">Department</span>
+                <strong id="insider-department-val" style="color: #0f172a; font-size: 0.9rem;">Fraud Operations</strong>
+              </div>
+              <div style="height: 30px; width: 1px; background: #e9d5ff;"></div>
+              <div>
+                <span style="font-size: 0.7rem; color: #6b21a8; font-weight: 700; text-transform: uppercase; display: block;">Working Window</span>
+                <strong id="insider-working-hours-val" style="color: #0f172a; font-size: 0.9rem;">09:00 AM – 06:00 PM EST</strong>
+              </div>
+              <div style="height: 30px; width: 1px; background: #e9d5ff;"></div>
+              <div>
+                <span style="font-size: 0.7rem; color: #6b21a8; font-weight: 700; text-transform: uppercase; display: block;">Evaluated Risk Status</span>
+                <span id="insider-risk-badge" class="badge badge-low" style="font-weight: 800; font-size: 0.85rem;">NORMAL</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LEARNING MODE NOTIFICATION BANNER -->
+        <div id="insider-learning-mode-banner" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; color: #1e40af; font-size: 0.88rem;">
+          <strong style="font-size: 0.95rem;">ℹ️ LEARNING MODE ACTIVE:</strong>
+          <span id="insider-learning-msg">Accumulating historical database review cycles to build a reliable behavioral baseline.</span>
+        </div>
+
+        <!-- BASELINE VS CURRENT OPERATIONAL ACTIVITY COMPARISON GRID -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+          
+          <!-- NORMAL BEHAVIORAL BASELINE CARD -->
+          <div class="card" style="border-top: 4px solid #059669; margin: 0; background: #f0fdf4;">
+            <h3 style="margin: 0 0 1rem 0; font-size: 1.05rem; color: #065f46; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+              <span>🌱 HISTORICAL NORMAL BEHAVIORAL BASELINE</span>
+            </h3>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem; color: #166534;">
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
+                <span>Average Daily Review Volume:</span>
+                <strong id="base-avg-reviews" style="color: #047857;">10 reviews / day</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
+                <span>Normal Working Hours:</span>
+                <strong id="base-normal-hours" style="color: #047857;">09:00 AM – 06:00 PM EST</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
+                <span>Normal Working Days:</span>
+                <strong id="base-normal-days" style="color: #047857;">Monday – Friday</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
+                <span>Normal Location:</span>
+                <strong id="base-normal-location" style="color: #047857;">New York, US</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
+                <span>Authorized IP Address:</span>
+                <code id="base-normal-ip" style="color: #047857; font-weight: 700;">192.168.1.101</code>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #bbf7d0; padding-bottom: 0.4rem;">
+                <span>Authorized Workstation Device:</span>
+                <strong id="base-normal-device" style="color: #047857; font-size: 0.8rem;">Chrome 122 on Windows 11 Workstation</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span>Normal Max Transaction Reviewed:</span>
+                <strong id="base-max-amount" style="color: #047857;">₹50,000</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- CURRENT OPERATIONAL ACTIVITY CARD -->
+          <div class="card" style="border-top: 4px solid #ea580c; margin: 0; background: #fff7ed;">
+            <h3 style="margin: 0 0 1rem 0; font-size: 1.05rem; color: #9a3412; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+              <span>⚡ CURRENT OPERATIONAL ACTIVITY TELEMETRY</span>
+            </h3>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.85rem; color: #7c2d12;">
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
+                <span>Total Reviews Handled Today:</span>
+                <strong id="curr-reviews-today" style="color: #ea580c;">1 review</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
+                <span>Last Action Time:</span>
+                <strong id="curr-action-time" style="color: #ea580c;">-</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
+                <span>Current Operational Location:</span>
+                <strong id="curr-location" style="color: #ea580c;">New York, US</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
+                <span>Current Originating IP Address:</span>
+                <code id="curr-ip" style="color: #ea580c; font-weight: 700;">192.168.1.101</code>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
+                <span>Current Environment Device:</span>
+                <strong id="curr-device" style="color: #ea580c; font-size: 0.8rem;">Chrome 122 on Windows 11 Workstation</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #fed7aa; padding-bottom: 0.4rem;">
+                <span>Current Reviewed Amount:</span>
+                <strong id="curr-amount" style="color: #ea580c;">₹25,000</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span>Total Accepted / Rejected Counters:</span>
+                <strong id="curr-counters" style="color: #ea580c;">Accepted: 0 | Rejected: 0</strong>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- DETECTED DEVIATION SIGNALS BREAKDOWN -->
+        <div class="card" style="border-top: 4px solid #dc2626; margin-bottom: 1.5rem;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">⚠️ DETECTED BEHAVIORAL DEVIATION SIGNALS</span>
+              <div style="font-size: 0.8rem; color: #64748b;">Multi-signal anomaly breakdown calculated against analyst's historical baseline</div>
+            </div>
+            <span id="deviation-count-badge" class="badge badge-low" style="font-weight: 700;">0 DEVIATIONS DETECTED</span>
+          </div>
+
+          <div id="insider-deviations-list" style="display: flex; flex-direction: column; gap: 0.6rem;">
+            <div style="text-align: center; color: #64748b; padding: 1rem;">No behavioral deviations detected for selected analyst profile.</div>
+          </div>
+        </div>
+
+        <!-- ==================================================================== -->
+        <!-- BOTTOM SECTION: FULL POSSIBILITIES OF INSIDER THREAT & THREAT %     -->
+        <!-- ==================================================================== -->
+        <div class="card" style="border-top: 5px solid #dc2626; background: #fafafa; margin-bottom: 1.5rem;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.25rem; font-weight: 800; color: #991b1b;">🚨 FULL POSSIBILITIES OF INSIDER THREAT & RISK EVALUATION (%)</span>
+              <div style="font-size: 0.8rem; color: #64748b;">Comprehensive threat vector analysis evaluating potential internal malicious or compromised analyst scenarios</div>
+            </div>
+            <span id="threat-percentage-badge" class="badge badge-low" style="font-size: 1.1rem; padding: 0.4rem 1rem; font-weight: 900;">0% THREAT LEVEL</span>
+          </div>
+
+          <!-- THREAT PERCENTAGE GAUGE BAR -->
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.85rem; font-weight: 800; color: #0f172a; text-transform: uppercase;">Overall Insider Threat Probability Score</span>
+              <span id="threat-percentage-text" style="font-size: 1.4rem; font-weight: 900; color: #059669;">0%</span>
+            </div>
+            
+            <div style="width: 100%; height: 16px; background: #e2e8f0; border-radius: 8px; overflow: hidden; position: relative;">
+              <div id="threat-percentage-fill" style="width: 0%; height: 100%; background: #059669; transition: width 0.5s ease, background 0.5s ease;"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: #64748b; margin-top: 0.35rem; font-weight: 700;">
+              <span>0% (NORMAL)</span>
+              <span>30% (LOW DEVIATION)</span>
+              <span>60% (HIGH DEVIATION)</span>
+              <span>80%-100% (CRITICAL INSIDER THREAT)</span>
+            </div>
+          </div>
+
+          <!-- THREAT POSSIBILITIES MATRIX TABLE -->
+          <h4 style="font-size: 1rem; color: #0f172a; margin-bottom: 0.75rem; font-weight: 700;">
+            Full Possibilities & Malicious Threat Vector Matrix
+          </h4>
+
+          <div id="threat-possibilities-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <!-- Populated dynamically via JS -->
+            <div style="text-align: center; color: #64748b; padding: 1rem;">Loading threat vectors...</div>
+          </div>
+        </div>
+
+        <!-- HISTORICAL COMPLETED REVIEW CYCLES ANALYSIS TABLE -->
+        <div class="card" style="border-top: 4px solid #2563eb; margin-bottom: 1.5rem;">
+          <div class="section-title">
+            <div>
+              <span style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">📜 HISTORICAL COMPLETED REVIEW CYCLES & ANALYSIS AUDIT TRAIL</span>
+              <div style="font-size: 0.8rem; color: #64748b;">Chronological audit log of all completed review cycle batches and analyzed database deviations</div>
+            </div>
+            <span id="insider-history-count-badge" class="badge badge-low">0 CYCLES COMPLETED</span>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="data-table" style="font-size: 0.82rem;">
+              <thead>
+                <tr>
+                  <th>Cycle ID</th>
+                  <th>Completion Time</th>
+                  <th>Batch Size</th>
+                  <th>Approved / Rejected</th>
+                  <th>Duration</th>
+                  <th>Location</th>
+                  <th>Risk Level</th>
+                  <th>Threat Score</th>
+                </tr>
+              </thead>
+              <tbody id="insider-history-table-body">
+                <tr><td colspan="8" style="text-align:center; color:#64748b; padding: 1.25rem;">No completed review cycles recorded yet. Complete a review batch using [ COMPLETE REVIEW ] in High Risk Sessions.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
   </div>
 
-  <!-- Toast Notification System Container -->
-  <div class="toast-container" id="toastContainer"></div>
+  <!-- Interactive Slide-Out Side Panel -->
+  <div id="side-panel" class="side-panel">
+    <div class="side-panel-header">
+      <h3 id="sp-title" style="font-size: 1.1rem; color: #0f172a; margin: 0;">Investigation Details</h3>
+      <button id="sp-close-btn" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">✕</button>
+    </div>
+    <div id="sp-body" class="side-panel-body"></div>
+  </div>
 
-  <!-- Main Analyst UI Logic -->
+  <footer class="footer">
+    FINSPARK — Real-Time Analyst Monitoring & Fraud Intelligence Platform
+  </footer>
+
+  <!-- APPROVE CONFIRMATION MODAL -->
+  <div id="approve-confirm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: #ffffff; border-radius: 10px; width: 90%; max-width: 480px; padding: 1.5rem; border-top: 5px solid #059669; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);">
+      <h3 style="margin: 0 0 0.75rem 0; font-size: 1.15rem; color: #0f172a;">Approve this high-risk session?</h3>
+      <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Session ID: <code id="approve-modal-session-id" style="color: #2563eb; font-weight: 700;">-</code></p>
+      <div style="margin-bottom: 1.25rem;">
+        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #0f172a; margin-bottom: 0.35rem;">Approval Reason:</label>
+        <input type="text" id="approve-reason-input" class="form-input" placeholder="Enter approval reason..." style="width: 100%; box-sizing: border-box;" required>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" onclick="closeApproveModal()" class="btn btn-outline" style="padding: 0.45rem 1rem;">CANCEL</button>
+        <button type="button" id="confirm-approve-btn" class="btn btn-primary" style="background: #059669; border-color: #059669; padding: 0.45rem 1.25rem; font-weight: 700;">CONFIRM APPROVE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REJECT CONFIRMATION MODAL -->
+  <div id="reject-confirm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: #ffffff; border-radius: 10px; width: 90%; max-width: 480px; padding: 1.5rem; border-top: 5px solid #dc2626; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);">
+      <h3 style="margin: 0 0 0.75rem 0; font-size: 1.15rem; color: #0f172a;">Reject this high-risk session?</h3>
+      <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Session ID: <code id="reject-modal-session-id" style="color: #2563eb; font-weight: 700;">-</code></p>
+      <div style="margin-bottom: 1.25rem;">
+        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #0f172a; margin-bottom: 0.35rem;">Rejection Reason:</label>
+        <input type="text" id="reject-reason-input" class="form-input" placeholder="Enter rejection reason..." style="width: 100%; box-sizing: border-box;" required>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" onclick="closeRejectModal()" class="btn btn-outline" style="padding: 0.45rem 1rem;">CANCEL</button>
+        <button type="button" id="confirm-reject-btn" class="btn btn-danger" style="padding: 0.45rem 1.25rem; font-weight: 700;">CONFIRM REJECT</button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/analyst-ui.js"></script>
 </body>
 </html>
