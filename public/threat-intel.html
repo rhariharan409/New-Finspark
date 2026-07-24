@@ -3,344 +3,270 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Unified Threat Intelligence Dashboard - FINSPARK</title>
+  <title>Threat Intelligence | QUANTRA CORRELATE</title>
   <link rel="stylesheet" href="css/style.css">
-  <style>
-    .layout-wrapper {
-      display: flex;
-      min-height: calc(100vh - 60px);
-    }
-    .sidebar {
-      width: 260px;
-      background: #f8fafc;
-      border-right: 1px solid #e2e8f0;
-      padding: 1.25rem 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-    .nav-group-title {
-      font-size: 0.72rem;
-      font-weight: 800;
-      color: #64748b;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 0.5rem;
-      padding-left: 0.5rem;
-    }
-    .sidebar-menu {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    .sidebar-menu li a {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      padding: 0.6rem 0.75rem;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #334155;
-      text-decoration: none;
-      border-radius: 6px;
-      transition: all 0.15s ease;
-    }
-    .sidebar-menu li a:hover {
-      background: #e2e8f0;
-      color: #0f172a;
-    }
-    .sidebar-menu li a.active {
-      background: #2563eb;
-      color: #ffffff;
-    }
-    .content-area {
-      flex: 1;
-      padding: 1.5rem 2rem;
-      max-width: 1200px;
-    }
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-      gap: 0.85rem;
-    }
-    .summary-box {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      padding: 0.75rem;
-    }
-    .summary-val {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: #0f172a;
-      margin-top: 0.2rem;
-      word-break: break-all;
-    }
-
-    /* Module Navigation Tabs */
-    .module-tabs {
-      display: flex;
-      gap: 0.35rem;
-      border-bottom: 2px solid #e2e8f0;
-      margin-bottom: 1.25rem;
-      flex-wrap: wrap;
-    }
-    .module-tab-btn {
-      padding: 0.65rem 1rem;
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #64748b;
-      background: none;
-      border: none;
-      border-bottom: 3px solid transparent;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-    }
-    .module-tab-btn:hover {
-      color: #2563eb;
-      background: #f8fafc;
-    }
-    .module-tab-btn.active {
-      color: #2563eb;
-      border-bottom-color: #2563eb;
-      background: #eff6ff;
-    }
-
-    /* Side Panel / Drawer */
-    .side-panel {
-      position: fixed;
-      top: 0; right: -460px;
-      width: 440px;
-      height: 100vh;
-      background: #ffffff;
-      border-left: 1px solid #cbd5e1;
-      box-shadow: -4px 0 20px rgba(0,0,0,0.12);
-      transition: right 0.25s ease;
-      z-index: 10000;
-      display: flex;
-      flex-direction: column;
-    }
-    .side-panel.open {
-      right: 0;
-    }
-    .side-panel-header {
-      padding: 1.25rem;
-      border-bottom: 1px solid #e2e8f0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #f8fafc;
-    }
-    .side-panel-body {
-      padding: 1.25rem;
-      overflow-y: auto;
-      flex: 1;
-    }
-  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body style="background-color: #ffffff;">
+<body>
 
-  <!-- Navigation Bar -->
-  <nav class="navbar">
-    <a href="index.html" class="brand">
-      <span class="brand-icon">⚡</span>
-      <span>FINSPARK</span>
-      <span style="font-size: 0.75rem; background: #1e293b; color: #38bdf8; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; text-transform: uppercase;">Enterprise Threat Console</span>
-    </a>
-    <div class="nav-links">
-      <span id="analyst-info" style="font-size: 0.85rem; color: #cbd5e1;">Analyst</span>
-      <button id="analyst-logout-btn" class="btn btn-danger" style="padding: 0.35rem 0.85rem; font-size: 0.8rem;">Logout</button>
+  <!-- Top Application Header -->
+  <header class="app-header glass-header">
+    <div class="header-brand">
+      <div class="header-brand-icon">QC</div>
+      <div class="brand-titles">
+        <span class="brand-main-title">QUANTRA CORRELATE</span>
+        <span class="brand-subtitle">Financial Threat Intelligence Platform</span>
+      </div>
     </div>
-  </nav>
 
+    <div class="global-search-container">
+      <svg class="search-icon-svg" viewBox="0 0 24 24">
+        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <input type="text" id="globalSearchInput" class="global-search-input" placeholder="Search threat actors, IP addresses, devices, session patterns...">
+    </div>
+
+    <div class="header-actions">
+      <div class="header-time-stamp" id="liveTimestamp">
+        <span class="status-dot green"></span>
+        <span>2026-07-24 07:45:00 UTC</span>
+      </div>
+
+      <a href="analyst.html" class="action-btn-icon">
+        <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        <span>Back to SOC Console</span>
+      </a>
+
+      <div class="user-profile-badge">
+        <div class="profile-avatar-initials">SC</div>
+        <div class="profile-info">
+          <span class="profile-name">Sarah Connor</span>
+          <span class="profile-role">Lead SOC Investigator</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Global Application Layout -->
   <div class="layout-wrapper">
-    <!-- LEFT SIDEBAR NAVIGATION -->
+    
+    <!-- Sidebar -->
     <aside class="sidebar">
-      <div>
-        <div class="nav-group-title">INVESTIGATION PORTAL</div>
-        <ul class="sidebar-menu">
-          <li><a href="analyst.html">🔍 Investigation & Money Flow</a></li>
+      <div class="nav-section">
+        <div class="nav-section-title">Overview</div>
+        <ul class="nav-menu">
+          <li class="nav-menu-item"><a href="analyst.html">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+            <span>Overview</span>
+          </a></li>
         </ul>
       </div>
 
-      <div>
-        <div class="nav-group-title">THREAT INTELLIGENCE</div>
-        <ul class="sidebar-menu">
-          <li><a href="threat-intel.html" class="active">⚡ Unified Threat Dashboard</a></li>
-          <li><a href="ato.html">🛡️ Account Takeover (ATO)</a></li>
-          <li><a href="threat-intel.html?module=mule">💸 Money Mule / Laundering</a></li>
-          <li><a href="threat-intel.html?module=stuffing">🔑 Credential Stuffing</a></li>
-          <li><a href="threat-intel.html?module=card">💳 Card Fraud</a></li>
-          <li><a href="threat-intel.html?module=synthetic">👤 Synthetic Identity</a></li>
-          <li><a href="threat-intel.html?module=api">⚡ API Abuse</a></li>
-          <li><a href="threat-intel.html?module=insider">🏢 Insider Threat</a></li>
-          <li><a href="threat-intel.html?module=device">📱 Device Intelligence</a></li>
+      <div class="nav-section">
+        <div class="nav-section-title">Intelligence</div>
+        <ul class="nav-menu">
+          <li class="nav-menu-item"><a href="#" class="active">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <span>Threat Intelligence</span>
+          </a></li>
+          <li class="nav-menu-item"><a href="#internal-threats">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            <span>Internal Threats</span>
+          </a></li>
         </ul>
       </div>
     </aside>
 
-    <!-- MAIN CONTENT AREA -->
-    <main class="content-area">
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top Metrics Bar -->
+      <section class="metrics-row">
+        <div class="glass-panel metric-panel">
+          <div class="metric-header"><span class="metric-label">Threat Confidence</span><span class="metric-trend trend-down">Verified</span></div>
+          <div class="metric-value-container">
+            <span class="metric-value" id="valConfidence">92%</span>
+            <svg class="metric-sparkline" viewBox="0 0 70 26"><path d="M0 20 L20 12 L40 8 L70 4" fill="none" stroke="#2563eb" stroke-width="2"/></svg>
+          </div>
+        </div>
 
-      <!-- Unified Search Panel -->
-      <div class="card" style="border-top: 4px solid #2563eb;">
-        <h2 style="font-size: 1.35rem; color: #0f172a; margin-bottom: 0.35rem;">Unified Threat Intelligence Search</h2>
-        <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
-          Enter any identifier (User ID, Account Number, Email, Phone, Session ID, or Transaction ID) to load complete database context across all 8 fraud engines.
-        </p>
+        <div class="glass-panel metric-panel">
+          <div class="metric-header"><span class="metric-label">Threat Actors Classified</span><span class="metric-trend trend-up">+1 Active</span></div>
+          <div class="metric-value-container">
+            <span class="metric-value">04</span>
+            <svg class="metric-sparkline" viewBox="0 0 70 26"><path d="M0 22 L30 14 L70 6" fill="none" stroke="#ef4444" stroke-width="2"/></svg>
+          </div>
+        </div>
 
-        <form id="intel-search-form" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-          <input type="text" id="intel-query-input" class="form-input" placeholder="Search User ID, Account Number, Email, Phone, Session ID, or Txn ID" style="flex: 1; min-width: 300px;" required>
-          <button type="submit" id="intel-search-btn" class="btn btn-primary" style="padding: 0.65rem 1.5rem;">
-            Load Investigation Context
-          </button>
-        </form>
-        <div id="intel-alert" class="alert alert-danger" style="display:none; margin-top: 1rem;"></div>
-      </div>
+        <div class="glass-panel metric-panel">
+          <div class="metric-header"><span class="metric-label">Correlated Accounts</span><span class="metric-trend trend-neutral">Monitored</span></div>
+          <div class="metric-value-container">
+            <span class="metric-value">12</span>
+            <svg class="metric-sparkline" viewBox="0 0 70 26"><path d="M0 10 L30 16 L70 18" fill="none" stroke="#f97316" stroke-width="2"/></svg>
+          </div>
+        </div>
 
-      <!-- Unified Investigation Workspace (Hidden until search executed) -->
-      <div id="intel-workspace" style="display: none;">
+        <div class="glass-panel metric-panel">
+          <div class="metric-header"><span class="metric-label">Review Cycle Sync</span><span class="metric-trend trend-down">Live</span></div>
+          <div class="metric-value-container">
+            <span class="metric-value" id="valSyncStatus">Syncing...</span>
+            <svg class="metric-sparkline" viewBox="0 0 70 26"><path d="M0 14 L30 14 L70 14" fill="none" stroke="#10b981" stroke-width="2"/></svg>
+          </div>
+        </div>
+      </section>
 
-        <!-- 1. Global Investigation Summary Cards -->
-        <div class="card">
-          <div class="section-title">
-            <span style="font-size: 1.05rem; font-weight: 700; color: #0f172a;">1. Overall Security Posture & Summary</span>
-            <span id="overall-posture-badge" class="badge badge-low">LOW RISK</span>
+      <!-- Threat Relationship Graph -->
+      <section class="glass-panel viz-section">
+        <div class="section-header-row">
+          <div class="section-header-title">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+            <span>Internal Threat Actor Relationship Topology</span>
+          </div>
+          <span class="section-header-badge">Actor #TA-9901 (Correlated)</span>
+        </div>
+
+        <div class="node-graph-canvas" style="min-height:360px;">
+          <div class="node-flow-horizontal" id="threatGraphContainer">
+            <!-- Threat Actor -->
+            <div class="graph-node-box risk-high selected">
+              <span class="node-type-label">THREAT ACTOR</span>
+              <span class="node-title-value">Actor TA-9901</span>
+              <div class="node-meta-row"><span>Internal Collusion</span><span class="status-dot red"></span></div>
+            </div>
+
+            <div class="node-connector-line"><div class="node-connector-arrow"></div></div>
+
+            <!-- IP Address -->
+            <div class="graph-node-box risk-high">
+              <span class="node-type-label">IP ADDRESS</span>
+              <span class="node-title-value">192.168.4.11</span>
+              <div class="node-meta-row"><span>Repeated Subnet</span><span class="status-dot red"></span></div>
+            </div>
+
+            <div class="node-connector-line"><div class="node-connector-arrow"></div></div>
+
+            <!-- Device -->
+            <div class="graph-node-box risk-high">
+              <span class="node-type-label">DEVICE</span>
+              <span class="node-title-value">Chrome / Win</span>
+              <div class="node-meta-row"><span>Shared Fingerprint</span><span class="status-dot red"></span></div>
+            </div>
+
+            <div class="node-connector-line"><div class="node-connector-arrow"></div></div>
+
+            <!-- Session -->
+            <div class="graph-node-box risk-medium">
+              <span class="node-type-label">SESSION</span>
+              <span class="node-title-value">SES-88291</span>
+              <div class="node-meta-row"><span>Off-Hours Login</span><span class="status-dot amber"></span></div>
+            </div>
+
+            <div class="node-connector-line"><div class="node-connector-arrow"></div></div>
+
+            <!-- Multiple Accounts -->
+            <div class="graph-node-box risk-high">
+              <span class="node-type-label">ACCOUNTS</span>
+              <span class="node-title-value">3 Shared Accounts</span>
+              <div class="node-meta-row"><span>Multi-Account Access</span><span class="status-dot red"></span></div>
+            </div>
+
+            <div class="node-connector-line"><div class="node-connector-arrow"></div></div>
+
+            <!-- Suspicious Transactions -->
+            <div class="graph-node-box risk-high">
+              <span class="node-type-label">SUSPICIOUS TXNS</span>
+              <span class="node-title-value">₹2,85,000</span>
+              <div class="node-meta-row"><span>Pattern Structuring</span><span class="status-dot red"></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Threat Evolution Timeline & Threat Indicators -->
+      <section class="intelligence-grid">
+        
+        <!-- Threat Evolution Timeline -->
+        <div class="glass-panel viz-section">
+          <div class="section-header-row">
+            <div class="section-header-title">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Threat Evolution Timeline</span>
+            </div>
+            <span class="section-header-badge">Progression Lifecycle</span>
           </div>
 
-          <div class="summary-grid">
-            <div class="summary-box">
-              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total Sessions</span>
-              <div id="sum-total-sessions" class="summary-val">0</div>
+          <div class="timeline-list" style="padding-left:1.5rem; margin-top:0.5rem;">
+            <div class="timeline-item">
+              <span class="timeline-time">Day 1</span>
+              <span class="timeline-event-name">First suspicious login observed during off-peak hours</span>
             </div>
-            <div class="summary-box">
-              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Allowed Sessions</span>
-              <div id="sum-allowed-sessions" class="summary-val" style="color: #059669;">0</div>
+            <div class="timeline-item">
+              <span class="timeline-time">Day 2</span>
+              <span class="timeline-event-name">Unrecognized new device fingerprint attached to session</span>
             </div>
-            <div class="summary-box">
-              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Step-Up Sessions</span>
-              <div id="sum-stepup-sessions" class="summary-val" style="color: #d97706;">0</div>
+            <div class="timeline-item">
+              <span class="timeline-time">Day 3</span>
+              <span class="timeline-event-name">Multiple account access attempt across disparate identities</span>
             </div>
-            <div class="summary-box">
-              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Blocked Sessions</span>
-              <div id="sum-blocked-sessions" class="summary-val" style="color: #dc2626;">0</div>
+            <div class="timeline-item">
+              <span class="timeline-time">Day 4</span>
+              <span class="timeline-event-name">High-value transaction structuring initiated (₹85,000)</span>
             </div>
-            <div class="summary-box">
-              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Failed Login Attempts</span>
-              <div id="sum-failed-logins" class="summary-val" style="color: #dc2626;">0</div>
-            </div>
-            <div class="summary-box">
-              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Unique Devices / IPs</span>
-              <div id="sum-devices-ips" class="summary-val" style="color: #2563eb;">1 / 1</div>
-            </div>
-            <div class="summary-box">
-              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Total Money Transferred</span>
-              <div id="sum-money-sent" class="summary-val" style="color: #059669;">₹0.00</div>
-            </div>
-            <div class="summary-box">
-              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Average Risk Score</span>
-              <div id="sum-avg-risk" class="summary-val" style="color: #dc2626;">0/100</div>
-            </div>
-            <div class="summary-box">
-              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Highest Risk Score</span>
-              <div id="sum-high-risk" class="summary-val" style="color: #dc2626;">0/100</div>
-            </div>
-            <div class="summary-box">
-              <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase;">Account Status</span>
-              <div id="sum-acc-status" class="summary-val" style="color: #059669;">ACTIVE</div>
+            <div class="timeline-item">
+              <span class="timeline-time">Day 5</span>
+              <span class="timeline-event-name">Pattern classified as internal threat & flagged in review cycle</span>
             </div>
           </div>
         </div>
 
-        <!-- 2. Session Overview Table -->
-        <div class="card">
-          <div class="section-title">
-            <span style="font-size: 1.05rem; font-weight: 700; color: #0f172a;">2. Session Overview History</span>
-            <input type="text" id="session-filter-input" class="form-input" placeholder="Filter sessions by IP, Browser, or Status..." style="width: 260px; padding: 0.35rem 0.65rem; font-size: 0.8rem;">
+        <!-- Threat Indicators List -->
+        <div class="glass-panel viz-section">
+          <div class="section-header-row">
+            <div class="section-header-title">
+              <svg class="nav-icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              <span>Key Threat Indicators</span>
+            </div>
+            <span class="section-header-badge">6 Active Indicators</span>
           </div>
 
-          <div style="overflow-x: auto;">
-            <table class="data-table" style="font-size: 0.82rem;">
-              <thead>
-                <tr>
-                  <th>Session ID</th>
-                  <th>Login Time</th>
-                  <th>Logout Time</th>
-                  <th>Duration</th>
-                  <th>IP Address</th>
-                  <th>Device / Browser</th>
-                  <th>Location</th>
-                  <th>Risk Score</th>
-                  <th>Decision</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="sessions-table-body">
-                <tr><td colspan="10" style="text-align:center; color:#64748b;">No session records loaded</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+          <div style="display:flex; flex-direction:column; gap:0.6rem; margin-top:0.5rem;" id="threatIndicatorsContainer">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem 0.85rem; font-size:0.82rem;">
+              <span style="font-weight:700; color:#0f172a;"><span class="status-dot red"></span> Repeated IP Usage</span>
+              <span style="font-weight:800; color:#dc2626;">High Risk</span>
+            </div>
 
-        <!-- 3. MODULE SELECTOR TABS -->
-        <div class="card" style="border-top: 4px solid #2563eb;">
-          <div class="module-tabs">
-            <button class="module-tab-btn active" data-module="ato">🛡️ Account Takeover</button>
-            <button class="module-tab-btn" data-module="money_mule">💸 Money Mule / Laundering</button>
-            <button class="module-tab-btn" data-module="credential_stuffing">🔑 Credential Stuffing</button>
-            <button class="module-tab-btn" data-module="card_fraud">💳 Card Fraud</button>
-            <button class="module-tab-btn" data-module="synthetic_identity">👤 Synthetic Identity</button>
-            <button class="module-tab-btn" data-module="api_abuse">⚡ API Abuse</button>
-            <button class="module-tab-btn" data-module="insider_threat">🏢 Insider Threat</button>
-            <button class="module-tab-btn" data-module="device_intelligence">📱 Device Intelligence</button>
-          </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem 0.85rem; font-size:0.82rem;">
+              <span style="font-weight:700; color:#0f172a;"><span class="status-dot red"></span> Shared Device Fingerprint</span>
+              <span style="font-weight:800; color:#dc2626;">High Risk</span>
+            </div>
 
-          <!-- DYNAMIC MODULE CONTENT DISPLAY CONTAINER -->
-          <div id="module-content-area">
-            <!-- Selected module content renders here dynamically without reloading database data -->
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem 0.85rem; font-size:0.82rem;">
+              <span style="font-weight:700; color:#0f172a;"><span class="status-dot amber"></span> Unusual Login Time</span>
+              <span style="font-weight:800; color:#d97706;">Medium Risk</span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem 0.85rem; font-size:0.82rem;">
+              <span style="font-weight:700; color:#0f172a;"><span class="status-dot red"></span> Transaction Velocity Spike</span>
+              <span style="font-weight:800; color:#dc2626;">High Risk</span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem 0.85rem; font-size:0.82rem;">
+              <span style="font-weight:700; color:#0f172a;"><span class="status-dot red"></span> Multiple Account Access</span>
+              <span style="font-weight:800; color:#dc2626;">Critical Risk</span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#ffffff; border:1px solid #e2e8f0; border-radius:6px; padding:0.6rem 0.85rem; font-size:0.82rem;">
+              <span style="font-weight:700; color:#0f172a;"><span class="status-dot red"></span> Behavioral Cadence Deviation</span>
+              <span style="font-weight:800; color:#dc2626;">High Risk</span>
+            </div>
           </div>
         </div>
 
-        <!-- 4. ANALYST REMEDIATION ACTION PANEL -->
-        <div class="card" style="border-top: 4px solid #2563eb;">
-          <div class="section-title"><span>Analyst Remediation Action Panel</span></div>
-          <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">
-            Execute corrective fraud remediation actions. All actions are logged permanently in Supabase audit history.
-          </p>
-
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button class="btn-action" onclick="executeAnalystAction('MARK_SAFE')">✅ Mark Account Safe</button>
-            <button class="btn-action" onclick="executeAnalystAction('MONITOR')">👁️ Monitor Account</button>
-            <button class="btn-action" onclick="executeAnalystAction('REQUIRE_MFA')">🔐 Require Step-up Auth</button>
-            <button class="btn-action" style="color: #ea580c; border-color: #ea580c;" onclick="executeAnalystAction('FREEZE_TX')">⚠️ Freeze Transactions</button>
-            <button class="btn-action" style="color: #dc2626; border-color: #dc2626;" onclick="executeAnalystAction('LOCK_ACCOUNT')">🔒 Lock Account</button>
-            <button class="btn-action" style="background: #2563eb; color: #ffffff; border-color: #2563eb;" onclick="executeAnalystAction('ESCALATE')">🚨 Escalate Investigation</button>
-          </div>
-          <div id="action-status-msg" style="margin-top: 0.75rem; font-size: 0.85rem; font-weight: 600; display: none;"></div>
-        </div>
-
-      </div>
+      </section>
 
     </main>
-  </div>
 
-  <!-- Interactive Session Details Side Drawer -->
-  <div id="side-panel" class="side-panel">
-    <div class="side-panel-header">
-      <h3 id="sp-title" style="font-size: 1.05rem; color: #0f172a; margin: 0;">Session Investigation Details</h3>
-      <button id="sp-close-btn" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">✕</button>
-    </div>
-    <div id="sp-body" class="side-panel-body">
-      <!-- Session details render here dynamically -->
-    </div>
   </div>
-
-  <footer class="footer">
-    FINSPARK — Enterprise Multi-Engine Threat Intelligence Dashboard
-  </footer>
 
   <script src="js/threat-intel-ui.js"></script>
 </body>
