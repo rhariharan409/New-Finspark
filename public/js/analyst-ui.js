@@ -13,6 +13,7 @@ if (window.supabase && window.supabase.createClient) {
 }
 
 // Global Dashboard & Investigation State
+let activeAnalystProfile = null;
 let rawUsers = [];
 let rawSessions = [];
 let rawTxns = [];
@@ -54,6 +55,10 @@ async function initAnalystPortal() {
     if (!authRes.ok || !authData.authenticated) {
       window.location.href = 'analyst-login.html';
       return;
+    }
+
+    if (authData.analyst) {
+      activeAnalystProfile = authData.analyst;
     }
 
     const infoEl = document.getElementById('analyst-info');
