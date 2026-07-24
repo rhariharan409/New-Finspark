@@ -4,6 +4,7 @@
  */
 
 import express from 'express';
+import crypto from 'crypto';
 import { userService } from '../services/userService.js';
 import { passwordService } from '../security/passwordService.js';
 import { sessionModule } from '../session/index.js';
@@ -13,6 +14,7 @@ import { sessionIntegrityEngine } from '../services/sessionIntegrityEngine.js';
 import { supabase } from '../db/supabaseClient.js';
 import { riskRepository } from '../db/riskRepository.js';
 import { atoVerificationService } from '../services/atoVerificationService.js';
+import { credentialStuffingDetector } from '../security/credential_stuffing/credentialStuffingDetector.js';
 
 const router = express.Router();
 
@@ -109,11 +111,97 @@ router.post('/login', async (req, res) => {
     }
 
     const trimmedIdentifier = identifier.trim();
+    const clientDetails = telemetryService.extractClientDetails(req);
+    const ipAddress = req.body.ipAddress || clientDetails.ipAddress || '';
+    const userAgent = req.headers['user-agent'] || req.body.deviceType || clientDetails.deviceType || '';
+    const passwordHash = crypto.createHash('sha256').update(password || '').digest('hex');
+
+    // 1. Fetch user to map to user_id if possible
     const rawUser = (await userService.findUserByEmail(trimmedIdentifier, true)) ||
                     (await userService.findUserByAccountId(trimmedIdentifier, true)) ||
                     (await userService.findUserById(trimmedIdentifier, true));
 
+    const entityId = rawUser ? rawUser.user_id : trimmedIdentifier;
+
+    // 2. Perform threat analysis dry-run (evaluate current accumulated risk score)
+    const threatCheck = credentialStuffingDetector.detect({
+      event_id: `EVT_CHECK_${Date.now()}`,
+      event_type: 'login',
+      entity_id: entityId,
+      ip_address: ipAddress,
+      timestamp: new Date(),
+      payload: {
+        login_success: false, // Dry run: evaluate risk under worst-case assumption (i.e. failure)
+        password_hash: passwordHash,
+        user_agent: userAgent
+      }
+    }, null, true); // dryRun = true
+
+    // Check if risk score meets or exceeds the action block threshold (70+)
+    if (threatCheck.score >= 70.0) {
+      console.warn(`[THREAT BLOCKED] IP: ${ipAddress}, User: ${entityId}, Score: ${threatCheck.score}, Reasons:`, threatCheck.reasons);
+      
+      // Record a failed login event to telemetry with 'blocked' metadata
+      try {
+        await telemetryService.recordTelemetryEvent({
+          userId: rawUser ? rawUser.user_id : 'usr_unknown',
+          eventType: 'login_failed',
+          ipAddress,
+          deviceType: userAgent,
+          metadata: {
+            blocked: true,
+            score: threatCheck.score,
+            reasons: threatCheck.reasons,
+            password_hash: passwordHash
+          }
+        });
+      } catch (tErr) {}
+
+      // Formally persist the failure event in the detector stores
+      credentialStuffingDetector.detect({
+        event_id: `EVT_BLOCKED_FAIL_${Date.now()}`,
+        event_type: 'login_failed',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: {
+          login_success: false,
+          password_hash: passwordHash,
+          user_agent: userAgent
+        }
+      }, null, false); // dryRun = false
+
+      return res.status(403).json({
+        success: false,
+        message: 'Access blocked due to suspicious activity.'
+      });
+    }
+
+    // 3. User Lookup check
     if (!rawUser || !rawUser.password_hash) {
+      try {
+        await telemetryService.recordTelemetryEvent({
+          userId: 'usr_unknown',
+          eventType: 'login_failed',
+          ipAddress,
+          deviceType: userAgent,
+          metadata: { password_hash: passwordHash }
+        });
+      } catch (tErr) {}
+
+      credentialStuffingDetector.detect({
+        event_id: `EVT_FAIL_${Date.now()}`,
+        event_type: 'login_failed',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: {
+          login_success: false,
+          password_hash: passwordHash,
+          user_agent: userAgent
+        }
+      }, null, false); // dryRun = false
+
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password.'
@@ -127,14 +215,39 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // 4. Verify password
     const isMatch = await passwordService.verifyPassword(password, rawUser.password_hash);
     if (!isMatch) {
+      try {
+        await telemetryService.recordTelemetryEvent({
+          userId: rawUser.user_id,
+          eventType: 'login_failed',
+          ipAddress,
+          deviceType: userAgent,
+          metadata: { password_hash: passwordHash }
+        });
+      } catch (tErr) {}
+
+      credentialStuffingDetector.detect({
+        event_id: `EVT_FAIL_${Date.now()}`,
+        event_type: 'login_failed',
+        entity_id: entityId,
+        ip_address: ipAddress,
+        timestamp: new Date(),
+        payload: {
+          login_success: false,
+          password_hash: passwordHash,
+          user_agent: userAgent
+        }
+      }, null, false); // dryRun = false
+
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password.'
       });
     }
 
+    // 5. Successful Login
     const safeUser = toSafeUser(rawUser);
     const activeSession = await sessionService.createSessionForUser(rawUser.user_id);
 
@@ -153,20 +266,33 @@ router.post('/login', async (req, res) => {
       console.error('Session Integrity Profile Error:', eErr.message);
     }
 
-    const clientDetails = telemetryService.extractClientDetails(req);
     try {
       await telemetryService.recordTelemetryEvent({
         userId: rawUser.user_id,
         sessionId: activeSession.session_id,
         eventType: 'login',
-        ipAddress: req.body.ipAddress || clientDetails.ipAddress,
-        deviceType: req.body.deviceType || clientDetails.deviceType,
+        ipAddress,
+        deviceType: userAgent,
         location: req.body.location || null,
         metadata: { login_time: activeSession.login_time, email: rawUser.email }
       });
     } catch (telemetryError) {
       console.error('Telemetry Login Event Error:', telemetryError.message);
     }
+
+    // Record success in detector stores to maintain correct ratio
+    credentialStuffingDetector.detect({
+      event_id: `EVT_SUCCESS_${Date.now()}`,
+      event_type: 'login',
+      entity_id: entityId,
+      ip_address: ipAddress,
+      timestamp: new Date(),
+      payload: {
+        login_success: true,
+        password_hash: passwordHash,
+        user_agent: userAgent
+      }
+    }, null, false); // dryRun = false
 
     req.session.save((err) => {
       if (err) console.error('Session save error:', err.message);

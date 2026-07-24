@@ -6,7 +6,11 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node tests/test_credential_stuffing.js",
+    "test:integration": "node tests/integration_test_credential_stuffing.js",
+    "test:live": "node scripts/live_threat_feed.js",
+    "test:e2e": "node scripts/verify_live_ato_blocking.js"
   },
   "keywords": [
     "banking",
