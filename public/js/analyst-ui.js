@@ -1978,6 +1978,7 @@ async function renderInsiderThreatWorkspace() {
       renderInsiderThreatWorkspace();
     });
   }
+}
 
 function setupAuthorizationForm() {
   // Bind Show Password toggle
