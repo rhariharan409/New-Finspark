@@ -16,6 +16,7 @@ import { telemetryModule } from './src/telemetry/index.js';
 import { baselineModule } from './src/baseline/index.js';
 import { riskModule } from './src/risk/index.js';
 import { analystModule } from './src/analyst/index.js';
+import { cardNotPresentModule } from './src/features/card-not-present/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,6 +42,7 @@ app.use(session({
 
 // Static files middleware
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/src', express.static(path.join(__dirname, 'src')));
 
 // Mount API routes
 app.use('/api/auth', authModule.router);
@@ -49,6 +51,7 @@ app.use('/api/telemetry', telemetryModule.router);
 app.use('/api/baseline', baselineModule.router);
 app.use('/api/risk', riskModule.router);
 app.use('/api/analyst', analystModule.router);
+app.use('/api/card-not-present', cardNotPresentModule.router);
 
 // Protected API Route example
 app.get('/api/protected/dashboard-data', sessionModule.requireAuth, (req, res) => {
