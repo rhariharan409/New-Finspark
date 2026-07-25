@@ -3,7 +3,7 @@
  * Generates live sequential events representing customer payment journey & AI security checks.
  */
 
-import { CNPTelemetry, CNPTransaction, RiskEvaluationResult, TimelineEvent } from './types/cnpTypes.js';
+import { CNPTelemetry, CNPTransaction, RiskEvaluationResult, TimelineEvent, TimelineEventSeverity } from './types/cnpTypes.js';
 
 export class TimelineGenerator {
   /**
