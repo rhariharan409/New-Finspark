@@ -59,16 +59,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabATO = document.getElementById('tab-ato-attack');
   const cnpLab = document.getElementById('cnp-attack-lab');
 
+  async function autoVerifyDefaultSession() {
+    activeVerifiedSessionId = 'SES-9C213624';
+    if (simSessionIdEl) simSessionIdEl.textContent = activeVerifiedSessionId;
+    if (verificationCard) verificationCard.style.display = 'none';
+    if (simulationCard) simulationCard.style.display = 'block';
+
+    try {
+      const res = await fetch('/api/auth/verify-session-id-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: activeVerifiedSessionId,
+          clientEnv: {
+            browserName: 'Chrome',
+            operatingSystem: 'Windows 11',
+            deviceFingerprint: 'FP-SIMULATED-ATTACKER'
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.checks) {
+        renderLiveSecurityPanel(data.checks, data.weightedRiskScore || 30, data.riskLevel || 'MEDIUM');
+      }
+    } catch (e) {
+      console.error('Auto-verify error:', e);
+    }
+  }
+
   function switchAttackLabTab(tabName) {
     if (tabName === 'ato') {
       if (cnpLab) cnpLab.style.display = 'none';
-      if (activeVerifiedSessionId) {
-        if (verificationCard) verificationCard.style.display = 'none';
-        if (simulationCard) simulationCard.style.display = 'block';
-      } else {
-        if (verificationCard) verificationCard.style.display = 'block';
-        if (simulationCard) simulationCard.style.display = 'none';
-      }
+      if (verificationCard) verificationCard.style.display = 'none';
+      if (simulationCard) simulationCard.style.display = 'block';
+
+      autoVerifyDefaultSession();
 
       if (tabATO) {
         tabATO.style.background = '#005994';
