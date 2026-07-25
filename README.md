@@ -424,3 +424,24 @@ to:
 > **Understanding Complete Fraud Behavior**
 
 By combining transaction intelligence, session intelligence, behavioral analytics, identity verification, and network analysis, the platform provides a unified approach to detecting and preventing modern financial fraud.
+
+
+
+---
+
+## 👥 Team
+
+> **Team Name:** 🥷 **Ninja Turtles**
+
+### Members
+
+- 👨‍💼 **Hariharan R** — Team Lead
+- 👨‍💻 **Suhail Akthar S M**
+- 👨‍💻 **Devendiran K**
+- 👨‍💻 **Sreekanth R**
+
+### 🏫 College
+
+**Chennai Institute of Technology (CIT), Chennai, India**
+
+---
