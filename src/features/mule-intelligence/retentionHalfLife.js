@@ -15,11 +15,14 @@ export function computeHalfLife(inflowAmount, inflowTimestampMs, outflowEvents) 
     return null;
   }
 
+  // Ensure outflowEvents are sorted chronologically without mutating caller array
+  const sortedOutflows = [...outflowEvents].sort((a, b) => (a.timestampMs || 0) - (b.timestampMs || 0));
+
   // Ensure target is exactly 50% of inflow amount
   const target = inflowAmount / 2;
   let cumulative = 0;
 
-  for (const ev of outflowEvents) {
+  for (const ev of sortedOutflows) {
     cumulative += ev.amount;
     if (cumulative >= target) {
       return (ev.timestampMs - inflowTimestampMs) / 1000;

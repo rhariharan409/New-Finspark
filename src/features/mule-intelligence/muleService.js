@@ -209,12 +209,23 @@ export const muleService = {
         console.error('[MMIE] Error saving assessment:', assessErr.message);
       }
 
+      // Normalize evidence array if read back as string from Supabase client driver
+      let normalizedEvidence = savedAssessment?.evidence || evidence;
+      if (typeof normalizedEvidence === 'string') {
+        try {
+          normalizedEvidence = JSON.parse(normalizedEvidence);
+        } catch (parseErr) {
+          console.error('[MMIE] Failed to parse evidence string:', parseErr.message);
+          normalizedEvidence = [];
+        }
+      }
+
       console.log(`[MMIE] Assessment complete. Confidence: ${confidence}%, Decision: ${decision}`);
 
       return {
         muleConfidence: confidence,
         decision,
-        evidence,
+        evidence: normalizedEvidence,
         assessmentId: savedAssessment?.id || null
       };
 

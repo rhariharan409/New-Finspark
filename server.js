@@ -26,8 +26,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Start MMIE Background Posture update job
-startPostureJob();
+// Start MMIE Background Posture update job (only in persistent server environments, not Vercel serverless)
+if (!process.env.VERCEL) {
+  startPostureJob();
+}
 
 // Body parser middleware
 app.use(express.json());
@@ -79,9 +81,14 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(`  Bank of Turtles Server running at http://localhost:${PORT}`);
-  console.log(`====================================================`);
-});
+// Start Server (only when running locally, not on Vercel)
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`  Bank of Turtles Server running at http://localhost:${PORT}`);
+    console.log(`====================================================`);
+  });
+}
+
+// Export for Vercel serverless deployment
+export default app;

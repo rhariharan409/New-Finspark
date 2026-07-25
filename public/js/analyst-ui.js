@@ -240,19 +240,23 @@ function setupViewNavigation() {
         const res = await fetch(`/api/analyst/investigate?accountNumber=${encodeURIComponent(query)}`);
         const data = await res.json();
         
-        if (!res.ok || !data.found || !data.identity || !data.identity.account_id) {
-          if (alertEl) {
-            alertEl.textContent = `No database record found for target '${query}'.`;
-            alertEl.style.display = 'block';
-          }
+        if (res.ok && data.found && data.identity && data.identity.account_id) {
+          await loadMuleIntelligence(data.identity.account_id);
           return;
         }
 
-        await loadMuleIntelligence(data.identity.account_id);
+        // Direct fallback: Attempt querying directly via loadMuleIntelligence if account format matched
+        console.warn('[MMIE] Investigate endpoint did not return account identity. Falling back to direct loadMuleIntelligence...');
+        await loadMuleIntelligence(query);
       } catch (err) {
-        if (alertEl) {
-          alertEl.textContent = 'Failed to execute Money Mule Intelligence query.';
-          alertEl.style.display = 'block';
+        console.warn('[MMIE] Investigate fetch error. Attempting direct loadMuleIntelligence fallback...', err);
+        try {
+          await loadMuleIntelligence(query);
+        } catch (fallbackErr) {
+          if (alertEl) {
+            alertEl.textContent = 'Failed to execute Money Mule Intelligence query.';
+            alertEl.style.display = 'block';
+          }
         }
       }
     }

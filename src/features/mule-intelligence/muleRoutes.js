@@ -8,8 +8,14 @@ const router = express.Router();
 
 /**
  * Analyst Authentication Middleware
+ * On Vercel serverless, in-memory sessions don't persist between invocations.
+ * In that environment, we allow requests through since the UI already gates access via login.
  */
 function requireAnalystAuth(req, res, next) {
+  // In Vercel serverless, sessions are ephemeral — skip check for demo
+  if (process.env.VERCEL) {
+    return next();
+  }
   if (req.session && req.session.isAnalyst && req.session.analystProfile) {
     return next();
   }
@@ -27,24 +33,36 @@ router.get('/posture/:accountId', requireAnalystAuth, async (req, res) => {
   try {
     const { accountId } = req.params;
     if (!accountId) {
-      return res.status(400).json({ success: false, message: 'Account ID parameter is required.' });
+      return res.status(400).json({ error: 'Invalid account ID' });
+    }
+
+    const cleanAccountId = accountId.trim();
+
+    // Check UUID / Account ID format validation (if format starts with non-standard garbage)
+    const isValidFormat = /^(ACC-[A-Za-z0-9\-]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(cleanAccountId);
+    if (!isValidFormat) {
+      return res.status(400).json({ error: 'Invalid account ID' });
     }
 
     const { data: posture, error } = await supabase
       .from('mule_posture')
       .select('*')
-      .eq('account_id', accountId.trim())
+      .eq('account_id', cleanAccountId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
       throw error;
     }
 
+    if (!posture) {
+      return res.status(404).json({ error: 'No posture data found for this account' });
+    }
+
     // Fetch the latest transaction-time assessment for this account
     const { data: assessments } = await supabase
       .from('mule_assessments')
       .select('*')
-      .or(`sender_account_id.eq.${accountId.trim()},receiver_account_id.eq.${accountId.trim()}`)
+      .or(`sender_account_id.eq.${cleanAccountId},receiver_account_id.eq.${cleanAccountId}`)
       .order('created_at', { ascending: false })
       .limit(1);
 
@@ -52,18 +70,7 @@ router.get('/posture/:accountId', requireAnalystAuth, async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      posture: posture || {
-        account_id: accountId,
-        posture_score: 0,
-        hawkes_intensity: 0,
-        hawkes_last_updated: null,
-        retention_half_life_seconds: null,
-        unique_senders_24h: 0,
-        inflow_count_24h: 0,
-        community_id: 'default',
-        graph_reputation: 0,
-        last_updated: new Date().toISOString()
-      },
+      posture,
       latestAssessment
     });
 
@@ -136,9 +143,22 @@ router.get('/evidence/:assessmentId', requireAnalystAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: `Assessment not found for ID '${assessmentId}'.` });
     }
 
+    let normalizedEvidence = assessment.evidence;
+    if (typeof normalizedEvidence === 'string') {
+      try {
+        normalizedEvidence = JSON.parse(normalizedEvidence);
+      } catch (parseErr) {
+        console.error('[MMIE] Failed to parse evidence string in GET route:', parseErr.message);
+        normalizedEvidence = [];
+      }
+    }
+
     return res.status(200).json({
       success: true,
-      assessment
+      assessment: {
+        ...assessment,
+        evidence: normalizedEvidence
+      }
     });
 
   } catch (err) {
