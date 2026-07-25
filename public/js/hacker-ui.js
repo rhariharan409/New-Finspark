@@ -199,8 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
           renderLiveSecurityPanel(data.checks, data.weightedRiskScore, data.riskLevel);
         }
 
-        if (confirmModal) confirmModal.style.display = 'flex';
-
       } catch (err) {
         if (verifyBtn) {
           verifyBtn.disabled = false;
