@@ -38,10 +38,10 @@ router.get('/posture/:accountId', requireAnalystAuth, async (req, res) => {
 
     const cleanAccountId = accountId.trim();
 
-    // Check UUID / Account ID format validation (if format starts with non-standard garbage)
-    const isValidFormat = /^(ACC-[A-Za-z0-9\-]+|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(cleanAccountId);
+    // Check UUID / Account ID format validation
+    const isValidFormat = /^(TURTLE-[A-Za-z0-9\-]+|ACC-[A-Za-z0-9\-]+|USR-[A-Za-z0-9\-]+|[A-Za-z0-9\-_]{3,64}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.test(cleanAccountId);
     if (!isValidFormat) {
-      return res.status(400).json({ error: 'Invalid account ID' });
+      return res.status(400).json({ error: 'Invalid account ID format' });
     }
 
     const { data: posture, error } = await supabase
@@ -54,9 +54,14 @@ router.get('/posture/:accountId', requireAnalystAuth, async (req, res) => {
       throw error;
     }
 
-    if (!posture) {
-      return res.status(404).json({ error: 'No posture data found for this account' });
-    }
+    const activePosture = posture || {
+      account_id: cleanAccountId,
+      posture_score: 0,
+      hawkes_intensity: 0.0,
+      retention_half_life_seconds: null,
+      graph_reputation: 0.0,
+      community_id: 'default'
+    };
 
     // Fetch the latest transaction-time assessment for this account
     const { data: assessments } = await supabase
@@ -70,7 +75,7 @@ router.get('/posture/:accountId', requireAnalystAuth, async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      posture,
+      posture: activePosture,
       latestAssessment
     });
 

@@ -314,17 +314,19 @@ export const graphEngine = {
           });
         }
 
-        // Fetch assessments to map dynamic mule score
+        // Fetch assessments to map dynamic mule score (latest assessment first)
         const assessmentsMap = {};
         if (memberIds.length > 0) {
           const { data: receiverAssess } = await supabase
             .from('mule_assessments')
             .select('receiver_account_id, mule_confidence, created_at')
             .in('receiver_account_id', memberIds)
-            .order('created_at', { ascending: true });
+            .order('created_at', { ascending: false });
 
           (receiverAssess || []).forEach(ass => {
-            assessmentsMap[ass.receiver_account_id] = ass.mule_confidence;
+            if (assessmentsMap[ass.receiver_account_id] === undefined) {
+              assessmentsMap[ass.receiver_account_id] = ass.mule_confidence;
+            }
           });
         }
 
@@ -365,13 +367,17 @@ export const graphEngine = {
           }));
         }
 
-        const enrichedPostures = (postures || []).map(m => ({
-          ...m,
-          full_name: detailsMap[m.account_id]?.full_name || m.account_id,
-          total_sent: detailsMap[m.account_id]?.total_sent || 0,
-          total_received: detailsMap[m.account_id]?.total_received || 0,
-          mule_score: assessmentsMap[m.account_id] !== undefined ? assessmentsMap[m.account_id] : 0
-        }));
+        const enrichedPostures = (postures || []).map(m => {
+          const assessScore = assessmentsMap[m.account_id] !== undefined ? assessmentsMap[m.account_id] : 0;
+          const standingScore = m.posture_score || 0;
+          return {
+            ...m,
+            full_name: detailsMap[m.account_id]?.full_name || m.account_id,
+            total_sent: detailsMap[m.account_id]?.total_sent || 0,
+            total_received: detailsMap[m.account_id]?.total_received || 0,
+            mule_score: Math.max(standingScore, assessScore)
+          };
+        });
         return { postures: enrichedPostures, edges: edges || [], transactions: communityTransactions };
       }
 
@@ -439,27 +445,33 @@ export const graphEngine = {
         });
       }
 
-      // Fetch assessments to map dynamic mule score
+      // Fetch assessments to map dynamic mule score (latest assessment first)
       const assessmentsMap = {};
       if (memberIds.length > 0) {
         const { data: receiverAssess } = await supabase
           .from('mule_assessments')
           .select('receiver_account_id, mule_confidence, created_at')
           .in('receiver_account_id', memberIds)
-          .order('created_at', { ascending: true });
+          .order('created_at', { ascending: false });
 
         (receiverAssess || []).forEach(ass => {
-          assessmentsMap[ass.receiver_account_id] = ass.mule_confidence;
+          if (assessmentsMap[ass.receiver_account_id] === undefined) {
+            assessmentsMap[ass.receiver_account_id] = ass.mule_confidence;
+          }
         });
       }
 
-      const enrichedPostures = (ringMembers || []).map(m => ({
-        ...m,
-        full_name: detailsMap[m.account_id]?.full_name || m.account_id,
-        total_sent: detailsMap[m.account_id]?.total_sent || 0,
-        total_received: detailsMap[m.account_id]?.total_received || 0,
-        mule_score: assessmentsMap[m.account_id] !== undefined ? assessmentsMap[m.account_id] : 0
-      }));
+      const enrichedPostures = (ringMembers || []).map(m => {
+        const assessScore = assessmentsMap[m.account_id] !== undefined ? assessmentsMap[m.account_id] : 0;
+        const standingScore = m.posture_score || 0;
+        return {
+          ...m,
+          full_name: detailsMap[m.account_id]?.full_name || m.account_id,
+          total_sent: detailsMap[m.account_id]?.total_sent || 0,
+          total_received: detailsMap[m.account_id]?.total_received || 0,
+          mule_score: Math.max(standingScore, assessScore)
+        };
+      });
 
       // Fetch all edges connecting members in this community
       const { data: ringEdges } = await supabase
