@@ -54,8 +54,67 @@ document.addEventListener('DOMContentLoaded', () => {
     verifyAlert.style.display = 'block';
   }
 
-  function hideVerifyError() {
-    if (verifyAlert) verifyAlert.style.display = 'none';
+  // ATTACK LAB TAB SWITCHER (CNP Fraud vs ATO Session Verification)
+  const tabCNP = document.getElementById('tab-cnp-attack');
+  const tabATO = document.getElementById('tab-ato-attack');
+  const cnpLab = document.getElementById('cnp-attack-lab');
+
+  function switchAttackLabTab(tabName) {
+    if (tabName === 'ato') {
+      if (cnpLab) cnpLab.style.display = 'none';
+      if (activeVerifiedSessionId) {
+        if (verificationCard) verificationCard.style.display = 'none';
+        if (simulationCard) simulationCard.style.display = 'block';
+      } else {
+        if (verificationCard) verificationCard.style.display = 'block';
+        if (simulationCard) simulationCard.style.display = 'none';
+      }
+
+      if (tabATO) {
+        tabATO.style.background = '#005994';
+        tabATO.style.color = '#ffffff';
+        tabATO.style.borderColor = '#00497b';
+        tabATO.style.boxShadow = '0 2px 6px rgba(0, 89, 148, 0.25)';
+      }
+      if (tabCNP) {
+        tabCNP.style.background = '#ffffff';
+        tabCNP.style.color = '#404751';
+        tabCNP.style.borderColor = '#c0c7d2';
+        tabCNP.style.boxShadow = 'none';
+      }
+    } else {
+      if (cnpLab) cnpLab.style.display = 'block';
+      if (verificationCard) verificationCard.style.display = 'none';
+      if (simulationCard) simulationCard.style.display = 'none';
+
+      if (tabCNP) {
+        tabCNP.style.background = '#005994';
+        tabCNP.style.color = '#ffffff';
+        tabCNP.style.borderColor = '#00497b';
+        tabCNP.style.boxShadow = '0 2px 6px rgba(0, 89, 148, 0.25)';
+      }
+      if (tabATO) {
+        tabATO.style.background = '#ffffff';
+        tabATO.style.color = '#404751';
+        tabATO.style.borderColor = '#c0c7d2';
+        tabATO.style.boxShadow = 'none';
+      }
+    }
+  }
+
+  if (tabCNP) {
+    tabCNP.addEventListener('click', () => switchAttackLabTab('cnp'));
+  }
+
+  if (tabATO) {
+    tabATO.addEventListener('click', () => switchAttackLabTab('ato'));
+  }
+
+  // Auto-switch tab if URL contains #ato or ?tab=ato
+  if (window.location.hash.includes('ato') || window.location.search.includes('tab=ato')) {
+    switchAttackLabTab('ato');
+  } else {
+    switchAttackLabTab('cnp');
   }
 
   // 1. Session Verification Logic & Mismatch Handling

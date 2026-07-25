@@ -125,47 +125,107 @@ document.addEventListener('DOMContentLoaded', () => {
   const reasonsDiv = document.getElementById('widget-reasons');
   const resetBtn = document.getElementById('reset-threat-btn');
 
+  // Top-Right Floating Risk Score Increase Notification Toast & Sound Alert
+  let lastKnownLoginRiskScore = 0;
+  let riskToastTimer = null;
+
+  function playRiskScoreAlertSound() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+      
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.35);
+    } catch (e) {}
+  }
+
   function updateRiskWidget(score = 0, level = 'LOW (ALLOW)', reasons = []) {
-    if (!scoreVal || !scoreBar || !riskBadge) return;
     const numScore = Math.min(100, Math.max(0, parseFloat(score) || 0));
 
-    scoreVal.textContent = Math.round(numScore);
-    scoreBar.style.width = `${numScore}%`;
-
-    let color = '#22c55e'; // Green
-    let badgeBg = 'rgba(34, 197, 94, 0.15)';
-    let badgeBorder = 'rgba(34, 197, 94, 0.3)';
-
-    if (numScore >= 70) {
-      color = '#ef4444'; // Red
-      badgeBg = 'rgba(239, 68, 68, 0.2)';
-      badgeBorder = 'rgba(239, 68, 68, 0.4)';
-    } else if (numScore >= 45) {
-      color = '#f97316'; // Orange
-      badgeBg = 'rgba(249, 115, 22, 0.2)';
-      badgeBorder = 'rgba(249, 115, 22, 0.4)';
-    } else if (numScore > 0) {
-      color = '#eab308'; // Yellow
-      badgeBg = 'rgba(234, 179, 8, 0.2)';
-      badgeBorder = 'rgba(234, 179, 8, 0.4)';
+    if (numScore > lastKnownLoginRiskScore && numScore > 0) {
+      playRiskScoreAlertSound();
+      showTopRightRiskToast(numScore, level, reasons);
     }
+    lastKnownLoginRiskScore = numScore;
+  }
 
-    scoreVal.style.color = color;
-    scoreBar.style.backgroundColor = color;
-    riskBadge.style.color = color;
-    riskBadge.style.background = badgeBg;
-    riskBadge.style.borderColor = badgeBorder;
-    riskBadge.textContent = level;
+  function showTopRightRiskToast(score, level, reasons = []) {
+    let toast = document.getElementById('risk-score-top-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'risk-score-top-toast';
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 100000;
+        background: #001d35;
+        color: #ffffff;
+        border: 1px solid #00497b;
+        border-left: 5px solid #ef4444;
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        max-width: 380px;
+        font-family: 'IBM Plex Sans', sans-serif;
+        animation: slideInRight 0.3s ease-out forwards;
+      `;
+      document.body.appendChild(toast);
 
-    if (reasonsDiv) {
-      if (reasons && reasons.length > 0) {
-        reasonsDiv.style.display = 'block';
-        reasonsDiv.innerHTML = `<span style="color: #f87171; font-weight: 700;">⚠️ Triggered Rules:</span> ${reasons.join('; ')}`;
-      } else {
-        reasonsDiv.style.display = 'none';
-        reasonsDiv.innerHTML = '';
+      if (!document.getElementById('risk-toast-style')) {
+        const style = document.createElement('style');
+        style.id = 'risk-toast-style';
+        style.textContent = `
+          @keyframes slideInRight {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
       }
     }
+
+    const borderLeftColor = score >= 70 ? '#ef4444' : score >= 45 ? '#f97316' : '#eab308';
+    toast.style.borderLeftColor = borderLeftColor;
+
+    const reasonText = reasons && reasons.length > 0 ? reasons.join('; ') : 'Bot signature / behavioral anomaly detected';
+
+    toast.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.2rem;">⚠️</span>
+          <strong style="font-size: 0.92rem; color: #ffffff;">Security Notice: Risk Score Increased</strong>
+        </div>
+        <button onclick="document.getElementById('risk-score-top-toast')?.remove()" style="background: none; border: none; color: #94a3b8; font-size: 1.1rem; cursor: pointer; line-height: 1;">✕</button>
+      </div>
+      <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #d0e4ff; display: flex; align-items: center; gap: 0.5rem;">
+        <span>Risk Score:</span>
+        <span style="background: ${borderLeftColor}33; color: ${borderLeftColor}; border: 1px solid ${borderLeftColor}66; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">
+          ${score}/100 (${level})
+        </span>
+      </div>
+      <div style="margin-top: 0.4rem; font-size: 0.78rem; color: #cbd5e1;">
+        <span style="color: #f87171; font-weight: 700;">Signals:</span> ${reasonText}
+      </div>
+    `;
+
+    if (riskToastTimer) clearTimeout(riskToastTimer);
+    riskToastTimer = setTimeout(() => {
+      toast?.remove();
+    }, 8000);
   }
 
   async function unblockEntity() {
