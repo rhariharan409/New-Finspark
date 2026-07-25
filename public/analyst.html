@@ -250,7 +250,7 @@
   <nav class="navbar glass-navbar" style="padding: 0.75rem 2rem;">
     <div style="display: flex; align-items: center; gap: 1.5rem;">
       <a href="index.html" class="brand" style="color: #ffffff; display: flex; align-items: center; gap: 0.65rem;">
-        <span style="font-weight: 700; letter-spacing: 0.02em;">FINSPARK</span>
+        <span style="font-weight: 700; letter-spacing: 0.02em;">QuantraCorrelate</span>
         <span style="font-size: 0.7rem; background: rgba(255,255,255,0.15); color: #d0e4ff; padding: 0.2rem 0.6rem; border-radius: 9999px; font-weight: 600; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.25);">
           Bank of Maharashtra Risk Engine
         </span>
@@ -486,6 +486,67 @@
               <span style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Live System Status</span>
               <div id="metric-live-status" class="summary-val" style="font-size: 0.85rem; color: #059669;">ONLINE (REALTIME)</div>
             </div>
+          </div>
+        </div>
+
+        <!-- CREDENTIAL STUFFING & AUTOMATED THREAT BLOCK ANALYSIS SECTION -->
+        <div class="card" style="border-top: 4px solid #dc2626; margin-bottom: 1.5rem; background: #ffffff; border-radius: 8px; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.08);">
+          <div class="section-title" style="padding-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #fee2e2;">
+            <div>
+              <span style="font-size: 1.15rem; font-weight: 800; color: #991b1b; display: flex; align-items: center; gap: 0.5rem;">
+                🔑 Credential Stuffing & Automated Attack Rationale Analysis
+              </span>
+              <div style="font-size: 0.8rem; color: #404751; font-weight: normal; margin-top: 0.15rem;">
+                Real-time threat detector telemetry for blocked brute force, password spray, and bot signatures
+              </div>
+            </div>
+            <span id="cs-live-count-badge" class="badge" style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 0.35rem 0.75rem; font-weight: 800;">
+              0 ATTACK(S) BLOCKED
+            </span>
+          </div>
+
+          <!-- SUMMARY TILES FOR CREDENTIAL STUFFING -->
+          <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.85rem; margin-top: 1rem; margin-bottom: 1.25rem;">
+            <div class="summary-box" style="border-left: 4px solid #dc2626; background: #fff5f5;">
+              <span style="font-size: 0.7rem; color: #7f1d1d; text-transform: uppercase; font-weight: 800;">Blocked Login Attempts</span>
+              <div id="cs-metric-blocked-logins" class="summary-val" style="color: #dc2626; font-weight: 900;">0</div>
+            </div>
+            <div class="summary-box" style="border-left: 4px solid #ea580c; background: #fff7ed;">
+              <span style="font-size: 0.7rem; color: #7c2d12; text-transform: uppercase; font-weight: 800;">Password Sprays Detected</span>
+              <div id="cs-metric-password-sprays" class="summary-val" style="color: #ea580c; font-weight: 900;">0</div>
+            </div>
+            <div class="summary-box" style="border-left: 4px solid #d97706; background: #fffbeb;">
+              <span style="font-size: 0.7rem; color: #78350f; text-transform: uppercase; font-weight: 800;">Flagged Attacking IPs</span>
+              <div id="cs-metric-flagged-ips" class="summary-val" style="color: #d97706; font-weight: 900;">0</div>
+            </div>
+            <div class="summary-box" style="border-left: 4px solid #2563eb; background: #eff6ff;">
+              <span style="font-size: 0.7rem; color: #1e3a8a; text-transform: uppercase; font-weight: 800;">Max Threat Score</span>
+              <div id="cs-metric-max-risk" class="summary-val" style="color: #2563eb; font-weight: 900;">0/100</div>
+            </div>
+          </div>
+
+          <!-- LIVE BLOCKED ATTEMPTS TABLE -->
+          <div style="overflow-x: auto;">
+            <table class="data-table" style="font-size: 0.82rem;">
+              <thead>
+                <tr style="background: #fef2f2; color: #991b1b;">
+                  <th>Timestamp</th>
+                  <th>Target Entity / Email</th>
+                  <th>Originating IP</th>
+                  <th>Detector Scenario</th>
+                  <th>Risk Score</th>
+                  <th>Status</th>
+                  <th>Block Rationale & Triggered Reasons</th>
+                </tr>
+              </thead>
+              <tbody id="cs-blocked-table-body">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: #64748b; padding: 1.5rem; font-style: italic;">
+                    No credential stuffing or automated attack blocks recorded yet.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 

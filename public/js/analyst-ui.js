@@ -451,6 +451,7 @@ async function loadDashboardData(isSilent = false) {
     rawTelemetry = telemetryData;
 
     renderSection1GlobalOverview();
+    renderCredentialStuffingAnalysis();
     renderSection2AllUserSessions();
     renderSection3InvestigationQueue();
 
@@ -894,6 +895,21 @@ window.inspectHighRiskSession = function(sessionId) {
 
   // BUILD DYNAMIC PREDICTION REASONS FROM DATABASE REASONING ENGINE
   const reasons = [];
+
+  const failedLogins = sTelemetry.filter(t => t.event_type === 'login_failed');
+  const triggerReasons = rObj.trigger_reasons || [];
+  const csReasons = triggerReasons.filter(r => 
+    r.toLowerCase().includes('spray') || 
+    r.toLowerCase().includes('bot') || 
+    r.toLowerCase().includes('stuffing') || 
+    r.toLowerCase().includes('brute') ||
+    r.toLowerCase().includes('credential')
+  );
+
+  if (failedLogins.length > 0 || csReasons.length > 0 || score >= 70) {
+    const csDetail = csReasons.length > 0 ? csReasons.join('; ') : (failedLogins.length > 0 ? `${failedLogins.length} failed login attempt(s) detected from IP ${ipInfo}` : 'Automated credential stuffing pattern detected');
+    reasons.push(`🚫 <strong style="color: #dc2626;">BLOCKED BY CREDENTIAL STUFFING DETECTOR:</strong> Attempt was intercepted and restricted due to suspicious automated login activity. <em>Triggered Rationale:</em> ${csDetail}`);
+  }
 
   if (sTxns.length > 0) {
     reasons.push(`💸 <strong>High Transaction Velocity & Volume:</strong> Executed ${sTxns.length} transfer(s) totaling <strong>₹${totalAmount.toLocaleString()}</strong> in a fraction of seconds post-login.`);
@@ -3502,5 +3518,128 @@ async function loadMuleIntelligence(accountId) {
     }
   } catch (err) {
     console.error('[MMIE] loadMuleIntelligence error:', err);
+  }
+}
+
+/**
+ * RENDER CREDENTIAL STUFFING & AUTOMATED THREAT BLOCK ANALYSIS CARD
+ */
+function renderCredentialStuffingAnalysis() {
+  if (!rawTelemetry || !rawRisks) return;
+
+  // Filter telemetry & risk decisions for failed logins / blocked attacks / credential stuffing events
+  const blockedTelemetry = rawTelemetry.filter(e => 
+    e.event_type === 'login_failed' || 
+    (e.metadata && (e.metadata.blocked || e.metadata.reasons || (e.metadata.score && e.metadata.score >= 50)))
+  );
+
+  const blockedRisks = rawRisks.filter(r => 
+    r.decision === 'BLOCK' || 
+    (r.trigger_reasons && r.trigger_reasons.some(reason => 
+      reason.toLowerCase().includes('spray') || 
+      reason.toLowerCase().includes('bot') || 
+      reason.toLowerCase().includes('stuffing') || 
+      reason.toLowerCase().includes('brute') ||
+      reason.toLowerCase().includes('failed')
+    ))
+  );
+
+  // Collect unique attack events
+  const attackEvents = [];
+
+  blockedTelemetry.forEach(t => {
+    const meta = t.metadata || {};
+    const reasons = meta.reasons || (meta.ruleName ? [meta.ruleName] : []);
+    const score = meta.score || (meta.blocked ? 85 : 45);
+    
+    let scenario = 'Credential Stuffing Spray';
+    const rLower = (reasons.join(' ')).toLowerCase();
+    if (rLower.includes('bot')) scenario = 'Bot Signature Detection';
+    else if (rLower.includes('brute')) scenario = 'Brute Force Single Account';
+    else if (rLower.includes('spray')) scenario = 'Password Spray Distributed';
+
+    attackEvents.push({
+      timestamp: t.created_at || t.event_timestamp || new Date(),
+      entity: t.user_id || meta.identifier || 'usr_unknown',
+      ip: t.ip_address || '192.168.1.10',
+      scenario,
+      score,
+      reasons: reasons.length > 0 ? reasons : ['Automated login failure pattern detected'],
+      action: 'BLOCKED'
+    });
+  });
+
+  blockedRisks.forEach(r => {
+    const reasons = r.trigger_reasons || ['High-risk threat decision threshold reached'];
+    let scenario = 'Credential Stuffing Attack';
+    const rLower = (reasons.join(' ')).toLowerCase();
+    if (rLower.includes('bot')) scenario = 'Bot Signature Detection';
+    else if (rLower.includes('spray')) scenario = 'Password Spray Attack';
+
+    // Prevent duplicate entries if matching timestamp & user
+    const isDup = attackEvents.some(a => a.entity === r.user_id && Math.abs(new Date(a.timestamp) - new Date(r.created_at)) < 2000);
+    if (!isDup) {
+      attackEvents.push({
+        timestamp: r.created_at || new Date(),
+        entity: r.user_id || 'usr_unknown',
+        ip: r.ip_address || '192.168.1.10',
+        scenario,
+        score: r.risk_score || 85,
+        reasons,
+        action: r.decision || 'BLOCK'
+      });
+    }
+  });
+
+  attackEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  // Compute Summary Metrics
+  const totalBlocked = attackEvents.length;
+  const passwordSprays = attackEvents.filter(a => a.scenario.toLowerCase().includes('spray')).length;
+  const uniqueIPs = new Set(attackEvents.map(a => a.ip)).size;
+  const maxScore = attackEvents.length > 0 ? Math.max(...attackEvents.map(a => a.score)) : 0;
+
+  const badgeEl = document.getElementById('cs-live-count-badge');
+  const metricBlocked = document.getElementById('cs-metric-blocked-logins');
+  const metricSprays = document.getElementById('cs-metric-password-sprays');
+  const metricIPs = document.getElementById('cs-metric-flagged-ips');
+  const metricMax = document.getElementById('cs-metric-max-risk');
+  const tableBody = document.getElementById('cs-blocked-table-body');
+
+  if (badgeEl) badgeEl.textContent = `${totalBlocked} ATTACK(S) BLOCKED`;
+  if (metricBlocked) metricBlocked.textContent = totalBlocked;
+  if (metricSprays) metricSprays.textContent = passwordSprays;
+  if (metricIPs) metricIPs.textContent = uniqueIPs;
+  if (metricMax) metricMax.textContent = `${maxScore}/100`;
+
+  if (tableBody) {
+    if (attackEvents.length === 0) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align: center; color: #64748b; padding: 1.5rem; font-style: italic;">
+            No credential stuffing or automated attack blocks recorded in database telemetry yet.
+          </td>
+        </tr>
+      `;
+    } else {
+      tableBody.innerHTML = attackEvents.slice(0, 8).map(evt => {
+        const dateStr = new Date(evt.timestamp).toLocaleString();
+        const scoreBadge = evt.score >= 70 ? 'badge-critical' : (evt.score >= 45 ? 'badge-high' : 'badge-medium');
+        
+        return `
+          <tr style="border-bottom: 1px solid #fee2e2;">
+            <td style="color: #64748b; font-size: 0.78rem;">${dateStr}</td>
+            <td><strong style="color: #0f172a;">${evt.entity}</strong></td>
+            <td><code>${evt.ip}</code></td>
+            <td><span style="background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.72rem;">🔑 ${evt.scenario}</span></td>
+            <td><span class="badge ${scoreBadge}">${evt.score}/100</span></td>
+            <td><span class="badge badge-critical" style="background: #dc2626; color: #ffffff; font-weight: 800;">🚫 ${evt.action}</span></td>
+            <td style="color: #991b1b; font-weight: 600;">
+              ⚠️ ${evt.reasons.join('; ')}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
   }
 }
