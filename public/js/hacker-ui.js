@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return showVerifyError(data.message || 'Unable to verify session. Invalid session ID.');
         }
 
-        // Verified Active Session -> Store & Show Confirmation Modal with DB Starting Time
+        // Verified Active Session -> Transition to ATO Simulation Interface
         activeVerifiedSessionId = sessionId;
         activeUserEmail = data.user?.email || 'user@example.com';
 
@@ -189,6 +189,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (modalSessionTimeEl) modalSessionTimeEl.textContent = formattedTime;
         if (modalOwnerEmailEl) modalOwnerEmailEl.textContent = activeUserEmail;
+
+        if (verificationCard) verificationCard.style.display = 'none';
+        if (simulationCard) simulationCard.style.display = 'block';
+        if (simSessionIdEl) simSessionIdEl.textContent = activeVerifiedSessionId;
 
         // Render Live Security Panel with checks
         if (data.checks) {
