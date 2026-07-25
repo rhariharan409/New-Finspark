@@ -2574,13 +2574,26 @@ function updateDetailsSidebar(nodeId, nodesData, edgesData) {
         </div>
       </div>
 
-      <!-- Attack Timeline / Recent activity -->
+      <!-- Attack Timeline / Recent Activity -->
       <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.75rem;">
-        <strong style="color: #334155; font-size: 0.78rem; display: block; margin-bottom: 0.3rem;">Recent Activity Timeline</strong>
-        <div style="font-size: 0.72rem; color: #475569; display: flex; flex-direction: column; gap: 0.25rem;">
-          <div>• User telemetry logged from <strong>${devices} device(s)</strong></div>
-          <div>• High-velocity inflows check: <strong>${p.hawkes_intensity > 0.5 ? 'Suspicious' : 'Normal'}</strong></div>
-          <div>• Status: <strong>${(p.account_status || 'active').toUpperCase()}</strong></div>
+        <strong style="color: #334155; font-size: 0.78rem; display: block; margin-bottom: 0.5rem; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.25rem;">Recent Attack & Activity Timeline</strong>
+        <div style="font-size: 0.73rem; color: #475569; display: flex; flex-direction: column; gap: 0.4rem;">
+          <div style="display: flex; gap: 0.4rem; align-items: flex-start;">
+            <span style="color: #2563eb; font-weight: 700;">1.</span>
+            <div>Telemetry & Device: <strong>${devices} device(s) / ${ips} IP(s)</strong> mapped</div>
+          </div>
+          <div style="display: flex; gap: 0.4rem; align-items: flex-start;">
+            <span style="color: ${p.hawkes_intensity > 0.5 ? '#dc2626' : '#059669'}; font-weight: 700;">2.</span>
+            <div>Velocity Check: Hawkes <strong>${(p.hawkes_intensity || 0).toFixed(4)}</strong> (${p.hawkes_intensity > 0.5 ? '⚡ HIGH BURST' : 'Normal'})</div>
+          </div>
+          <div style="display: flex; gap: 0.4rem; align-items: flex-start;">
+            <span style="color: #7c3aed; font-weight: 700;">3.</span>
+            <div>Cluster Proximity: Louvain ID <strong>${p.community_id || 'default'}</strong></div>
+          </div>
+          <div style="display: flex; gap: 0.4rem; align-items: flex-start;">
+            <span style="color: ${score >= 50 ? '#dc2626' : '#059669'}; font-weight: 700;">4.</span>
+            <div>Mule Risk Standing: <strong>${score >= 80 ? 'CRITICAL MULE' : score >= 50 ? 'HIGH RISK' : 'CLEAN'}</strong> (${score}%)</div>
+          </div>
         </div>
       </div>
 
@@ -3262,45 +3275,228 @@ async function loadMuleIntelligence(accountId) {
       if (latestAssess.mule_confidence >= 80) scoreEl.style.color = '#dc2626';
       else if (latestAssess.mule_confidence >= 50) scoreEl.style.color = '#ea580c';
       else scoreEl.style.color = '#7c3aed';
-
-      // Render Evidence timeline
-      const timelineContainer = document.getElementById('mule-evidence-timeline');
-      if (timelineContainer && latestAssess.evidence) {
-        timelineContainer.innerHTML = latestAssess.evidence.map((evt, idx) => `
-          <div class="timeline-node">
-            <div class="timeline-badge alert">${idx + 1}</div>
-            <div style="flex: 1; background: #f8fafc; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid #e2e8f0;">
-              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #64748b;">
-                <span>SIGNAL: ${evt.signal.toUpperCase().replace(/_/g, ' ')}</span>
-                <span style="color: #7c3aed;">Contribution: +${evt.contributionPct}%</span>
-              </div>
-              <div style="font-size: 0.85rem; font-weight: 600; color: #0f172a; margin-top: 0.2rem;">${evt.description}</div>
-            </div>
-          </div>
-        `).join('');
-      }
     } else {
       scoreEl.textContent = '0%';
       scoreEl.style.color = '#7c3aed';
       decisionEl.textContent = 'ALLOW';
       decisionEl.className = 'badge badge-low';
-      document.getElementById('mule-evidence-timeline').innerHTML = `
-        <div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 2rem 0;">No active assessment available</div>
-      `;
     }
 
-    // 2. Fetch sharing rings data
+    // Render Recent Attack Timeline & Evidence Chain
+    const timelineContainer = document.getElementById('mule-evidence-timeline');
+    let evidenceArr = [];
+    if (latestAssess && latestAssess.evidence) {
+      if (typeof latestAssess.evidence === 'string') {
+        try { evidenceArr = JSON.parse(latestAssess.evidence); } catch (e) { evidenceArr = []; }
+      } else if (Array.isArray(latestAssess.evidence)) {
+        evidenceArr = latestAssess.evidence;
+      }
+    }
+
+    if (timelineContainer) {
+      if (evidenceArr && evidenceArr.length > 0) {
+        timelineContainer.innerHTML = evidenceArr.map((evt, idx) => `
+          <div class="timeline-node">
+            <div class="timeline-badge alert">${idx + 1}</div>
+            <div style="flex: 1; background: #f8fafc; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: #64748b;">
+                <span>SIGNAL: ${(evt.signal || 'ANOMALY').toUpperCase().replace(/_/g, ' ')}</span>
+                <span style="color: #7c3aed;">Contribution: +${evt.contributionPct || 0}%</span>
+              </div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: #0f172a; margin-top: 0.2rem;">${evt.description || 'Behavioral signal anomaly detected.'}</div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        // Build Chronological Attack & Telemetry Timeline from live account correlation data
+        try {
+          const invRes = await fetch(`/api/analyst/investigate?accountNumber=${encodeURIComponent(accountId)}`);
+          const invData = await invRes.json();
+
+          if (invRes.ok && invData.found) {
+            const events = [];
+
+            // 1. Identity & Session Event
+            events.push({
+              title: '1. ACCOUNT IDENTITY & TELEMETRY INITIALIZED',
+              detail: `Target Account: <strong>${accountId}</strong>. Profile Status: <strong>${(invData.identity?.account_status || 'active').toUpperCase()}</strong>. Standing Mule Posture Score: <strong>${effectivePostureScore}%</strong>.`,
+              badge: '1',
+              color: '#2563eb'
+            });
+
+            // 2. Network Cluster Event
+            events.push({
+              title: '2. GRAPH REPUTATION & LOUVAIN CLUSTER MAPPED',
+              detail: `Community Ring ID: <strong>${posture.community_id || 'default'}</strong>. Personalized PageRank: <strong>${(posture.graph_reputation || 0).toFixed(6)}</strong>. Linked to shared device/IP nodes.`,
+              badge: '2',
+              color: '#7c3aed'
+            });
+
+            // 3. Transactions / Velocity Event
+            if (invData.transactions_list && invData.transactions_list.length > 0) {
+              invData.transactions_list.slice(0, 3).forEach((tx, idx) => {
+                const isReceiver = tx.receiver_account_id === accountId || tx.receiver_user_id === invData.identity?.user_id;
+                events.push({
+                  title: `${3 + idx}. ${isReceiver ? `INBOUND DEPOSIT ($${tx.amount})` : `OUTBOUND PASS-THROUGH WIRE ($${tx.amount})`}`,
+                  detail: `${isReceiver ? 'Received funds from sender' : 'Transferred funds to receiver'} <strong>${isReceiver ? (tx.sender_account_id || tx.sender_user_id) : (tx.receiver_account_id || tx.receiver_user_id)}</strong> at ${new Date(tx.transaction_timestamp || tx.created_at || Date.now()).toLocaleString()}. Tx Risk: ${tx.risk_score || 0}/100.`,
+                  badge: `${3 + idx}`,
+                  color: isReceiver ? '#dc2626' : '#ea580c'
+                });
+              });
+            } else {
+              events.push({
+                title: '3. VELOCITY & PASS-THROUGH DRAIN ANALYSIS',
+                detail: `Hawkes self-exciting inflow intensity: <strong>${(posture.hawkes_intensity || 0).toFixed(4)}</strong> (${posture.hawkes_intensity > 0.5 ? '⚡ HIGH BURST' : 'Normal'}). Fund retention half-life: <strong>${posture.retention_half_life_seconds ? posture.retention_half_life_seconds.toFixed(0) + 's drain' : 'Infinite'}</strong>.`,
+                badge: '3',
+                color: posture.hawkes_intensity > 0.5 ? '#dc2626' : '#059669'
+              });
+            }
+
+            // 4. Final Evaluation Event
+            events.push({
+              title: `${events.length + 1}. AUTOMATED RISK DECISION: ${decisionEl ? decisionEl.textContent : 'EVALUATED'}`,
+              detail: `Fused Money Mule Confidence: <strong>${effectivePostureScore}%</strong>. Final Assessment: <strong>${effectivePostureScore >= 80 ? 'CRITICAL RISK MULE' : effectivePostureScore >= 50 ? 'HIGH RISK MULE' : 'LOW RISK SAFE POSTURE'}</strong>.`,
+              badge: `${events.length + 1}`,
+              color: effectivePostureScore >= 80 ? '#dc2626' : effectivePostureScore >= 50 ? '#ea580c' : '#059669'
+            });
+
+            timelineContainer.innerHTML = events.map(evt => `
+              <div class="timeline-node">
+                <div class="timeline-badge" style="border-color: ${evt.color}; color: ${evt.color}; background: #ffffff;">${evt.badge}</div>
+                <div style="flex: 1; background: #f8fafc; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+                  <div style="font-size: 0.8rem; font-weight: 700; color: ${evt.color}; flex-wrap: wrap;">
+                    ${evt.title}
+                  </div>
+                  <div style="font-size: 0.83rem; font-weight: 500; color: #0f172a; margin-top: 0.25rem; line-height: 1.45;">
+                    ${evt.detail}
+                  </div>
+                </div>
+              </div>
+            `).join('');
+
+          } else {
+            timelineContainer.innerHTML = `
+              <div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 1.5rem 0;">No active assessment or attack sequence available</div>
+            `;
+          }
+        } catch (err) {
+          timelineContainer.innerHTML = `
+            <div style="color: #64748b; font-size: 0.85rem; text-align: center; padding: 1.5rem 0;">No active assessment available</div>
+          `;
+        }
+      }
+    }
+
+    // Update Bottom Flagging Evaluation Section
+    const hawkesVal = posture.hawkes_intensity || 0;
+    const halfLifeVal = posture.retention_half_life_seconds;
+    const pageRankVal = posture.graph_reputation || 0;
+    const seqMatch = latestAssess && latestAssess.evidence ? latestAssess.evidence.some(e => e.signal === 'sequence_matching') : false;
+    const isSplit = posture.unique_senders_24h > 2 || hawkesVal > 0.4;
+
+    const flagHawkesEl = document.getElementById('flag-val-hawkes');
+    if (flagHawkesEl) flagHawkesEl.textContent = hawkesVal.toFixed(4);
+
+    const flagHalflifeEl = document.getElementById('flag-val-halflife');
+    if (flagHalflifeEl) flagHalflifeEl.textContent = halfLifeVal ? `${halfLifeVal.toFixed(0)}s` : 'No Rapid Outflow';
+
+    const flagPageRankEl = document.getElementById('flag-val-pagerank');
+    if (flagPageRankEl) flagPageRankEl.textContent = pageRankVal.toFixed(6);
+
+    const flagSeqEl = document.getElementById('flag-val-sequence');
+    if (flagSeqEl) flagSeqEl.textContent = seqMatch ? 'Playbook Sequence Matched' : 'Normal Telemetry';
+
+    const flagSplitEl = document.getElementById('flag-val-split');
+    if (flagSplitEl) flagSplitEl.textContent = isSplit ? 'Pattern Detected' : 'None Detected';
+
+    const evalBadgeEl = document.getElementById('mule-eval-status-badge');
+    const evalTextEl = document.getElementById('mule-eval-summary-text');
+    if (evalBadgeEl && evalTextEl) {
+      if (effectivePostureScore >= 80) {
+        evalBadgeEl.className = 'badge badge-critical';
+        evalBadgeEl.textContent = 'CRITICAL MULE RISK (FLAGGED)';
+        evalTextEl.innerHTML = `Account <strong>${accountId}</strong> is <strong>CRITICAL RISK (Score: ${effectivePostureScore}%)</strong>. Flagged primarily due to high inflow Hawkes intensity (<strong>${hawkesVal.toFixed(2)}</strong>), rapid fund drain half-life, and graph network contamination.`;
+      } else if (effectivePostureScore >= 50) {
+        evalBadgeEl.className = 'badge badge-high';
+        evalBadgeEl.textContent = 'HIGH MULE RISK (FLAGGED)';
+        evalTextEl.innerHTML = `Account <strong>${accountId}</strong> is <strong>HIGH RISK (Score: ${effectivePostureScore}%)</strong>. Exhibiting elevated velocity and network sharing traits matching mule criteria.`;
+      } else {
+        evalBadgeEl.className = 'badge badge-low';
+        evalBadgeEl.textContent = 'SAFE / LOW RISK';
+        evalTextEl.innerHTML = `Account <strong>${accountId}</strong> is currently <strong>LOW RISK (Score: ${effectivePostureScore}%)</strong>. No severe money mule flagging thresholds triggered.`;
+      }
+    }
+
+    // 2. Fetch sharing rings & community money movement flow transactions
     const ringsRes = await fetch(`/api/mule/rings?accountId=${encodeURIComponent(accountId)}`);
     const ringsData = await ringsRes.json();
 
     if (ringsRes.ok && ringsData.success) {
       renderMuleRingGraph(ringsData.postures, ringsData.edges, accountId);
-    }
 
+      // Render Money Movement Flow & Transaction Trace Audit Table
+      const tbody = document.getElementById('mule-transactions-table-body');
+      const countBadge = document.getElementById('mule-txn-count-badge');
+      const txns = ringsData.transactions || [];
+
+      if (countBadge) {
+        countBadge.textContent = `${txns.length} Transaction${txns.length === 1 ? '' : 's'} Traced`;
+        countBadge.style.background = txns.length > 0 ? '#e0e7ff' : '#f1f5f9';
+        countBadge.style.color = txns.length > 0 ? '#3730a3' : '#64748b';
+      }
+
+      if (tbody) {
+        if (txns.length > 0) {
+          tbody.innerHTML = txns.map((t, idx) => {
+            const isTargetSender = t.sender_account_id === accountId;
+            const isTargetReceiver = t.receiver_account_id === accountId;
+            const flowColor = isTargetSender ? '#ea580c' : isTargetReceiver ? '#dc2626' : '#2563eb';
+            const statusBadgeClass = t.status === 'completed' ? 'badge-low' : t.status === 'blocked' ? 'badge-critical' : 'badge-high';
+            const formattedDate = new Date(t.timestamp).toLocaleString();
+
+            return `
+              <tr style="border-bottom: 1px solid #e2e8f0; transition: background 0.15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                <td style="padding: 0.65rem 0.85rem; color: #64748b; font-size: 0.78rem;">${formattedDate}</td>
+                <td style="padding: 0.65rem 0.85rem; font-family: monospace; font-weight: 600; color: #3b82f6;">${t.transaction_id}</td>
+                <td style="padding: 0.65rem 0.85rem;">
+                  <strong style="color: #0f172a; font-size: 0.82rem;">${t.sender_account_id}</strong>
+                  ${t.sender_name && t.sender_name !== t.sender_account_id ? `<div style="font-size: 0.72rem; color: #64748b;">${t.sender_name}</div>` : ''}
+                </td>
+                <td style="padding: 0.65rem 0.85rem; text-align: center;">
+                  <span style="display: inline-block; background: ${flowColor}15; color: ${flowColor}; border: 1px solid ${flowColor}40; padding: 0.15rem 0.45rem; border-radius: 12px; font-weight: 700; font-size: 0.72rem;">
+                    ➜ 💸 ➜
+                  </span>
+                </td>
+                <td style="padding: 0.65rem 0.85rem;">
+                  <strong style="color: #0f172a; font-size: 0.82rem;">${t.receiver_account_id}</strong>
+                  ${t.receiver_name && t.receiver_name !== t.receiver_account_id ? `<div style="font-size: 0.72rem; color: #64748b;">${t.receiver_name}</div>` : ''}
+                </td>
+                <td style="padding: 0.65rem 0.85rem; text-align: right; font-weight: 700; color: #0f172a;">
+                  ₹${t.amount.toLocaleString('en-IN')}
+                </td>
+                <td style="padding: 0.65rem 0.85rem; text-align: center;">
+                  <span class="badge ${statusBadgeClass}" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;">
+                    ${t.status.toUpperCase()}
+                  </span>
+                </td>
+                <td style="padding: 0.65rem 0.85rem; color: #475569; font-size: 0.78rem;">
+                  ${t.description}
+                </td>
+              </tr>
+            `;
+          }).join('');
+        } else {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="8" style="text-align: center; color: #64748b; padding: 2rem 0; font-style: italic;">
+                No direct money movement transactions recorded between accounts in this community ring yet.
+              </td>
+            </tr>
+          `;
+        }
+      }
+    }
   } catch (err) {
     console.error('[MMIE] loadMuleIntelligence error:', err);
   }
 }
-
-
-

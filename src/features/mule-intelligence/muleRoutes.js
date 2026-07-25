@@ -2,6 +2,7 @@ import express from 'express';
 import { supabase } from '../../db/supabaseClient.js';
 import { muleService } from './muleService.js';
 import { graphEngine } from './graphEngine.js';
+import { userRepository } from '../../db/userRepository.js';
 
 const router = express.Router();
 
@@ -155,10 +156,71 @@ router.get('/rings', requireAnalystAuth, async (req, res) => {
     const accountId = req.query.accountId ? String(req.query.accountId).trim() : null;
     const ringData = await graphEngine.getRingsForAccount(accountId);
 
+    // Fetch transactions between community members
+    const memberAccountIds = (ringData.postures || []).map(p => p.account_id);
+    let transactions = [];
+
+    if (memberAccountIds.length > 0) {
+      // Resolve account_id -> user_id mapping
+      const { data: users } = await supabase
+        .from('users')
+        .select('user_id, account_id, full_name')
+        .in('account_id', memberAccountIds);
+
+      const userIdToAccount = {};
+      const accountToName = {};
+      const userIds = [];
+      (users || []).forEach(u => {
+        userIdToAccount[u.user_id] = u.account_id;
+        accountToName[u.account_id] = u.full_name || u.account_id;
+        userIds.push(u.user_id);
+      });
+
+      if (userIds.length > 0) {
+        // Fetch transactions where sender OR receiver is in the community
+        const { data: sentTxns } = await supabase
+          .from('transactions')
+          .select('transaction_id, sender_user_id, receiver_user_id, amount, transaction_timestamp, transaction_status, description')
+          .in('sender_user_id', userIds)
+          .order('transaction_timestamp', { ascending: false })
+          .limit(50);
+
+        const { data: recvTxns } = await supabase
+          .from('transactions')
+          .select('transaction_id, sender_user_id, receiver_user_id, amount, transaction_timestamp, transaction_status, description')
+          .in('receiver_user_id', userIds)
+          .order('transaction_timestamp', { ascending: false })
+          .limit(50);
+
+        // Merge and deduplicate by transaction id
+        const txnMap = new Map();
+        [...(sentTxns || []), ...(recvTxns || [])].forEach(t => {
+          const key = t.transaction_id;
+          if (key && !txnMap.has(key)) txnMap.set(key, t);
+        });
+
+        transactions = Array.from(txnMap.values())
+          .map(t => ({
+            transaction_id: t.transaction_id,
+            sender_account_id: userIdToAccount[t.sender_user_id] || t.sender_user_id,
+            sender_name: accountToName[userIdToAccount[t.sender_user_id]] || userIdToAccount[t.sender_user_id] || t.sender_user_id,
+            receiver_account_id: userIdToAccount[t.receiver_user_id] || t.receiver_user_id,
+            receiver_name: accountToName[userIdToAccount[t.receiver_user_id]] || userIdToAccount[t.receiver_user_id] || t.receiver_user_id,
+            amount: parseFloat(t.amount) || 0,
+            timestamp: t.transaction_timestamp,
+            status: t.transaction_status || 'completed',
+            description: t.description || 'Fund transfer'
+          }))
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+          .slice(0, 50);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       postures: ringData.postures,
-      edges: ringData.edges
+      edges: ringData.edges,
+      transactions
     });
 
   } catch (err) {

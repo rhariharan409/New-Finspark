@@ -997,6 +997,135 @@
 
         </div>
 
+        <!-- MONEY MULE FLAGGING CRITERIA & DETECTION BASIS CARD -->
+        <div class="card" style="border-top: 4px solid #dc2626; margin-top: 1.5rem;">
+          <div class="section-title" style="margin-bottom: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.15rem; font-weight: 700; color: #dc2626;">🚩 Money Mule Flagging Criteria & Detection Basis</span>
+            </div>
+            <span class="badge" style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; font-weight: 700;">MMIE DETECTION RULES</span>
+          </div>
+          <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem;">
+            Comprehensive baseline detection rules and mathematical signal thresholds used by the Money Mule Intelligence Engine (MMIE) to flag high-risk mule accounts.
+          </p>
+
+          <!-- Current Account Active Flagging Evaluation Banner -->
+          <div id="mule-flagging-evaluation-banner" style="background: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #7c3aed; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+              <strong style="color: #0f172a; font-size: 0.9rem;">Target Account Flagging Evaluation</strong>
+              <span id="mule-eval-status-badge" class="badge badge-low">No Target Queried</span>
+            </div>
+            <div id="mule-eval-summary-text" style="font-size: 0.82rem; color: #475569; line-height: 1.4;">
+              Query an account ID above to see live evaluation against these 5 flagging criteria.
+            </div>
+          </div>
+
+          <!-- 5 Core Detection Criteria Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+            
+            <!-- Criterion 1: High Inflow Velocity (Hawkes Intensity) -->
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-weight: 700; font-size: 0.9rem; color: #991b1b; display: flex; align-items: center; gap: 0.4rem;">
+                  ⚡ Rapid Inflow Velocity
+                </span>
+                <span id="flag-badge-hawkes" class="badge" style="background: #f1f5f9; color: #64748b; font-size: 0.7rem;">THRESHOLD > 0.50</span>
+              </div>
+              <div style="font-size: 0.8rem; color: #334155; margin-bottom: 0.6rem; font-weight: 600;">
+                Hawkes Self-Exciting Intensity Point Process
+              </div>
+              <p style="font-size: 0.78rem; color: #64748b; margin: 0; line-height: 1.45;">
+                <strong>Basis:</strong> Rapid bursts of incoming fund transfers from multiple distinct senders within tight time windows. Automated micro-deposit fan-in triggers exponential Hawkes intensity spikes.
+              </p>
+              <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #e2e8f0; font-size: 0.73rem; color: #475569; display: flex; justify-content: space-between;">
+                <span>Current Value: <strong id="flag-val-hawkes">-</strong></span>
+                <span>Risk Impact: <strong style="color: #dc2626;">High Velocity</strong></span>
+              </div>
+            </div>
+
+            <!-- Criterion 2: Rapid Pass-Through & Short Half-life -->
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-weight: 700; font-size: 0.9rem; color: #c2410c; display: flex; align-items: center; gap: 0.4rem;">
+                  ⏱️ Rapid Fund Pass-Through
+                </span>
+                <span id="flag-badge-halflife" class="badge" style="background: #f1f5f9; color: #64748b; font-size: 0.7rem;">HALF-LIFE &lt; 180s</span>
+              </div>
+              <div style="font-size: 0.8rem; color: #334155; margin-bottom: 0.6rem; font-weight: 600;">
+                Inbound Retention Half-Life & Rapid Outflow Drain
+              </div>
+              <p style="font-size: 0.78rem; color: #64748b; margin: 0; line-height: 1.45;">
+                <strong>Basis:</strong> Funds entering the account are immediately transferred out, withdrawn at ATMs, or converted to crypto within minutes of arrival, leaving a zero standing balance.
+              </p>
+              <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #e2e8f0; font-size: 0.73rem; color: #475569; display: flex; justify-content: space-between;">
+                <span>Current Value: <strong id="flag-val-halflife">-</strong></span>
+                <span>Risk Impact: <strong style="color: #ea580c;">Fast Pass-Through</strong></span>
+              </div>
+            </div>
+
+            <!-- Criterion 3: Graph Contamination & Louvain Ring -->
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-weight: 700; font-size: 0.9rem; color: #6b21a8; display: flex; align-items: center; gap: 0.4rem;">
+                  🌐 Network Graph Contamination
+                </span>
+                <span id="flag-badge-graph" class="badge" style="background: #f1f5f9; color: #64748b; font-size: 0.7rem;">PAGERANK &gt; 0.001</span>
+              </div>
+              <div style="font-size: 0.8rem; color: #334155; margin-bottom: 0.6rem; font-weight: 600;">
+                Personalized PageRank & Shared Fingerprint Clusters
+              </div>
+              <p style="font-size: 0.78rem; color: #64748b; margin: 0; line-height: 1.45;">
+                <strong>Basis:</strong> Proximity to known fraudulent seeds in the Louvain community graph. Shared hardware devices, IP subnets, phone numbers, or beneficiary accounts propagate contamination score.
+              </p>
+              <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #e2e8f0; font-size: 0.73rem; color: #475569; display: flex; justify-content: space-between;">
+                <span>Current Value: <strong id="flag-val-pagerank">-</strong></span>
+                <span>Risk Impact: <strong style="color: #7c3aed;">Cluster Linkage</strong></span>
+              </div>
+            </div>
+
+            <!-- Criterion 4: Attack Sequence Playbook Match -->
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-weight: 700; font-size: 0.9rem; color: #1e40af; display: flex; align-items: center; gap: 0.4rem;">
+                  🎯 Attack Sequence Alignment
+                </span>
+                <span id="flag-badge-sequence" class="badge" style="background: #f1f5f9; color: #64748b; font-size: 0.7rem;">MATCH &gt; 50%</span>
+              </div>
+              <div style="font-size: 0.8rem; color: #334155; margin-bottom: 0.6rem; font-weight: 600;">
+                Chronological Session Telemetry Template Match
+              </div>
+              <p style="font-size: 0.78rem; color: #64748b; margin: 0; line-height: 1.45;">
+                <strong>Basis:</strong> User telemetry event sequence matches known money laundering operational templates (e.g. credential update &rarr; instant beneficiary add &rarr; rapid high-value wire &rarr; session terminate).
+              </p>
+              <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #e2e8f0; font-size: 0.73rem; color: #475569; display: flex; justify-content: space-between;">
+                <span>Current Status: <strong id="flag-val-sequence">-</strong></span>
+                <span>Risk Impact: <strong style="color: #2563eb;">Playbook Executed</strong></span>
+              </div>
+            </div>
+
+            <!-- Criterion 5: Split Transactions & Structuring Pattern -->
+            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                <span style="font-weight: 700; font-size: 0.9rem; color: #065f46; display: flex; align-items: center; gap: 0.4rem;">
+                  🔄 Split & Structuring Pattern
+                </span>
+                <span id="flag-badge-split" class="badge" style="background: #f1f5f9; color: #64748b; font-size: 0.7rem;">SPLIT &gt; 3 ACCOUNTS</span>
+              </div>
+              <div style="font-size: 0.8rem; color: #334155; margin-bottom: 0.6rem; font-weight: 600;">
+                Structuring Under Thresholds & Fan-In / Fan-Out
+              </div>
+              <p style="font-size: 0.78rem; color: #64748b; margin: 0; line-height: 1.45;">
+                <strong>Basis:</strong> Breaking large funds into small structured transactions across connected accounts to evade reporting limits, or fanning incoming transfers out to multiple mule destinations.
+              </p>
+              <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed #e2e8f0; font-size: 0.73rem; color: #475569; display: flex; justify-content: space-between;">
+                <span>Current Status: <strong id="flag-val-split">-</strong></span>
+                <span>Risk Impact: <strong style="color: #059669;">Structuring Detection</strong></span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
 
 
@@ -1421,6 +1550,46 @@
                   </div>
                 </div>
 
+              </div>
+            </div>
+
+            <!-- Money Movement Flow & Transaction Audit Log (Full Width Card Container) -->
+            <div style="margin-top: 2rem;">
+              <h3 style="font-size: 0.95rem; font-weight: 700; color: #334155; margin-bottom: 0.85rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center;">
+                <span>💸 Money Movement Flow & Community Transaction Trace</span>
+                <span id="mule-txn-count-badge" class="badge" style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe;">0 Transactions</span>
+              </h3>
+
+              <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; padding: 1.25rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <p style="color: #64748b; font-size: 0.82rem; margin: 0;">
+                    Complete step-by-step chronology showing origin accounts, intermediate mule hops, transfer amounts, timestamps, and destination endpoints.
+                  </p>
+                </div>
+
+                <div style="overflow-x: auto;">
+                  <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                    <thead>
+                      <tr style="background: #f8fafc; text-align: left; color: #475569; border-bottom: 2px solid #cbd5e1;">
+                        <th style="padding: 0.65rem 0.85rem;">Timestamp</th>
+                        <th style="padding: 0.65rem 0.85rem;">Txn ID</th>
+                        <th style="padding: 0.65rem 0.85rem;">Source (Sender)</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: center;">Flow</th>
+                        <th style="padding: 0.65rem 0.85rem;">Destination (Receiver)</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: right;">Amount</th>
+                        <th style="padding: 0.65rem 0.85rem; text-align: center;">Status</th>
+                        <th style="padding: 0.65rem 0.85rem;">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody id="mule-transactions-table-body">
+                      <tr>
+                        <td colspan="8" style="text-align: center; color: #64748b; padding: 2rem 0; font-style: italic;">
+                          Query an account to view full money movement flows.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 

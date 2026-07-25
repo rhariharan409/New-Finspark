@@ -328,6 +328,43 @@ export const graphEngine = {
           });
         }
 
+        let communityTransactions = [];
+        if (userIds.length > 0) {
+          const { data: sentTxns } = await supabase
+            .from('transactions')
+            .select('transaction_id, sender_user_id, receiver_user_id, amount, currency, transaction_status, transaction_timestamp, description')
+            .in('sender_user_id', userIds);
+
+          const { data: recvTxns } = await supabase
+            .from('transactions')
+            .select('transaction_id, sender_user_id, receiver_user_id, amount, currency, transaction_status, transaction_timestamp, description')
+            .in('receiver_user_id', userIds);
+
+          const txMap = new Map();
+          [...(sentTxns || []), ...(recvTxns || [])].forEach(t => {
+            if (!txMap.has(t.transaction_id)) {
+              txMap.set(t.transaction_id, t);
+            }
+          });
+
+          const sortedTxns = Array.from(txMap.values()).sort((a, b) => 
+            new Date(b.transaction_timestamp || b.created_at || 0) - new Date(a.transaction_timestamp || a.created_at || 0)
+          );
+
+          communityTransactions = sortedTxns.map(t => ({
+            transaction_id: t.transaction_id,
+            sender_account_id: userIdToAccountId[t.sender_user_id] || t.sender_user_id,
+            sender_name: detailsMap[userIdToAccountId[t.sender_user_id]]?.full_name || userIdToAccountId[t.sender_user_id] || t.sender_user_id,
+            receiver_account_id: userIdToAccountId[t.receiver_user_id] || t.receiver_user_id,
+            receiver_name: detailsMap[userIdToAccountId[t.receiver_user_id]]?.full_name || userIdToAccountId[t.receiver_user_id] || t.receiver_user_id,
+            amount: parseFloat(t.amount) || 0,
+            currency: t.currency || 'INR',
+            status: t.transaction_status || 'completed',
+            timestamp: t.transaction_timestamp,
+            description: t.description || 'Transfer'
+          }));
+        }
+
         const enrichedPostures = (postures || []).map(m => ({
           ...m,
           full_name: detailsMap[m.account_id]?.full_name || m.account_id,
@@ -335,7 +372,7 @@ export const graphEngine = {
           total_received: detailsMap[m.account_id]?.total_received || 0,
           mule_score: assessmentsMap[m.account_id] !== undefined ? assessmentsMap[m.account_id] : 0
         }));
-        return { postures: enrichedPostures, edges: edges || [] };
+        return { postures: enrichedPostures, edges: edges || [], transactions: communityTransactions };
       }
 
       // 1. Fetch current account posture to identify community
@@ -424,16 +461,55 @@ export const graphEngine = {
         mule_score: assessmentsMap[m.account_id] !== undefined ? assessmentsMap[m.account_id] : 0
       }));
 
-      // 3. Fetch all edges connecting members in this community
+      // Fetch all edges connecting members in this community
       const { data: ringEdges } = await supabase
         .from('entity_edges')
         .select('*')
         .in('account_a', memberIds)
         .in('account_b', memberIds);
 
+      // Fetch all direct money flows involving community members for complete money movement tracing
+      let communityTransactions = [];
+      if (userIds.length > 0) {
+        const { data: sentTxns } = await supabase
+          .from('transactions')
+          .select('transaction_id, sender_user_id, receiver_user_id, amount, currency, transaction_status, transaction_timestamp, description')
+          .in('sender_user_id', userIds);
+
+        const { data: recvTxns } = await supabase
+          .from('transactions')
+          .select('transaction_id, sender_user_id, receiver_user_id, amount, currency, transaction_status, transaction_timestamp, description')
+          .in('receiver_user_id', userIds);
+
+        const txMap = new Map();
+        [...(sentTxns || []), ...(recvTxns || [])].forEach(t => {
+          if (!txMap.has(t.transaction_id)) {
+            txMap.set(t.transaction_id, t);
+          }
+        });
+
+        const sortedTxns = Array.from(txMap.values()).sort((a, b) => 
+          new Date(b.transaction_timestamp || b.created_at || 0) - new Date(a.transaction_timestamp || a.created_at || 0)
+        );
+
+        communityTransactions = sortedTxns.map(t => ({
+          transaction_id: t.transaction_id,
+          sender_account_id: userIdToAccountId[t.sender_user_id] || t.sender_user_id,
+          sender_name: detailsMap[userIdToAccountId[t.sender_user_id]]?.full_name || userIdToAccountId[t.sender_user_id] || t.sender_user_id,
+          receiver_account_id: userIdToAccountId[t.receiver_user_id] || t.receiver_user_id,
+          receiver_name: detailsMap[userIdToAccountId[t.receiver_user_id]]?.full_name || userIdToAccountId[t.receiver_user_id] || t.receiver_user_id,
+          amount: parseFloat(t.amount) || 0,
+          currency: t.currency || 'INR',
+          status: t.transaction_status || 'completed',
+          timestamp: t.transaction_timestamp,
+          description: t.description || 'Transfer'
+        }));
+      }
+
       return {
         postures: enrichedPostures,
-        edges: ringEdges || []
+        edges: ringEdges || [],
+        transactions: communityTransactions
       };
     } catch (err) {
       console.error('[MMIE] getRingsForAccount error:', err.message);

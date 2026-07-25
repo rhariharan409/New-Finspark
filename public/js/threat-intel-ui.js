@@ -289,9 +289,73 @@ function renderModuleContent(modKey, data) {
           <div style="font-size: 1.2rem; font-weight: 700; color: #dc2626;">${mule.mule_risk_score || 0}/100</div>
         </div>
       </div>
-      <a href="analyst.html?query=${encodeURIComponent(data.query)}" class="btn btn-primary" style="display: inline-block; text-decoration: none;">
-        Open Interactive Money Flow Graph
-      </a>
+      <div style="margin-bottom: 1.25rem;">
+        <a href="analyst.html?query=${encodeURIComponent(data.query)}" class="btn btn-primary" style="display: inline-block; text-decoration: none;">
+          Open Interactive Money Flow Graph
+        </a>
+      </div>
+
+      <!-- MONEY MULE FLAGGING CRITERIA & DETECTION BASIS CARD -->
+      <div style="background: #ffffff; border: 1px solid #cbd5e1; border-top: 4px solid #dc2626; border-radius: 10px; padding: 1.25rem; margin-top: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h4 style="font-size: 1.05rem; font-weight: 700; color: #dc2626; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+            🚩 Money Mule Flagging Criteria & Detection Basis
+          </h4>
+          <span class="badge" style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; font-weight: 700;">MMIE DETECTION RULES</span>
+        </div>
+        <p style="color: #64748b; font-size: 0.82rem; margin-bottom: 1rem;">
+          On what basis accounts are flagged by the Money Mule Intelligence Engine (MMIE):
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem;">
+          
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: #991b1b; margin-bottom: 0.35rem;">
+              ⚡ 1. Rapid Inflow Velocity
+            </div>
+            <p style="font-size: 0.76rem; color: #475569; margin: 0; line-height: 1.4;">
+              High Hawkes intensity point-process score (>0.50) from rapid, repeated micro-deposit inflows across multiple senders in tight time windows.
+            </p>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: #c2410c; margin-bottom: 0.35rem;">
+              ⏱️ 2. Rapid Fund Pass-Through
+            </div>
+            <p style="font-size: 0.76rem; color: #475569; margin: 0; line-height: 1.4;">
+              Inbound retention half-life < 180s. Funds pass through instantly via immediate wire out, ATM withdrawal, or crypto cashout.
+            </p>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: #6b21a8; margin-bottom: 0.35rem;">
+              🌐 3. Louvain Graph Ring
+            </div>
+            <p style="font-size: 0.76rem; color: #475569; margin: 0; line-height: 1.4;">
+              Personalized PageRank > 0.001 and shared cluster links (IP addresses, hardware devices, phone numbers) connected to known fraud seeds.
+            </p>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: #1e40af; margin-bottom: 0.35rem;">
+              🎯 4. Attack Playbook Match
+            </div>
+            <p style="font-size: 0.76rem; color: #475569; margin: 0; line-height: 1.4;">
+              Subsequence match > 50% matching known laundering playbooks (password reset → beneficiary add → high-value wire → session termination).
+            </p>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.85rem;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: #065f46; margin-bottom: 0.35rem;">
+              🔄 5. Structuring & Fan-Out
+            </div>
+            <p style="font-size: 0.76rem; color: #475569; margin: 0; line-height: 1.4;">
+              Structuring payments under reporting thresholds across multi-layer beneficiary fan-out networks.
+            </p>
+          </div>
+
+        </div>
+      </div>
     `;
 
   } else if (modKey === 'credential_stuffing') {
